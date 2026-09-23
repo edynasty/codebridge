@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -18,9 +19,11 @@ func TestProductionChecks(t *testing.T) {
 		case "/.well-known/oauth-protected-resource":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"resource":              serverURL(r),
-				"authorization_servers": []string{"https://auth.example.com"},
+				"authorization_servers": []string{serverURL(r)},
 				"scopes_supported":      []string{"codebridge.read"},
 			})
+		case "/.well-known/oauth-authorization-server":
+			writeAuthorizationServerMetadata(w, r, []string{"codebridge.read"})
 		case "/mcp":
 			w.Header().Set("WWW-Authenticate", `Bearer resource_metadata="https://codebridge.example/.well-known/oauth-protected-resource"`)
 			http.Error(w, "no bearer token", http.StatusUnauthorized)
@@ -129,9 +132,12 @@ func TestAuthenticatedMCPSmoke(t *testing.T) {
 	mux.HandleFunc("/.well-known/oauth-protected-resource", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"resource":              serverURL(r),
-			"authorization_servers": []string{"https://auth.example.com"},
+			"authorization_servers": []string{serverURL(r)},
 			"scopes_supported":      []string{"codebridge.read"},
 		})
+	})
+	mux.HandleFunc("/.well-known/oauth-authorization-server", func(w http.ResponseWriter, r *http.Request) {
+		writeAuthorizationServerMetadata(w, r, []string{"codebridge.read"})
 	})
 	mux.Handle("/mcp", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer real-token" {
@@ -185,8 +191,11 @@ func TestAuthenticatedMCPSmokeRejectsBadToken(t *testing.T) {
 	mux.HandleFunc("/.well-known/oauth-protected-resource", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"resource":              serverURL(r),
-			"authorization_servers": []string{"https://auth.example.com"},
+			"authorization_servers": []string{serverURL(r)},
 		})
+	})
+	mux.HandleFunc("/.well-known/oauth-authorization-server", func(w http.ResponseWriter, r *http.Request) {
+		writeAuthorizationServerMetadata(w, r, nil)
 	})
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("WWW-Authenticate", `Bearer resource_metadata="https://codebridge.example/.well-known/oauth-protected-resource"`)
@@ -217,4 +226,69 @@ func TestAuthenticatedMCPSmokeRejectsBadToken(t *testing.T) {
 	if !foundFailure {
 		t.Fatalf("missing authenticated MCP failure: %#v", results)
 	}
+}
+
+func TestAuthorizationServerScopeMismatchFails(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/healthz":
+			_, _ = w.Write([]byte("ok\n"))
+		case "/.well-known/oauth-protected-resource":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"resource":              serverURL(r),
+				"authorization_servers": []string{serverURL(r)},
+				"scopes_supported":      []string{"codebridge.read"},
+			})
+		case "/.well-known/oauth-authorization-server":
+			writeAuthorizationServerMetadata(w, r, []string{"openid", "profile"})
+		case "/mcp":
+			w.Header().Set("WWW-Authenticate", `Bearer resource_metadata="https://codebridge.example/.well-known/oauth-protected-resource"`)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+		case "/admin/devices":
+			http.NotFound(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	results, ok := Run(context.Background(), Options{
+		PublicURL:        server.URL,
+		ExpectOAuth:      true,
+		ExpectAdminBlock: true,
+	})
+	if ok {
+		t.Fatalf("scope mismatch unexpectedly passed: %#v", results)
+	}
+	for _, result := range results {
+		if result.Name == "authorization_server" && !result.OK && strings.Contains(result.Detail, "scope:codebridge.read") {
+			return
+		}
+	}
+	t.Fatalf("authorization-server scope mismatch was not reported: %#v", results)
+}
+
+func TestAuthorizationMetadataCandidatesForIssuerPath(t *testing.T) {
+	got := authorizationMetadataCandidates("https://auth.example.com/realms/codebridge")
+	want := "https://auth.example.com/.well-known/oauth-authorization-server/realms/codebridge"
+	for _, candidate := range got {
+		if candidate == want {
+			return
+		}
+	}
+	t.Fatalf("RFC 8414 path-form candidate %q missing from %#v", want, got)
+}
+
+func writeAuthorizationServerMetadata(w http.ResponseWriter, r *http.Request, scopes []string) {
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"issuer":                                serverURL(r),
+		"authorization_endpoint":                serverURL(r) + "/oauth2/authorize",
+		"token_endpoint":                        serverURL(r) + "/oauth2/token",
+		"registration_endpoint":                 serverURL(r) + "/oauth2/register",
+		"grant_types_supported":                 []string{"authorization_code", "refresh_token"},
+		"response_types_supported":              []string{"code"},
+		"code_challenge_methods_supported":      []string{"S256"},
+		"scopes_supported":                      scopes,
+		"token_endpoint_auth_methods_supported": []string{"none"},
+	})
 }
