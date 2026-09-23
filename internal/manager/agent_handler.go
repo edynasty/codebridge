@@ -95,7 +95,11 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	conn := h.Registry.Put(Device{ID: reg.DeviceID, Name: reg.DeviceName, AccountID: account, Version: reg.Version, Online: true, ConnectedAt: now, LastSeen: now, Workspaces: reg.Workspaces}, ws)
 	defer h.Registry.Remove(reg.DeviceID, conn)
+	// Once the connection is in the registry a concurrent tool call may write
+	// to it under conn.mu, so the acknowledgment must take the same mutex.
+	conn.mu.Lock()
 	_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: true, DeviceCredential: issuedCredential})})
+	conn.mu.Unlock()
 	heartbeatTimeout := h.HeartbeatTimeout
 	if heartbeatTimeout <= 0 {
 		heartbeatTimeout = defaultAgentHeartbeatTimeout

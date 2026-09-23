@@ -36,6 +36,13 @@ Todo IDs are stable references for implementation, commits, reviews, and test ev
 
 **Done when:** an authenticated subject cannot discover or call another account's device even when it knows the device ID. *(Verified by `TestOAuthAccountScopingCrossTenant` in `cmd/client/mcp_account_scoping_test.go`.)*
 
+### MGR-002 Agent websocket write serialization
+
+- [x] Serialize the `registered` acknowledgment with the same mutex `Registry.Call` uses for `WriteJSON`.
+- [x] Add a race-detector regression run covering register-ack overlapping an immediate tool call.
+
+**Done when:** `go test -race` on the Manager↔Client WebSocket integration test no longer reports concurrent `WriteJSON` on the agent connection.
+
 ### SEC-001 Filesystem security regression matrix
 
 - [ ] Add table-driven cases for absolute path, `..`, symlink escape, sensitive symlink alias, broken symlink, and sensitive workspace root.
