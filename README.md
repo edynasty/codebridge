@@ -35,8 +35,8 @@ ChatGPT Web / MCP client
 - Device enrollment uses short-lived **one-time enrollment codes**.
 - Each enrolled device receives a random **per-device credential**. The manager persists only its SHA-256 digest; the client persists the credential locally with file mode `0600`.
 - Device credentials can be rotated or revoked through the admin API.
-
-MCP user authentication is still P0 work. Keep `/mcp` behind HTTPS/access controls until OAuth is implemented.
+- MCP user access supports OAuth 2.1 with an external IdP: RFC 9728 protected-resource metadata, JWT signature/issuer/audience/expiry/scope validation, and OAuth security metadata on each tool.
+- CodeBridge deliberately does not implement passwords, login pages, authorization-code issuance, or refresh-token storage; use an established authorization server.
 
 ## MCP tools
 
@@ -52,7 +52,7 @@ MCP user authentication is still P0 work. Keep `/mcp` behind HTTPS/access contro
 | `git_diff` | Read unstaged git diff |
 | `project_info` | Detect build/project markers |
 
-All tools are declared `readOnlyHint=true` and `openWorldHint=false`.
+All tools are declared `readOnlyHint=true` and `openWorldHint=false`. When OAuth is enabled, each tool also advertises the `codebridge.read` OAuth scope (or your configured scope).
 
 ## Requirements
 
@@ -148,7 +148,32 @@ curl -sS -X DELETE http://127.0.0.1:8080/admin/devices/mbp-m1 \
 
 Revocation also disconnects the currently active WebSocket. Re-enrollment requires a fresh one-time enrollment code.
 
+## OAuth for ChatGPT Web
+
+For private repositories, configure an external OAuth 2.1 authorization server:
+
+```bash
+export CODEBRIDGE_PUBLIC_URL='https://codebridge.example.com'
+export CODEBRIDGE_OAUTH_ISSUER='https://auth.example.com'
+export CODEBRIDGE_OAUTH_JWKS_URL='https://auth.example.com/.well-known/jwks.json'
+export CODEBRIDGE_OAUTH_RESOURCE='https://codebridge.example.com'
+export CODEBRIDGE_OAUTH_SCOPE='codebridge.read'
+```
+
+The authorization server must issue JWT access tokens with the exact issuer, the configured resource in `aud`, a valid expiration, and the required scope. It must also support the MCP/ChatGPT OAuth flow (authorization code + PKCE S256 and a compatible client registration/identification method).
+
+CodeBridge exposes:
+
+```text
+GET /.well-known/oauth-protected-resource
+POST /mcp   Authorization: Bearer <access-token>
+```
+
+See [docs/oauth.md](docs/oauth.md) and [docs/chatgpt-web.md](docs/chatgpt-web.md).
+
 ## Inspect MCP locally
+
+For a local no-OAuth development run:
 
 ```bash
 npx @modelcontextprotocol/inspector
@@ -160,30 +185,29 @@ Use:
 http://127.0.0.1:8080/mcp
 ```
 
+Do not expose a no-auth MCP endpoint to the public internet.
+
 ## Connect ChatGPT Web
 
-Put `/mcp` behind a stable HTTPS endpoint such as:
+Deploy the Manager at a stable HTTPS origin and add:
 
 ```text
 https://codebridge.example.com/mcp
 ```
 
-Then add that remote MCP endpoint from ChatGPT's developer/plugin UI available to your account.
-
-For initial personal testing, keep the MCP endpoint private by network/access policy where possible. Before public distribution, implement OAuth rather than relying on an unauthenticated or static-token MCP endpoint.
+as the remote MCP endpoint in ChatGPT's developer/plugin UI. With OAuth configured, ChatGPT can discover the protected-resource metadata and link the user's account before calling the read-only tools.
 
 ## Production hardening roadmap
 
-1. OAuth 2.1 / protected-resource metadata for MCP user authentication.
-2. PostgreSQL account/device registry for multi-tenant deployment.
-3. Tenant isolation (`account_id` on every device and request).
-4. Per-tool and per-workspace policy.
-5. Request IDs + metadata-only audit log; never log file contents/tool result bodies.
-6. Rate limits, concurrency limits and response byte budgets.
-7. TLS/WSS only; origin/host validation.
-8. Optional LSP / tree-sitter / code graph tools without arbitrary shell access.
+1. PostgreSQL account/device registry for multi-tenant deployment.
+2. Tenant isolation (`account_id` on every device and request).
+3. Per-tool and per-workspace policy.
+4. Request IDs + metadata-only audit log; never log file contents/tool result bodies.
+5. Rate limits, concurrency limits and response byte budgets.
+6. TLS/WSS deployment examples and strict proxy/origin configuration.
+7. Optional LSP / tree-sitter / code graph tools without arbitrary shell access.
 
-## Non-goals for v0.2
+## Non-goals for v0.3
 
 - Editing files
 - Running arbitrary commands

@@ -2,30 +2,53 @@ package main
 
 import (
 	"crypto/subtle"
+	"errors"
 	"flag"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/edynasty/codebridge/internal/authstore"
 	mgr "github.com/edynasty/codebridge/internal/manager"
+	"github.com/edynasty/codebridge/internal/oauthresource"
+	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/modelcontextprotocol/go-sdk/oauthex"
 )
+
+type oauthConfig struct {
+	PublicURL string
+	Resource  string
+	Issuer    string
+	JWKSURL   string
+	Scope     string
+}
 
 func main() {
 	addr := flag.String("addr", env("CODEBRIDGE_ADDR", ":8080"), "listen address")
 	stateFile := flag.String("state-file", env("CODEBRIDGE_STATE_FILE", "./data/auth.json"), "device auth state file")
 	flag.Parse()
 
-	auth, err := authstore.Open(*stateFile)
+	deviceAuth, err := authstore.Open(*stateFile)
 	if err != nil {
 		log.Fatalf("open auth state: %v", err)
 	}
+	oauthCfg, err := loadOAuthConfig()
+	if err != nil {
+		log.Fatalf("OAuth configuration: %v", err)
+	}
+
 	registry := mgr.NewRegistry()
-	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "CodeBridge", Version: "0.2.0"}, nil)
-	(&mgr.ToolService{Registry: registry}).Register(mcpServer)
+	toolService := &mgr.ToolService{Registry: registry}
+	if oauthCfg != nil {
+		toolService.OAuthScopes = []string{oauthCfg.Scope}
+	}
+	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "CodeBridge", Version: "0.3.0"}, nil)
+	toolService.Register(mcpServer)
 
 	mcpHandler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server { return mcpServer }, &mcp.StreamableHTTPOptions{
 		Stateless:    true,
@@ -33,9 +56,46 @@ func main() {
 	})
 
 	mux := http.NewServeMux()
-	mux.Handle("/mcp", optionalBearer(os.Getenv("CODEBRIDGE_MCP_TOKEN"), mcpHandler))
-	mux.Handle("/agent", &mgr.AgentHandler{Registry: registry, Auth: auth})
-	mux.Handle("/admin/", &mgr.AdminHandler{Auth: auth, Registry: registry, AdminToken: os.Getenv("CODEBRIDGE_ADMIN_TOKEN")})
+	var protectedMCP http.Handler = mcpHandler
+	if oauthCfg != nil {
+		verifier, err := oauthresource.New(oauthresource.Config{
+			Issuer:   oauthCfg.Issuer,
+			Audience: oauthCfg.Resource,
+			JWKSURL:  oauthCfg.JWKSURL,
+		})
+		if err != nil {
+			log.Fatalf("OAuth verifier: %v", err)
+		}
+		metadataURL := oauthCfg.PublicURL + "/.well-known/oauth-protected-resource"
+		metadata := &oauthex.ProtectedResourceMetadata{
+			Resource:               oauthCfg.Resource,
+			AuthorizationServers:   []string{oauthCfg.Issuer},
+			ScopesSupported:        []string{oauthCfg.Scope},
+			BearerMethodsSupported: []string{"header"},
+			ResourceName:           "CodeBridge",
+		}
+		metaHandler := mcpauth.ProtectedResourceMetadataHandler(metadata)
+		mux.Handle("/.well-known/oauth-protected-resource", metaHandler)
+		// RFC 9728 path-form discovery for clients that derive metadata from /mcp.
+		mux.Handle("/.well-known/oauth-protected-resource/mcp", metaHandler)
+		protectedMCP = mcpauth.RequireBearerToken(verifier.Verify, &mcpauth.RequireBearerTokenOptions{
+			ResourceMetadataURL: metadataURL,
+			Scopes:              []string{oauthCfg.Scope},
+			ClockSkew:           30 * time.Second,
+		})(mcpHandler)
+		log.Printf("MCP OAuth enabled: issuer=%s resource=%s scope=%s", oauthCfg.Issuer, oauthCfg.Resource, oauthCfg.Scope)
+	} else {
+		protectedMCP = optionalBearer(os.Getenv("CODEBRIDGE_MCP_TOKEN"), mcpHandler)
+		if os.Getenv("CODEBRIDGE_MCP_TOKEN") == "" {
+			log.Printf("WARNING: MCP authentication is disabled; do not expose /mcp to the public internet")
+		} else {
+			log.Printf("MCP static bearer enabled for development; OAuth is recommended for ChatGPT linking")
+		}
+	}
+
+	mux.Handle("/mcp", protectedMCP)
+	mux.Handle("/agent", &mgr.AgentHandler{Registry: registry, Auth: deviceAuth})
+	mux.Handle("/admin/", &mgr.AdminHandler{Auth: deviceAuth, Registry: registry, AdminToken: os.Getenv("CODEBRIDGE_ADMIN_TOKEN")})
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
@@ -56,6 +116,84 @@ func main() {
 	if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
+}
+
+func loadOAuthConfig() (*oauthConfig, error) {
+	publicURL := strings.TrimRight(strings.TrimSpace(os.Getenv("CODEBRIDGE_PUBLIC_URL")), "/")
+	issuer := strings.TrimSpace(os.Getenv("CODEBRIDGE_OAUTH_ISSUER"))
+	jwksURL := strings.TrimSpace(os.Getenv("CODEBRIDGE_OAUTH_JWKS_URL"))
+	resource := strings.TrimSpace(os.Getenv("CODEBRIDGE_OAUTH_RESOURCE"))
+	scope := strings.TrimSpace(env("CODEBRIDGE_OAUTH_SCOPE", "codebridge.read"))
+
+	enabled := publicURL != "" || issuer != "" || jwksURL != "" || resource != ""
+	if !enabled {
+		return nil, nil
+	}
+	if publicURL == "" || issuer == "" || jwksURL == "" {
+		return nil, errors.New("CODEBRIDGE_PUBLIC_URL, CODEBRIDGE_OAUTH_ISSUER and CODEBRIDGE_OAUTH_JWKS_URL are all required when OAuth is enabled")
+	}
+	if resource == "" {
+		resource = publicURL
+	}
+	if scope == "" || len(strings.Fields(scope)) != 1 {
+		return nil, errors.New("CODEBRIDGE_OAUTH_SCOPE must contain exactly one OAuth scope value")
+	}
+	if err := validatePublicURL(publicURL); err != nil {
+		return nil, err
+	}
+	if err := validateResourceURI(resource); err != nil {
+		return nil, err
+	}
+	return &oauthConfig{
+		PublicURL: publicURL,
+		Resource:  resource,
+		Issuer:    issuer,
+		JWKSURL:   jwksURL,
+		Scope:     scope,
+	}, nil
+}
+
+func validateResourceURI(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.Hostname() == "" || u.Fragment != "" {
+		return errors.New("CODEBRIDGE_OAUTH_RESOURCE must be an absolute HTTPS URI without a fragment")
+	}
+	if u.Scheme == "https" {
+		return nil
+	}
+	if u.Scheme == "http" {
+		host := u.Hostname()
+		if host == "localhost" {
+			return nil
+		}
+		if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+			return nil
+		}
+	}
+	return errors.New("CODEBRIDGE_OAUTH_RESOURCE must use https (http is allowed only for loopback development)")
+}
+
+func validatePublicURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.Hostname() == "" || u.RawQuery != "" || u.Fragment != "" {
+		return errors.New("CODEBRIDGE_PUBLIC_URL must be an absolute URL without query or fragment")
+	}
+	if u.Path != "" && u.Path != "/" {
+		return errors.New("CODEBRIDGE_PUBLIC_URL must be the public origin, without /mcp or another path")
+	}
+	if u.Scheme == "https" {
+		return nil
+	}
+	if u.Scheme == "http" {
+		host := u.Hostname()
+		if host == "localhost" {
+			return nil
+		}
+		if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+			return nil
+		}
+	}
+	return errors.New("CODEBRIDGE_PUBLIC_URL must use https (http is allowed only for loopback development)")
 }
 
 func optionalBearer(token string, next http.Handler) http.Handler {

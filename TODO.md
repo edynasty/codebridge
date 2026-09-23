@@ -2,7 +2,9 @@
 
 ## P0 - make the MVP production-safe enough for personal use
 
-- [ ] Add OAuth 2.1 for MCP user authentication.
+- [x] Add OAuth 2.1 resource-server authentication for MCP users (external IdP).
+- [x] Publish RFC 9728 protected-resource metadata and OAuth security metadata on tools.
+- [x] Verify access-token signature, issuer, audience/resource, expiration, nbf, and scope.
 - [x] Replace shared enrollment token with one-time enrollment and per-device credentials.
 - [x] Persist device identity metadata and credential hashes only; never persist source payloads.
 - [x] Add admin API for enrollment, device revoke, and credential rotation.
@@ -10,7 +12,7 @@
 - [ ] Add request/response byte and concurrency limits at the Manager.
 - [ ] Add structured metadata-only audit logs.
 - [ ] Add TLS/WSS deployment example with Caddy or Nginx.
-- [ ] Run official MCP Inspector cases against the real SDK build.
+- [ ] Run MCP Inspector OAuth flow against a real Auth0/Keycloak/Authentik tenant.
 
 ## P1 - coding intelligence
 

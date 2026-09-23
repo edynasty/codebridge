@@ -10,7 +10,8 @@ import (
 )
 
 type ToolService struct {
-	Registry *Registry
+	Registry    *Registry
+	OAuthScopes []string
 }
 
 type DeviceInput struct {
@@ -48,8 +49,8 @@ type SearchCodeInput struct {
 	Path      string `json:"path,omitempty" jsonschema:"Optional subdirectory relative to the workspace root"`
 }
 
-func readOnlyTool(name, description string) *mcp.Tool {
-	return &mcp.Tool{
+func (t *ToolService) readOnlyTool(name, description string) *mcp.Tool {
+	tool := &mcp.Tool{
 		Name:        name,
 		Description: description,
 		Annotations: &mcp.ToolAnnotations{
@@ -57,6 +58,18 @@ func readOnlyTool(name, description string) *mcp.Tool {
 			OpenWorldHint: boolPtr(false),
 		},
 	}
+	if len(t.OAuthScopes) > 0 {
+		scopes := append([]string(nil), t.OAuthScopes...)
+		// The upstream Go MCP SDK v1.8.0 exposes arbitrary tool metadata but
+		// does not yet have OpenAI's securitySchemes extension as a top-level
+		// Go field. ChatGPT supports this _meta mirror for compatibility.
+		tool.Meta = mcp.Meta{
+			"securitySchemes": []any{
+				map[string]any{"type": "oauth2", "scopes": scopes},
+			},
+		}
+	}
+	return tool
 }
 
 func textResult(v any) (*mcp.CallToolResult, any, error) {
@@ -68,11 +81,11 @@ func textResult(v any) (*mcp.CallToolResult, any, error) {
 }
 
 func (t *ToolService) Register(server *mcp.Server) {
-	mcp.AddTool(server, readOnlyTool("list_devices", "List local CodeBridge devices currently connected to this manager."), func(ctx context.Context, req *mcp.CallToolRequest, in struct{}) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(server, t.readOnlyTool("list_devices", "List local CodeBridge devices currently connected to this manager."), func(ctx context.Context, req *mcp.CallToolRequest, in struct{}) (*mcp.CallToolResult, any, error) {
 		return textResult(t.Registry.List())
 	})
 
-	mcp.AddTool(server, readOnlyTool("list_workspaces", "List source-code workspaces exposed by one connected device."), func(ctx context.Context, req *mcp.CallToolRequest, in DeviceInput) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(server, t.readOnlyTool("list_workspaces", "List source-code workspaces exposed by one connected device."), func(ctx context.Context, req *mcp.CallToolRequest, in DeviceInput) (*mcp.CallToolResult, any, error) {
 		v, err := t.Registry.Workspaces(in.DeviceID)
 		if err != nil {
 			return nil, nil, err
@@ -80,31 +93,31 @@ func (t *ToolService) Register(server *mcp.Server) {
 		return textResult(v)
 	})
 
-	mcp.AddTool(server, readOnlyTool("list_directory", "List files and directories inside an exposed local workspace. Paths are workspace-relative."), func(ctx context.Context, req *mcp.CallToolRequest, in PathInput) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(server, t.readOnlyTool("list_directory", "List files and directories inside an exposed local workspace. Paths are workspace-relative."), func(ctx context.Context, req *mcp.CallToolRequest, in PathInput) (*mcp.CallToolResult, any, error) {
 		return t.forward(ctx, in.DeviceID, in.Workspace, "list_directory", map[string]any{"path": in.Path})
 	})
 
-	mcp.AddTool(server, readOnlyTool("read_file", "Read a text/source file from an exposed local workspace. The local agent enforces path boundaries and size limits."), func(ctx context.Context, req *mcp.CallToolRequest, in ReadFileInput) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(server, t.readOnlyTool("read_file", "Read a text/source file from an exposed local workspace. The local agent enforces path boundaries and size limits."), func(ctx context.Context, req *mcp.CallToolRequest, in ReadFileInput) (*mcp.CallToolResult, any, error) {
 		return t.forward(ctx, in.DeviceID, in.Workspace, "read_file", map[string]any{"path": in.Path, "max_bytes": in.MaxBytes})
 	})
 
-	mcp.AddTool(server, readOnlyTool("find_files", "Find files by filename glob or path substring inside an exposed local workspace."), func(ctx context.Context, req *mcp.CallToolRequest, in FindFilesInput) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(server, t.readOnlyTool("find_files", "Find files by filename glob or path substring inside an exposed local workspace."), func(ctx context.Context, req *mcp.CallToolRequest, in FindFilesInput) (*mcp.CallToolResult, any, error) {
 		return t.forward(ctx, in.DeviceID, in.Workspace, "find_files", map[string]any{"pattern": in.Pattern})
 	})
 
-	mcp.AddTool(server, readOnlyTool("search_code", "Search literal text in local source code. Uses ripgrep when installed and never executes user-provided shell commands."), func(ctx context.Context, req *mcp.CallToolRequest, in SearchCodeInput) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(server, t.readOnlyTool("search_code", "Search literal text in local source code. Uses ripgrep when installed and never executes user-provided shell commands."), func(ctx context.Context, req *mcp.CallToolRequest, in SearchCodeInput) (*mcp.CallToolResult, any, error) {
 		return t.forward(ctx, in.DeviceID, in.Workspace, "search_code", map[string]any{"query": in.Query, "path": in.Path})
 	})
 
-	mcp.AddTool(server, readOnlyTool("git_status", "Return git status for an exposed local workspace."), func(ctx context.Context, req *mcp.CallToolRequest, in WorkspaceInput) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(server, t.readOnlyTool("git_status", "Return git status for an exposed local workspace."), func(ctx context.Context, req *mcp.CallToolRequest, in WorkspaceInput) (*mcp.CallToolResult, any, error) {
 		return t.forward(ctx, in.DeviceID, in.Workspace, "git_status", nil)
 	})
 
-	mcp.AddTool(server, readOnlyTool("git_diff", "Return the unstaged git diff for an exposed local workspace, optionally limited to one workspace-relative path."), func(ctx context.Context, req *mcp.CallToolRequest, in PathInput) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(server, t.readOnlyTool("git_diff", "Return the unstaged git diff for an exposed local workspace, optionally limited to one workspace-relative path."), func(ctx context.Context, req *mcp.CallToolRequest, in PathInput) (*mcp.CallToolResult, any, error) {
 		return t.forward(ctx, in.DeviceID, in.Workspace, "git_diff", map[string]any{"path": in.Path})
 	})
 
-	mcp.AddTool(server, readOnlyTool("project_info", "Detect common project/build markers such as pom.xml, go.mod, package.json and Dockerfile."), func(ctx context.Context, req *mcp.CallToolRequest, in WorkspaceInput) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(server, t.readOnlyTool("project_info", "Detect common project/build markers such as pom.xml, go.mod, package.json and Dockerfile."), func(ctx context.Context, req *mcp.CallToolRequest, in WorkspaceInput) (*mcp.CallToolResult, any, error) {
 		return t.forward(ctx, in.DeviceID, in.Workspace, "project_info", nil)
 	})
 }
