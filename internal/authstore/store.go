@@ -12,15 +12,24 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
 
-const stateVersion = 1
+const stateVersion = 2
+
+// DefaultAccount is the account devices fall back to when no explicit
+// account was configured at enrollment time, and the account that MCP
+// requests run under when OAuth is disabled for local development.
+const DefaultAccount = "default"
+
+const maxAccountIDBytes = 128
 
 type Device struct {
 	ID             string    `json:"id"`
 	Name           string    `json:"name"`
+	AccountID      string    `json:"account_id"`
 	CredentialHash string    `json:"credential_hash"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
@@ -29,12 +38,14 @@ type Device struct {
 type PublicDevice struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
+	AccountID string    `json:"account_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Enrollment struct {
 	Hash      string    `json:"hash"`
+	AccountID string    `json:"account_id"`
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`
 }
@@ -66,8 +77,21 @@ func Open(path string) (*Store, error) {
 	if err := json.Unmarshal(b, &s.state); err != nil {
 		return nil, fmt.Errorf("decode auth state: %w", err)
 	}
-	if s.state.Version != stateVersion {
+	if s.state.Version != 1 && s.state.Version != stateVersion {
 		return nil, fmt.Errorf("unsupported auth state version %d", s.state.Version)
+	}
+	if s.state.Version == 1 {
+		// v1 had no accounts; single-user devices and pending enrollments
+		// migrate to the default account so existing deployments keep working.
+		for id, d := range s.state.Devices {
+			d.AccountID = DefaultAccount
+			s.state.Devices[id] = d
+		}
+		for h, e := range s.state.Enrollments {
+			e.AccountID = DefaultAccount
+			s.state.Enrollments[h] = e
+		}
+		s.state.Version = stateVersion
 	}
 	if s.state.Devices == nil {
 		s.state.Devices = map[string]Device{}
@@ -78,7 +102,11 @@ func Open(path string) (*Store, error) {
 	return s, nil
 }
 
-func (s *Store) CreateEnrollment(ttl time.Duration) (string, time.Time, error) {
+func (s *Store) CreateEnrollment(ttl time.Duration, accountID string) (string, time.Time, error) {
+	accountID = strings.TrimSpace(accountID)
+	if err := validateAccountID(accountID); err != nil {
+		return "", time.Time{}, err
+	}
 	if ttl <= 0 {
 		ttl = 10 * time.Minute
 	}
@@ -96,12 +124,22 @@ func (s *Store) CreateEnrollment(ttl time.Duration) (string, time.Time, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.pruneExpiredLocked(now)
-	s.state.Enrollments[h] = Enrollment{Hash: h, CreatedAt: now, ExpiresAt: expires}
+	s.state.Enrollments[h] = Enrollment{Hash: h, AccountID: accountID, CreatedAt: now, ExpiresAt: expires}
 	if err := s.persistLocked(); err != nil {
 		delete(s.state.Enrollments, h)
 		return "", time.Time{}, err
 	}
 	return secret, expires, nil
+}
+
+func validateAccountID(accountID string) error {
+	if accountID == "" {
+		return errors.New("account_id is required")
+	}
+	if len(accountID) > maxAccountIDBytes {
+		return fmt.Errorf("account_id exceeds %d bytes", maxAccountIDBytes)
+	}
+	return nil
 }
 
 // EnrollDevice consumes an enrollment code exactly once and returns a new
@@ -131,7 +169,7 @@ func (s *Store) EnrollDevice(code, deviceID, deviceName string) (string, error) 
 		return "", err
 	}
 	delete(s.state.Enrollments, codeHash)
-	s.state.Devices[deviceID] = Device{ID: deviceID, Name: deviceName, CredentialHash: digest(credential), CreatedAt: now, UpdatedAt: now}
+	s.state.Devices[deviceID] = Device{ID: deviceID, Name: deviceName, AccountID: entry.AccountID, CredentialHash: digest(credential), CreatedAt: now, UpdatedAt: now}
 	if err := s.persistLocked(); err != nil {
 		delete(s.state.Devices, deviceID)
 		s.state.Enrollments[codeHash] = entry
@@ -215,10 +253,26 @@ func (s *Store) ListDevices() []PublicDevice {
 	defer s.mu.Unlock()
 	out := make([]PublicDevice, 0, len(s.state.Devices))
 	for _, d := range s.state.Devices {
-		out = append(out, PublicDevice{ID: d.ID, Name: d.Name, CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt})
+		out = append(out, PublicDevice{ID: d.ID, Name: d.Name, AccountID: d.AccountID, CreatedAt: d.CreatedAt, UpdatedAt: d.UpdatedAt})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
+}
+
+// DeviceAccount returns the account a device belongs to. The Manager uses it
+// to bind the online registry entry to the persisted tenant and must reject
+// registration when it is unknown.
+func (s *Store) DeviceAccount(deviceID string) (string, bool) {
+	if deviceID == "" {
+		return "", false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d, ok := s.state.Devices[deviceID]
+	if !ok || d.AccountID == "" {
+		return "", false
+	}
+	return d.AccountID, true
 }
 
 func (s *Store) pruneExpiredLocked(now time.Time) {

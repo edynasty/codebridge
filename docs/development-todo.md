@@ -24,17 +24,17 @@ Todo IDs are stable references for implementation, commits, reviews, and test ev
 
 ### MGR-001 Tenant/account scoping
 
-- [ ] Define `account_id`/tenant ownership model.
-- [ ] Bind OAuth subject/account to device visibility.
-- [ ] Add tenant/account key to persistent device records.
-- [ ] Scope Registry lookups by account.
-- [ ] Scope MCP `list_devices`, `list_workspaces`, and every device Tool call by account.
-- [ ] Scope Admin operations appropriately.
-- [ ] Add cross-tenant negative tests for every lookup path.
-- [ ] Migrate existing single-user state safely.
-- [ ] Update architecture, OAuth, admin, and deployment docs.
+- [x] Define `account_id`/tenant ownership model.
+- [x] Bind OAuth subject/account to device visibility.
+- [x] Add tenant/account key to persistent device records.
+- [x] Scope Registry lookups by account.
+- [x] Scope MCP `list_devices`, `list_workspaces`, and every device Tool call by account.
+- [x] Scope Admin operations appropriately.
+- [x] Add cross-tenant negative tests for every lookup path.
+- [x] Migrate existing single-user state safely.
+- [x] Update architecture, OAuth, admin, and deployment docs.
 
-**Done when:** an authenticated subject cannot discover or call another account's device even when it knows the device ID.
+**Done when:** an authenticated subject cannot discover or call another account's device even when it knows the device ID. *(Verified by `TestOAuthAccountScopingCrossTenant` in `cmd/client/mcp_account_scoping_test.go`.)*
 
 ### SEC-001 Filesystem security regression matrix
 

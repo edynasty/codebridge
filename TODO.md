@@ -27,7 +27,7 @@ Engineering quality/CI/security delivery backlog: [docs/development-todo.md](doc
 - [x] Add official MCP SDK Streamable HTTP integration coverage for tool discovery and invocation.
 - [x] Add OAuth JWT → MCP → Manager → WebSocket Client end-to-end integration coverage, including OAuth subject audit metadata.
 - [x] Block common sensitive workspace content by default across read/search/discovery/git status/git diff, with explicit local opt-in.
-- [ ] Add tenant/account scoping to every Manager lookup.
+- [x] Add tenant/account scoping to every Manager lookup.
 - [ ] Run an external-provider OAuth + interactive ChatGPT linking flow against a current RFC 8707-compatible provider.
 
 ## P1 - coding intelligence

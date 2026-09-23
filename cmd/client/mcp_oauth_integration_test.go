@@ -64,7 +64,7 @@ func TestOAuthMCPToRealClientReadFileEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	enrollmentCode, _, err := authStore.CreateEnrollment(time.Minute)
+	enrollmentCode, _, err := authStore.CreateEnrollment(time.Minute, "integration-user")
 	if err != nil {
 		t.Fatal(err)
 	}

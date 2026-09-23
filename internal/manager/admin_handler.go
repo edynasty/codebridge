@@ -19,8 +19,11 @@ type AdminHandler struct {
 	Audit      *auditlog.Logger
 }
 
+const maxAdminAccountIDBytes = 128
+
 type createEnrollmentRequest struct {
-	TTLSeconds int `json:"ttl_seconds,omitempty"`
+	TTLSeconds int    `json:"ttl_seconds,omitempty"`
+	AccountID  string `json:"account_id,omitempty"`
 }
 
 func (h *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +61,16 @@ func (h *AdminHandler) createEnrollment(w http.ResponseWriter, r *http.Request) 
 	if in.TTLSeconds > 0 {
 		ttl = time.Duration(in.TTLSeconds) * time.Second
 	}
-	code, expires, err := h.Auth.CreateEnrollment(ttl)
+	account := strings.TrimSpace(in.AccountID)
+	if account == "" {
+		account = authstore.DefaultAccount
+	}
+	if len(account) > maxAdminAccountIDBytes {
+		_ = h.Audit.Log(auditlog.Event{Event: "admin.enrollment.create", RequestID: requestID, ActorID: "admin", Success: auditlog.Bool(false), DurationMS: time.Since(start).Milliseconds(), ErrorKind: "invalid_request"})
+		writeJSONError(w, http.StatusBadRequest, "account_id exceeds 128 bytes")
+		return
+	}
+	code, expires, err := h.Auth.CreateEnrollment(ttl, account)
 	if err != nil {
 		_ = h.Audit.Log(auditlog.Event{Event: "admin.enrollment.create", RequestID: requestID, ActorID: "admin", Success: auditlog.Bool(false), DurationMS: time.Since(start).Milliseconds(), ErrorKind: "store_error"})
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
@@ -85,6 +97,7 @@ func (h *AdminHandler) listDevices(w http.ResponseWriter) {
 		out = append(out, map[string]any{
 			"id":         d.ID,
 			"name":       d.Name,
+			"account_id": d.AccountID,
 			"created_at": d.CreatedAt,
 			"updated_at": d.UpdatedAt,
 			"online":     online[d.ID],

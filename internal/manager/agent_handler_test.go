@@ -60,7 +60,7 @@ func TestAgentHandlerExpiresMissingHeartbeat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	code, _, err := store.CreateEnrollment(time.Minute)
+	code, _, err := store.CreateEnrollment(time.Minute, authstore.DefaultAccount)
 	if err != nil {
 		t.Fatal(err)
 	}

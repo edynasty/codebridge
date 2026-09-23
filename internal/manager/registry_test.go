@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -44,6 +45,59 @@ func TestRegistryDisconnectFailsPendingCalls(t *testing.T) {
 	}
 
 	assertPendingFailure(t, wait, "agent disconnected")
+}
+
+func TestRegistryListAccountScopesDevices(t *testing.T) {
+	registry := NewRegistry(2)
+	registry.Put(Device{ID: "dev-a", AccountID: "account-a"}, nil)
+	registry.Put(Device{ID: "dev-b", AccountID: "account-b"}, nil)
+
+	scoped := registry.ListAccount("account-a")
+	if len(scoped) != 1 || scoped[0].ID != "dev-a" {
+		t.Fatalf("ListAccount leaked or missed devices: %#v", scoped)
+	}
+	if all := registry.List(); len(all) != 2 {
+		t.Fatalf("admin List should see all devices: %#v", all)
+	}
+}
+
+func TestRegistryWorkspacesAccountScope(t *testing.T) {
+	registry := NewRegistry(2)
+	registry.Put(Device{ID: "dev-a", AccountID: "account-a", Workspaces: []protocol.Workspace{{Name: "demo"}}}, nil)
+
+	if _, err := registry.Workspaces("account-b", "dev-a"); err == nil {
+		t.Fatal("cross-account Workspaces call succeeded")
+	}
+	ws, err := registry.Workspaces("account-a", "dev-a")
+	if err != nil {
+		t.Fatalf("same-account Workspaces call failed: %v", err)
+	}
+	if len(ws) != 1 || ws[0].Name != "demo" {
+		t.Fatalf("unexpected workspaces: %#v", ws)
+	}
+}
+
+func TestRegistryCallRejectsWrongAccountLikeUnknownDevice(t *testing.T) {
+	registry := NewRegistry(2)
+	registry.Put(Device{ID: "dev-a", AccountID: "account-a"}, nil)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	wrongAccount, err := registry.Call(ctx, "account-b", "dev-a", protocol.AgentRequest{})
+	if wrongAccount != nil || err == nil {
+		t.Fatalf("cross-account Call succeeded: %v", err)
+	}
+	unknown, err := registry.Call(ctx, "account-b", "missing-device", protocol.AgentRequest{})
+	if unknown != nil || err == nil {
+		t.Fatalf("unknown-device Call succeeded: %v", err)
+	}
+	if err.Error() != unknownError("missing-device") {
+		t.Fatalf("cross-account and unknown-device errors differ: %q vs %q", err.Error(), unknownError("missing-device"))
+	}
+}
+
+func unknownError(deviceID string) string {
+	return "device \"" + deviceID + "\" is offline or unknown"
 }
 
 func addPendingForTest(conn *AgentConn, id string) <-chan protocol.AgentResponse {

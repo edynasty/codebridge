@@ -39,6 +39,7 @@ ChatGPT Web / MCP client
 - Runtime safety limits bound MCP request size/concurrency, per-device in-flight calls, WebSocket messages, directory listings, and agent response payloads.
 - Every MCP/admin/agent request gets a Manager-generated request ID, and security-relevant actions emit structured metadata-only JSONL audit events.
 - MCP user access supports OAuth 2.1 with an external IdP: RFC 9728 protected-resource metadata, JWT signature/issuer/audience/expiry/subject/scope validation, optional subject allowlisting, and OAuth security metadata on each tool.
+- Every device belongs to an account. MCP callers only see and call devices in their own account; wrong-account device IDs behave like unknown ones. See [docs/oauth.md](docs/oauth.md#accounts-and-device-visibility).
 - CodeBridge deliberately does not implement passwords, login pages, authorization-code issuance, or refresh-token storage; use an established authorization server.
 
 ## MCP tools
@@ -140,7 +141,7 @@ Example response:
 }
 ```
 
-The enrollment code is single-use and expires automatically.
+The enrollment code is single-use and expires automatically. The enrolled device joins the `default` account unless you pass an explicit `"account_id"` (typically your OAuth subject for a personal deployment, or a shared account name for a team).
 
 ### 3. Start a Local Agent once with the enrollment code
 
@@ -167,6 +168,8 @@ with file mode `0600`. Remove `CODEBRIDGE_ENROLL_CODE`; future reconnects use th
 curl -sS http://127.0.0.1:8080/admin/devices \
   -H 'Authorization: Bearer replace-with-a-long-random-admin-token'
 ```
+
+Each entry includes the device's `account_id` and online state. The admin API is deployment-wide by design; MCP callers only ever see their own account's devices.
 
 ### Rotate a device credential
 
@@ -198,6 +201,10 @@ export CODEBRIDGE_OAUTH_RESOURCE='https://codebridge.example.com'
 export CODEBRIDGE_OAUTH_SCOPE='codebridge.read'
 # Recommended for a private/personal deployment after you know your IdP subject:
 export CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS='your-oauth-subject'
+# Optional: bind subjects to a shared account. Unmapped subjects are their own
+# account, so enroll devices with account_id=<subject> (or map subjects to the
+# account your devices use, e.g. "default" for migrated single-user state).
+# export CODEBRIDGE_OAUTH_ACCOUNT_MAP='your-oauth-subject=default'
 ```
 
 The authorization server must issue JWT access tokens with the exact issuer, the configured resource in `aud`, a non-empty `sub`, a valid expiration, and the required scope. When `CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS` is set, only those exact subjects are accepted. It must also support the MCP/ChatGPT OAuth flow (authorization code + PKCE S256 and a compatible client registration/identification method).
@@ -296,11 +303,10 @@ The remaining OAuth gap is an external-provider/UI smoke test against a provider
 
 ## Production hardening roadmap
 
-1. PostgreSQL account/device registry for multi-tenant deployment.
-2. Tenant isolation (`account_id` on every device and request).
+1. PostgreSQL account/device registry for large multi-tenant deployment (account scoping itself is implemented on the JSON state file).
+2. Run an external-provider OAuth flow and interactive ChatGPT linking test against a current RFC 8707-compatible provider.
 3. Per-tool and per-workspace policy.
-4. Run an external-provider OAuth flow and interactive ChatGPT linking test against a current RFC 8707-compatible provider.
-5. Optional LSP / tree-sitter / code graph tools without arbitrary shell access.
+4. Optional LSP / tree-sitter / code graph tools without arbitrary shell access.
 
 ## Non-goals for v0.3
 

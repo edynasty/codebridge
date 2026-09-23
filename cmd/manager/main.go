@@ -65,9 +65,20 @@ func main() {
 	maxAgentConnections := envInt("CODEBRIDGE_MAX_AGENT_CONNECTIONS", 32, 1, 512)
 
 	registry := mgr.NewRegistry(maxDeviceInflight)
-	toolService := &mgr.ToolService{Registry: registry, Audit: audit}
+	accountMap, err := parseAccountMap(os.Getenv("CODEBRIDGE_OAUTH_ACCOUNT_MAP"))
+	if err != nil {
+		log.Fatalf("CODEBRIDGE_OAUTH_ACCOUNT_MAP: %v", err)
+	}
+	toolService := &mgr.ToolService{
+		Registry: registry,
+		Accounts: &mgr.AccountResolver{Map: accountMap},
+		Audit:    audit,
+	}
 	if oauthCfg != nil {
 		toolService.OAuthScopes = []string{oauthCfg.Scope}
+		if len(accountMap) > 0 {
+			log.Printf("OAuth subject account map: %d subject(s) bound to shared accounts; all other subjects are their own account", len(accountMap))
+		}
 	}
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "CodeBridge", Version: version}, nil)
 	toolService.Register(mcpServer)
@@ -188,6 +199,43 @@ func loadOAuthConfig() (*oauthConfig, error) {
 		Scope:           scope,
 		AllowedSubjects: allowedSubjects,
 	}, nil
+}
+
+func parseAccountMap(raw string) (map[string]string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	out := map[string]string{}
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		subject, account, found := strings.Cut(part, "=")
+		subject = strings.TrimSpace(subject)
+		account = strings.TrimSpace(account)
+		if !found || subject == "" || account == "" {
+			return nil, fmt.Errorf("entries must look like subject=account, got %q", part)
+		}
+		if strings.Contains(account, "=") {
+			return nil, fmt.Errorf("account must not contain '=' in entry %q", part)
+		}
+		if len(subject) > 256 {
+			return nil, fmt.Errorf("subject exceeds 256 bytes in entry %q", part)
+		}
+		if len(account) > 128 {
+			return nil, fmt.Errorf("account exceeds 128 bytes in entry %q", part)
+		}
+		if _, exists := out[subject]; exists {
+			return nil, fmt.Errorf("duplicate subject %q", subject)
+		}
+		out[subject] = account
+		if len(out) > 100 {
+			return nil, errors.New("too many entries; maximum is 100")
+		}
+	}
+	return out, nil
 }
 
 func parseCSVValues(raw string, maxItems, maxLen int) ([]string, error) {

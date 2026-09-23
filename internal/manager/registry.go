@@ -16,6 +16,7 @@ import (
 type Device struct {
 	ID          string               `json:"id"`
 	Name        string               `json:"name"`
+	AccountID   string               `json:"account_id"`
 	Version     string               `json:"version"`
 	Online      bool                 `json:"online"`
 	ConnectedAt time.Time            `json:"connected_at"`
@@ -102,6 +103,23 @@ func (r *Registry) List() []Device {
 	return out
 }
 
+// ListAccount returns only devices that belong to the given account. It backs
+// the MCP list_devices tool; admin surfaces use List for deployment-wide state.
+func (r *Registry) ListAccount(account string) []Device {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]Device, 0, len(r.devices))
+	for _, c := range r.devices {
+		if c.device.AccountID != account {
+			continue
+		}
+		d := c.device
+		d.Online = true
+		out = append(out, d)
+	}
+	return out
+}
+
 func (r *Registry) Get(id string) (*AgentConn, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -123,17 +141,23 @@ func (r *Registry) Disconnect(id string) bool {
 	return true
 }
 
-func (r *Registry) Workspaces(id string) ([]protocol.Workspace, error) {
-	c, ok := r.Get(id)
-	if !ok {
+func (r *Registry) Workspaces(account, id string) ([]protocol.Workspace, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	c, ok := r.devices[id]
+	if !ok || c.device.AccountID != account {
 		return nil, fmt.Errorf("device %q is offline or unknown", id)
 	}
 	return append([]protocol.Workspace(nil), c.device.Workspaces...), nil
 }
 
-func (r *Registry) Call(ctx context.Context, deviceID string, req protocol.AgentRequest) (json.RawMessage, error) {
-	conn, ok := r.Get(deviceID)
-	if !ok {
+func (r *Registry) Call(ctx context.Context, account, deviceID string, req protocol.AgentRequest) (json.RawMessage, error) {
+	r.mu.RLock()
+	conn, ok := r.devices[deviceID]
+	r.mu.RUnlock()
+	// Wrong-account lookups intentionally return the same error as unknown
+	// devices so callers cannot probe device IDs across accounts.
+	if !ok || conn.device.AccountID != account {
 		return nil, fmt.Errorf("device %q is offline or unknown", deviceID)
 	}
 

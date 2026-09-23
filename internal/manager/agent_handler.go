@@ -81,12 +81,19 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		issuedCredential = credential
 		_ = h.Audit.Log(auditlog.Event{Event: "device.enroll", RequestID: requestID, DeviceID: reg.DeviceID, Success: auditlog.Bool(true)})
 	}
+	// The tenant account always comes from persisted device state, never from
+	// agent-supplied input, so a device cannot relabel itself into another account.
+	account, ok := h.Auth.DeviceAccount(reg.DeviceID)
+	if !ok {
+		_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: false, Message: "device account binding not found"})})
+		return
+	}
 
 	// Authenticated agent responses are bounded separately below.
 	ws.SetReadLimit(maxAgentPayloadBytes + 64*1024)
 
 	now := time.Now().UTC()
-	conn := h.Registry.Put(Device{ID: reg.DeviceID, Name: reg.DeviceName, Version: reg.Version, Online: true, ConnectedAt: now, LastSeen: now, Workspaces: reg.Workspaces}, ws)
+	conn := h.Registry.Put(Device{ID: reg.DeviceID, Name: reg.DeviceName, AccountID: account, Version: reg.Version, Online: true, ConnectedAt: now, LastSeen: now, Workspaces: reg.Workspaces}, ws)
 	defer h.Registry.Remove(reg.DeviceID, conn)
 	_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: true, DeviceCredential: issuedCredential})})
 	heartbeatTimeout := h.HeartbeatTimeout

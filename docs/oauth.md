@@ -67,6 +67,29 @@ CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS=auth0|abc123
 
 Do not use email addresses unless your IdP intentionally uses a stable email as `sub`; normally the opaque immutable subject identifier is safer.
 
+### `CODEBRIDGE_OAUTH_ACCOUNT_MAP`
+
+Optional comma-separated binding of OAuth subjects to shared accounts, formatted as `subject=account`:
+
+```env
+CODEBRIDGE_OAUTH_ACCOUNT_MAP=auth0|abc123=team-a,auth0|def456=team-a
+```
+
+Subjects not listed in the map resolve to their own account (the subject string itself), which is the fail-closed default: no subject can reach another tenant's devices unless an operator explicitly maps it. Subjects mapped to the same account share visibility of that account's devices.
+
+Devices join an account at enrollment time via the admin `account_id` field; for a personal deployment, create enrollment codes with `account_id` equal to your OAuth subject (or map your subject to the `default` account where pre-existing devices live).
+
+## Accounts and device visibility
+
+Every MCP tool call is scoped to the caller's account:
+
+1. the verified token `sub` identifies the subject;
+2. `CODEBRIDGE_OAUTH_ACCOUNT_MAP` (if configured) resolves the subject to an account; unmapped subjects are their own account;
+3. `list_devices`, `list_workspaces`, and every device tool call only match devices enrolled in that account;
+4. wrong-account device IDs return the same error as unknown device IDs, so account membership cannot be probed.
+
+When OAuth is disabled (local development), all MCP requests run under the `default` account, and enrollment codes without an explicit `account_id` enroll devices into that same account — so a no-OAuth local setup behaves as a single tenant.
+
 ## Protected resource metadata
 
 With OAuth enabled:

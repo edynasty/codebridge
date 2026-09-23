@@ -17,6 +17,7 @@ const requestIDHeader = "X-CodeBridge-Request-ID"
 
 type ToolService struct {
 	Registry    *Registry
+	Accounts    *AccountResolver
 	OAuthScopes []string
 	Audit       *auditlog.Logger
 }
@@ -89,14 +90,16 @@ func textResult(v any) (*mcp.CallToolResult, any, error) {
 
 func (t *ToolService) Register(server *mcp.Server) {
 	mcp.AddTool(server, t.readOnlyTool("list_devices", "List local CodeBridge devices currently connected to this manager."), func(ctx context.Context, req *mcp.CallToolRequest, in struct{}) (*mcp.CallToolResult, any, error) {
+		account := t.accountFor(req)
 		return t.invoke(req, "list_devices", "", "", func() (*mcp.CallToolResult, any, error) {
-			return textResult(t.Registry.List())
+			return textResult(t.Registry.ListAccount(account))
 		})
 	})
 
 	mcp.AddTool(server, t.readOnlyTool("list_workspaces", "List source-code workspaces exposed by one connected device."), func(ctx context.Context, req *mcp.CallToolRequest, in DeviceInput) (*mcp.CallToolResult, any, error) {
+		account := t.accountFor(req)
 		return t.invoke(req, "list_workspaces", in.DeviceID, "", func() (*mcp.CallToolResult, any, error) {
-			v, err := t.Registry.Workspaces(in.DeviceID)
+			v, err := t.Registry.Workspaces(account, in.DeviceID)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -105,44 +108,51 @@ func (t *ToolService) Register(server *mcp.Server) {
 	})
 
 	mcp.AddTool(server, t.readOnlyTool("list_directory", "List files and directories inside an exposed local workspace. Paths are workspace-relative."), func(ctx context.Context, req *mcp.CallToolRequest, in PathInput) (*mcp.CallToolResult, any, error) {
+		account := t.accountFor(req)
 		return t.invoke(req, "list_directory", in.DeviceID, in.Workspace, func() (*mcp.CallToolResult, any, error) {
-			return t.forward(ctx, in.DeviceID, in.Workspace, "list_directory", map[string]any{"path": in.Path})
+			return t.forward(ctx, account, in.DeviceID, in.Workspace, "list_directory", map[string]any{"path": in.Path})
 		})
 	})
 
 	mcp.AddTool(server, t.readOnlyTool("read_file", "Read a text/source file from an exposed local workspace. The local agent enforces path boundaries and size limits."), func(ctx context.Context, req *mcp.CallToolRequest, in ReadFileInput) (*mcp.CallToolResult, any, error) {
+		account := t.accountFor(req)
 		return t.invoke(req, "read_file", in.DeviceID, in.Workspace, func() (*mcp.CallToolResult, any, error) {
-			return t.forward(ctx, in.DeviceID, in.Workspace, "read_file", map[string]any{"path": in.Path, "max_bytes": in.MaxBytes})
+			return t.forward(ctx, account, in.DeviceID, in.Workspace, "read_file", map[string]any{"path": in.Path, "max_bytes": in.MaxBytes})
 		})
 	})
 
 	mcp.AddTool(server, t.readOnlyTool("find_files", "Find files by filename glob or path substring inside an exposed local workspace."), func(ctx context.Context, req *mcp.CallToolRequest, in FindFilesInput) (*mcp.CallToolResult, any, error) {
+		account := t.accountFor(req)
 		return t.invoke(req, "find_files", in.DeviceID, in.Workspace, func() (*mcp.CallToolResult, any, error) {
-			return t.forward(ctx, in.DeviceID, in.Workspace, "find_files", map[string]any{"pattern": in.Pattern})
+			return t.forward(ctx, account, in.DeviceID, in.Workspace, "find_files", map[string]any{"pattern": in.Pattern})
 		})
 	})
 
 	mcp.AddTool(server, t.readOnlyTool("search_code", "Search literal text in local source code. Uses ripgrep when installed and never executes user-provided shell commands."), func(ctx context.Context, req *mcp.CallToolRequest, in SearchCodeInput) (*mcp.CallToolResult, any, error) {
+		account := t.accountFor(req)
 		return t.invoke(req, "search_code", in.DeviceID, in.Workspace, func() (*mcp.CallToolResult, any, error) {
-			return t.forward(ctx, in.DeviceID, in.Workspace, "search_code", map[string]any{"query": in.Query, "path": in.Path})
+			return t.forward(ctx, account, in.DeviceID, in.Workspace, "search_code", map[string]any{"query": in.Query, "path": in.Path})
 		})
 	})
 
 	mcp.AddTool(server, t.readOnlyTool("git_status", "Return git status for an exposed local workspace."), func(ctx context.Context, req *mcp.CallToolRequest, in WorkspaceInput) (*mcp.CallToolResult, any, error) {
+		account := t.accountFor(req)
 		return t.invoke(req, "git_status", in.DeviceID, in.Workspace, func() (*mcp.CallToolResult, any, error) {
-			return t.forward(ctx, in.DeviceID, in.Workspace, "git_status", nil)
+			return t.forward(ctx, account, in.DeviceID, in.Workspace, "git_status", nil)
 		})
 	})
 
 	mcp.AddTool(server, t.readOnlyTool("git_diff", "Return the unstaged git diff for an exposed local workspace, optionally limited to one workspace-relative path."), func(ctx context.Context, req *mcp.CallToolRequest, in PathInput) (*mcp.CallToolResult, any, error) {
+		account := t.accountFor(req)
 		return t.invoke(req, "git_diff", in.DeviceID, in.Workspace, func() (*mcp.CallToolResult, any, error) {
-			return t.forward(ctx, in.DeviceID, in.Workspace, "git_diff", map[string]any{"path": in.Path})
+			return t.forward(ctx, account, in.DeviceID, in.Workspace, "git_diff", map[string]any{"path": in.Path})
 		})
 	})
 
 	mcp.AddTool(server, t.readOnlyTool("project_info", "Detect common project/build markers such as pom.xml, go.mod, package.json and Dockerfile."), func(ctx context.Context, req *mcp.CallToolRequest, in WorkspaceInput) (*mcp.CallToolResult, any, error) {
+		account := t.accountFor(req)
 		return t.invoke(req, "project_info", in.DeviceID, in.Workspace, func() (*mcp.CallToolResult, any, error) {
-			return t.forward(ctx, in.DeviceID, in.Workspace, "project_info", nil)
+			return t.forward(ctx, account, in.DeviceID, in.Workspace, "project_info", nil)
 		})
 	})
 }
@@ -195,11 +205,11 @@ func auditErrorKind(err error) string {
 	}
 }
 
-func (t *ToolService) forward(ctx context.Context, deviceID, workspace, tool string, args map[string]any) (*mcp.CallToolResult, any, error) {
+func (t *ToolService) forward(ctx context.Context, account, deviceID, workspace, tool string, args map[string]any) (*mcp.CallToolResult, any, error) {
 	if deviceID == "" || workspace == "" {
 		return nil, nil, fmt.Errorf("device_id and workspace are required")
 	}
-	raw, err := t.Registry.Call(ctx, deviceID, protocolRequest(tool, workspace, args))
+	raw, err := t.Registry.Call(ctx, account, deviceID, protocolRequest(tool, workspace, args))
 	if err != nil {
 		return nil, nil, err
 	}

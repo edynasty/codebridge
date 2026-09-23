@@ -96,6 +96,10 @@ ssh -L 18080:127.0.0.1:8080 user@codebridge-server
 
 Then access `http://127.0.0.1:18080/admin/...` locally.
 
+## Multi-account deployments
+
+Devices are grouped into accounts for MCP visibility (see [oauth.md](oauth.md#accounts-and-device-visibility)). The admin bearer token is a deployment-wide operator credential: it can create enrollment codes for any account, rotate and revoke any device, and list all devices with their `account_id`. Keep `/admin` loopback-bound and keep the admin token out of any account owner's hands — account isolation applies to MCP callers, not to the deployment operator.
+
 ## Local agents
 
 Local clients connect outbound through the same public domain:

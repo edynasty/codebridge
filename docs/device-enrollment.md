@@ -6,7 +6,7 @@
 curl -sS -X POST https://codebridge.example.com/admin/enrollments \
   -H "Authorization: Bearer $CODEBRIDGE_ADMIN_TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{"ttl_seconds":600}'
+  -d '{"ttl_seconds":600,"account_id":"your-oauth-subject"}'
 ```
 
 Enrollment codes:
@@ -14,7 +14,16 @@ Enrollment codes:
 - are random 256-bit values;
 - are stored only as SHA-256 digests by the Manager;
 - expire automatically;
-- can be consumed exactly once.
+- can be consumed exactly once;
+- carry the `account_id` (1-128 bytes) that the enrolled device will belong to; when omitted, the device joins the `default` account.
+
+## Accounts and device visibility
+
+Every device belongs to exactly one account. An MCP caller authenticated through OAuth only sees and can only call devices in their own account; a wrong-account device ID behaves exactly like an unknown device ID, so accounts cannot be probed. See [oauth.md](oauth.md#accounts-and-device-visibility) for how subjects map to accounts.
+
+Device IDs are unique per Manager: a device ID that is already enrolled cannot be enrolled into another account. Revoke it first if the ID must be reused.
+
+The admin API is deployment-wide by design (loopback-bound, bearer-token protected): `GET /admin/devices` lists every device with its `account_id`, and revocation/rotation work across accounts.
 
 ## Enroll a client
 

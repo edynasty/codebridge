@@ -1,6 +1,52 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+func TestParseAccountMap(t *testing.T) {
+	m, err := parseAccountMap(" user-a=team-a ,user-b=team-a,user-c = team-c ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m) != 3 || m["user-a"] != "team-a" || m["user-b"] != "team-a" || m["user-c"] != "team-c" {
+		t.Fatalf("unexpected account map: %#v", m)
+	}
+}
+
+func TestParseAccountMapEmpty(t *testing.T) {
+	for _, raw := range []string{"", "   ", " , , "} {
+		m, err := parseAccountMap(raw)
+		if err != nil {
+			t.Fatalf("parse %q: %v", raw, err)
+		}
+		if len(m) != 0 {
+			t.Fatalf("expected empty map for %q: %#v", raw, m)
+		}
+	}
+}
+
+func TestParseAccountMapRejectsMalformedEntries(t *testing.T) {
+	for _, raw := range []string{
+		"user-a",
+		"user-a=",
+		"=team-a",
+		"user-a=team-a=extra",
+		"user-a=" + strings.Repeat("x", 129),
+		strings.Repeat("x", 257) + "=team-a",
+	} {
+		if _, err := parseAccountMap(raw); err == nil {
+			t.Fatalf("malformed account map accepted: %q", raw)
+		}
+	}
+}
+
+func TestParseAccountMapRejectsDuplicateSubjects(t *testing.T) {
+	if _, err := parseAccountMap("user-a=team-a,user-a=team-b"); err == nil {
+		t.Fatal("duplicate subject accepted")
+	}
+}
 
 func TestLoadOAuthConfigDisabled(t *testing.T) {
 	t.Setenv("CODEBRIDGE_PUBLIC_URL", "")

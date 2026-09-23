@@ -28,7 +28,7 @@ func TestManagerClientEnrollmentToolCallAndCredentialReconnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	enrollmentCode, _, err := store.CreateEnrollment(5 * time.Minute)
+	enrollmentCode, _, err := store.CreateEnrollment(5*time.Minute, authstore.DefaultAccount)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestManagerClientEnrollmentToolCallAndCredentialReconnect(t *testing.T) {
 	}
 
 	callCtx, callCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	raw, err := registry.Call(callCtx, "test-device", protocol.AgentRequest{
+	raw, err := registry.Call(callCtx, authstore.DefaultAccount, "test-device", protocol.AgentRequest{
 		Tool:      "read_file",
 		Workspace: "demo",
 		Args:      map[string]any{"path": "hello.txt"},
@@ -125,7 +125,7 @@ func TestManagerClientEnrollmentToolCallAndCredentialReconnect(t *testing.T) {
 	}
 
 	callCtx, callCancel = context.WithTimeout(context.Background(), 3*time.Second)
-	raw, err = registry.Call(callCtx, "test-device", protocol.AgentRequest{
+	raw, err = registry.Call(callCtx, authstore.DefaultAccount, "test-device", protocol.AgentRequest{
 		Tool:      "project_info",
 		Workspace: "demo",
 	})
