@@ -196,7 +196,7 @@ GET /.well-known/oauth-protected-resource
 POST /mcp   Authorization: Bearer <access-token>
 ```
 
-See [docs/oauth.md](docs/oauth.md), [docs/chatgpt-web.md](docs/chatgpt-web.md), [docs/deployment.md](docs/deployment.md), and [docs/audit.md](docs/audit.md).
+See [docs/oauth.md](docs/oauth.md), [docs/oauth-providers.md](docs/oauth-providers.md), [docs/chatgpt-web.md](docs/chatgpt-web.md), [docs/deployment.md](docs/deployment.md), and [docs/audit.md](docs/audit.md).
 
 ## Inspect MCP locally
 
@@ -264,14 +264,14 @@ CI now exercises three real protocol layers:
 - official MCP Go SDK Streamable HTTP discovery and tool invocation;
 - signed JWT/JWKS OAuth authentication through `/mcp`, then `read_file` across Manager → WebSocket Client → local workspace, including OAuth `sub` propagation into metadata-only audit records.
 
-The remaining OAuth gap is an external-provider/UI smoke test against a real Auth0/Keycloak/Authentik tenant and ChatGPT linking flow.
+The remaining OAuth gap is an external-provider/UI smoke test against a provider that implements the current MCP requirements, plus the interactive ChatGPT linking flow. The provider compatibility guide currently uses WorkOS AuthKit as the reference path because its documentation explicitly covers RFC 8707 Resource Indicators; Keycloak 26.7.x is not treated as fully compatible because its own MCP guide says Resource Indicators are not supported.
 
 ## Production hardening roadmap
 
 1. PostgreSQL account/device registry for multi-tenant deployment.
 2. Tenant isolation (`account_id` on every device and request).
 3. Per-tool and per-workspace policy.
-4. Run MCP Inspector OAuth flow against a real Auth0/Keycloak/Authentik tenant.
+4. Run an external-provider OAuth flow and interactive ChatGPT linking test against a current RFC 8707-compatible provider.
 5. Optional LSP / tree-sitter / code graph tools without arbitrary shell access.
 
 ## Non-goals for v0.3
