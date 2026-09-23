@@ -1,0 +1,6 @@
+.env
+bin/
+.DS_Store
+.idea/
+.vscode/
+*.log

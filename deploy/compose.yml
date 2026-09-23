@@ -1,0 +1,12 @@
+services:
+  manager:
+    build:
+      context: ..
+      dockerfile: Dockerfile.manager
+    restart: unless-stopped
+    environment:
+      CODEBRIDGE_ADDR: ":8080"
+      CODEBRIDGE_ENROLL_TOKEN: "${CODEBRIDGE_ENROLL_TOKEN}"
+      CODEBRIDGE_MCP_TOKEN: "${CODEBRIDGE_MCP_TOKEN:-}"
+    ports:
+      - "8080:8080"
