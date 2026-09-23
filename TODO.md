@@ -16,11 +16,13 @@
 - [x] Add non-secret local Client JSON config and launchd/systemd user-service examples.
 - [x] Add metadata-only deployment doctor for public OAuth/Admin/device checks.
 - [x] Add authenticated Doctor smoke using a real external IdP access token without source-content reads.
+- [x] Validate authorization-server metadata, PKCE S256, authorization-code support, and advertised scope compatibility in Doctor.
+- [x] Document verified OAuth provider compatibility and a current RFC 8707-capable reference setup.
 - [x] Add real Manager↔Client WebSocket integration test covering enrollment, tool execution, one-time codes, and credential reconnect.
 - [x] Add official MCP SDK Streamable HTTP integration coverage for tool discovery and invocation.
 - [x] Add OAuth JWT → MCP → Manager → WebSocket Client end-to-end integration coverage, including OAuth subject audit metadata.
 - [ ] Add tenant/account scoping to every Manager lookup.
-- [ ] Run MCP Inspector OAuth flow against a real Auth0/Keycloak/Authentik tenant.
+- [ ] Run an external-provider OAuth + interactive ChatGPT linking flow against a current RFC 8707-compatible provider.
 
 ## P1 - coding intelligence
 
