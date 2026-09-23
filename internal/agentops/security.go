@@ -1,7 +1,9 @@
 package agentops
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,14 +12,18 @@ import (
 // ResolveUnderRoot resolves a workspace-relative path and rejects lexical or
 // symlink-based escapes. Existing targets are evaluated through symlinks before
 // the final containment check.
+//
+// Errors returned from this function intentionally never include the physical
+// workspace root. The caller-facing security boundary is the logical workspace
+// name plus workspace-relative paths.
 func ResolveUnderRoot(root, rel string) (string, error) {
 	rootAbs, err := filepath.Abs(root)
 	if err != nil {
-		return "", err
+		return "", errors.New("resolve workspace root failed")
 	}
 	rootReal, err := filepath.EvalSymlinks(rootAbs)
 	if err != nil {
-		return "", fmt.Errorf("resolve workspace root: %w", err)
+		return "", errors.New("workspace root is unavailable")
 	}
 
 	if rel == "" || rel == "." {
@@ -34,13 +40,13 @@ func ResolveUnderRoot(root, rel string) (string, error) {
 	joined := filepath.Join(rootReal, clean)
 	joinedAbs, err := filepath.Abs(joined)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("resolve path %q failed", logicalPath(rel))
 	}
 	candidate := joinedAbs
 	if _, statErr := os.Lstat(joinedAbs); statErr == nil {
 		real, evalErr := filepath.EvalSymlinks(joinedAbs)
 		if evalErr != nil {
-			return "", evalErr
+			return "", safePathError("resolve path", rel, evalErr)
 		}
 		candidate = real
 	}
@@ -56,4 +62,36 @@ func contained(root, target string) bool {
 		return false
 	}
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+func safePathError(action, rel string, err error) error {
+	path := logicalPath(rel)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return fmt.Errorf("%s %q: not found", action, path)
+	case errors.Is(err, fs.ErrPermission):
+		return fmt.Errorf("%s %q: permission denied", action, path)
+	default:
+		return fmt.Errorf("%s %q failed", action, path)
+	}
+}
+
+func logicalPath(rel string) string {
+	rel = strings.TrimSpace(rel)
+	if rel == "" {
+		return "."
+	}
+	clean := filepath.Clean(rel)
+	if clean == "." {
+		return "."
+	}
+	return filepath.ToSlash(clean)
+}
+
+func logicalChildPath(dir, name string) string {
+	dir = logicalPath(dir)
+	if dir == "." {
+		return filepath.ToSlash(name)
+	}
+	return filepath.ToSlash(filepath.Join(dir, name))
 }

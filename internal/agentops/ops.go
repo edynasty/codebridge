@@ -92,7 +92,7 @@ func (s *Service) listDirectory(root, rel string) ([]DirEntry, error) {
 	}
 	entries, err := os.ReadDir(p)
 	if err != nil {
-		return nil, err
+		return nil, safePathError("list directory", rel, err)
 	}
 	if len(entries) > maxDirectoryEntries {
 		return nil, fmt.Errorf("directory contains %d entries; limit is %d, narrow the path", len(entries), maxDirectoryEntries)
@@ -109,8 +109,7 @@ func (s *Service) listDirectory(root, rel string) ([]DirEntry, error) {
 		} else if info.Mode()&os.ModeSymlink != 0 {
 			typ = "symlink"
 		}
-		relPath, _ := filepath.Rel(root, filepath.Join(p, e.Name()))
-		out = append(out, DirEntry{Name: e.Name(), Path: filepath.ToSlash(relPath), Type: typ, Size: info.Size()})
+		out = append(out, DirEntry{Name: e.Name(), Path: logicalChildPath(rel, e.Name()), Type: typ, Size: info.Size()})
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Type != out[j].Type {
@@ -134,18 +133,18 @@ func (s *Service) readFile(root, rel string, limit int) (ReadFileResult, error) 
 	}
 	f, err := os.Open(p)
 	if err != nil {
-		return ReadFileResult{}, err
+		return ReadFileResult{}, safePathError("read file", rel, err)
 	}
 	defer f.Close()
 	buf, err := io.ReadAll(io.LimitReader(f, int64(limit+1)))
 	if err != nil {
-		return ReadFileResult{}, err
+		return ReadFileResult{}, fmt.Errorf("read file %q failed", logicalPath(rel))
 	}
 	truncated := len(buf) > limit
 	if truncated {
 		buf = buf[:limit]
 	}
-	return ReadFileResult{Path: filepath.ToSlash(rel), Content: string(buf), Truncated: truncated, BytesRead: len(buf)}, nil
+	return ReadFileResult{Path: logicalPath(rel), Content: string(buf), Truncated: truncated, BytesRead: len(buf)}, nil
 }
 
 func (s *Service) findFiles(root, pattern string) ([]string, error) {
@@ -221,10 +220,11 @@ func parseRG(root, output string) []SearchMatch {
 		}
 		n, _ := strconv.Atoi(parts[1])
 		path := parts[0]
-		if rel, err := filepath.Rel(root, path); err == nil {
-			path = filepath.ToSlash(rel)
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			continue
 		}
-		out = append(out, SearchMatch{Path: path, Line: n, Text: parts[2]})
+		out = append(out, SearchMatch{Path: filepath.ToSlash(rel), Line: n, Text: parts[2]})
 		if len(out) >= maxSearchLines {
 			break
 		}
@@ -296,11 +296,11 @@ func gitRun(ctx context.Context, root string, args ...string) (map[string]any, e
 	gitArgs := append([]string{"-c", "core.fsmonitor=false", "-C", root}, args...)
 	cmd := exec.CommandContext(ctx, "git", gitArgs...)
 	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "GIT_PAGER=cat")
-	var stdout, stderr bytes.Buffer
+	var stdout bytes.Buffer
 	cmd.Stdout = &limitedBuffer{buf: &stdout, max: maxOutputBytes}
-	cmd.Stderr = &limitedBuffer{buf: &stderr, max: 64 * 1024}
+	cmd.Stderr = io.Discard
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("git failed: %v: %s", err, strings.TrimSpace(stderr.String()))
+		return nil, fmt.Errorf("git command failed: %v", err)
 	}
 	return map[string]any{"output": stdout.String(), "truncated": stdout.Len() >= maxOutputBytes}, nil
 }
