@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/edynasty/codebridge/internal/auditlog"
 	"github.com/edynasty/codebridge/internal/authstore"
 )
 
@@ -15,6 +16,7 @@ type AdminHandler struct {
 	Auth       *authstore.Store
 	Registry   *Registry
 	AdminToken string
+	Audit      *auditlog.Logger
 }
 
 type createEnrollmentRequest struct {
@@ -46,6 +48,8 @@ func (h *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) createEnrollment(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	requestID := r.Header.Get(requestIDHeader)
 	var in createEnrollmentRequest
 	if r.Body != nil {
 		_ = json.NewDecoder(r.Body).Decode(&in)
@@ -56,6 +60,7 @@ func (h *AdminHandler) createEnrollment(w http.ResponseWriter, r *http.Request) 
 	}
 	code, expires, err := h.Auth.CreateEnrollment(ttl)
 	if err != nil {
+		_ = h.Audit.Log(auditlog.Event{Event: "admin.enrollment.create", RequestID: requestID, ActorID: "admin", Success: auditlog.Bool(false), DurationMS: time.Since(start).Milliseconds(), ErrorKind: "store_error"})
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -64,6 +69,7 @@ func (h *AdminHandler) createEnrollment(w http.ResponseWriter, r *http.Request) 
 		"expires_at":      expires,
 		"expires_in":      int(time.Until(expires).Seconds()),
 	})
+	_ = h.Audit.Log(auditlog.Event{Event: "admin.enrollment.create", RequestID: requestID, ActorID: "admin", Success: auditlog.Bool(true), DurationMS: time.Since(start).Milliseconds()})
 }
 
 func (h *AdminHandler) listDevices(w http.ResponseWriter) {
@@ -95,7 +101,10 @@ func (h *AdminHandler) deviceAction(w http.ResponseWriter, r *http.Request, rest
 	}
 	deviceID := parts[0]
 	if len(parts) == 1 && r.Method == http.MethodDelete {
+		start := time.Now()
+		requestID := r.Header.Get(requestIDHeader)
 		if err := h.Auth.RevokeDevice(deviceID); err != nil {
+			_ = h.Audit.Log(auditlog.Event{Event: "admin.device.revoke", RequestID: requestID, ActorID: "admin", DeviceID: deviceID, Success: auditlog.Bool(false), DurationMS: time.Since(start).Milliseconds(), ErrorKind: "not_found"})
 			writeJSONError(w, http.StatusNotFound, err.Error())
 			return
 		}
@@ -103,11 +112,15 @@ func (h *AdminHandler) deviceAction(w http.ResponseWriter, r *http.Request, rest
 			h.Registry.Disconnect(deviceID)
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"revoked": true, "device_id": deviceID})
+		_ = h.Audit.Log(auditlog.Event{Event: "admin.device.revoke", RequestID: requestID, ActorID: "admin", DeviceID: deviceID, Success: auditlog.Bool(true), DurationMS: time.Since(start).Milliseconds()})
 		return
 	}
 	if len(parts) == 2 && parts[1] == "rotate" && r.Method == http.MethodPost {
+		start := time.Now()
+		requestID := r.Header.Get(requestIDHeader)
 		credential, err := h.Auth.RotateDevice(deviceID)
 		if err != nil {
+			_ = h.Audit.Log(auditlog.Event{Event: "admin.device.rotate", RequestID: requestID, ActorID: "admin", DeviceID: deviceID, Success: auditlog.Bool(false), DurationMS: time.Since(start).Milliseconds(), ErrorKind: "not_found"})
 			writeJSONError(w, http.StatusNotFound, err.Error())
 			return
 		}
@@ -119,6 +132,7 @@ func (h *AdminHandler) deviceAction(w http.ResponseWriter, r *http.Request, rest
 			"device_credential": credential,
 			"note":              "This credential is shown once. Update the client credential file before its next reconnect.",
 		})
+		_ = h.Audit.Log(auditlog.Event{Event: "admin.device.rotate", RequestID: requestID, ActorID: "admin", DeviceID: deviceID, Success: auditlog.Bool(true), DurationMS: time.Since(start).Milliseconds()})
 		return
 	}
 	http.NotFound(w, r)

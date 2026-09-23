@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/edynasty/codebridge/internal/auditlog"
 	"github.com/edynasty/codebridge/internal/authstore"
 	"github.com/edynasty/codebridge/internal/protocol"
 	"github.com/gorilla/websocket"
@@ -18,6 +19,7 @@ const maxAgentPayloadBytes = 1024 * 1024
 type AgentHandler struct {
 	Registry *Registry
 	Auth     *authstore.Store
+	Audit    *auditlog.Logger
 }
 
 var upgrader = websocket.Upgrader{
@@ -52,6 +54,7 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: false, Message: err.Error()})})
 		return
 	}
+	requestID := r.Header.Get(requestIDHeader)
 	if h.Auth == nil {
 		_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: false, Message: "device authentication is not configured"})})
 		return
@@ -65,10 +68,12 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		credential, err := h.Auth.EnrollDevice(reg.EnrollmentCode, reg.DeviceID, reg.DeviceName)
 		if err != nil {
+			_ = h.Audit.Log(auditlog.Event{Event: "device.enroll", RequestID: requestID, DeviceID: reg.DeviceID, Success: auditlog.Bool(false), ErrorKind: "invalid_enrollment"})
 			_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: false, Message: err.Error()})})
 			return
 		}
 		issuedCredential = credential
+		_ = h.Audit.Log(auditlog.Event{Event: "device.enroll", RequestID: requestID, DeviceID: reg.DeviceID, Success: auditlog.Bool(true)})
 	}
 
 	now := time.Now().UTC()
@@ -77,6 +82,8 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: true, DeviceCredential: issuedCredential})})
 	_ = ws.SetReadDeadline(time.Time{})
 	log.Printf("agent online: %s (%s), workspaces=%d", reg.DeviceName, reg.DeviceID, len(reg.Workspaces))
+	_ = h.Audit.Log(auditlog.Event{Event: "device.connect", RequestID: requestID, DeviceID: reg.DeviceID, Success: auditlog.Bool(true)})
+	defer h.Audit.Log(auditlog.Event{Event: "device.disconnect", RequestID: requestID, DeviceID: reg.DeviceID, Success: auditlog.Bool(true)})
 
 	for {
 		var env protocol.Envelope

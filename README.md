@@ -36,6 +36,7 @@ ChatGPT Web / MCP client
 - Each enrolled device receives a random **per-device credential**. The manager persists only its SHA-256 digest; the client persists the credential locally with file mode `0600`.
 - Device credentials can be rotated or revoked through the admin API.
 - Runtime safety limits bound MCP request size/concurrency, per-device in-flight calls, WebSocket messages, directory listings, and agent response payloads.
+- Every MCP/admin/agent request gets a Manager-generated request ID, and security-relevant actions emit structured metadata-only JSONL audit events.
 - MCP user access supports OAuth 2.1 with an external IdP: RFC 9728 protected-resource metadata, JWT signature/issuer/audience/expiry/scope validation, and OAuth security metadata on each tool.
 - CodeBridge deliberately does not implement passwords, login pages, authorization-code issuance, or refresh-token storage; use an established authorization server.
 
@@ -170,7 +171,7 @@ GET /.well-known/oauth-protected-resource
 POST /mcp   Authorization: Bearer <access-token>
 ```
 
-See [docs/oauth.md](docs/oauth.md), [docs/chatgpt-web.md](docs/chatgpt-web.md), and [docs/deployment.md](docs/deployment.md).
+See [docs/oauth.md](docs/oauth.md), [docs/chatgpt-web.md](docs/chatgpt-web.md), [docs/deployment.md](docs/deployment.md), and [docs/audit.md](docs/audit.md).
 
 ## Inspect MCP locally
 
@@ -204,15 +205,27 @@ A Caddy + Docker Compose example is included under `deploy/`. It terminates TLS,
 
 See [docs/deployment.md](docs/deployment.md).
 
+## Audit logging
+
+By default, audit events are emitted as JSONL to stdout. Set:
+
+```bash
+export CODEBRIDGE_AUDIT_LOG='./data/audit.jsonl'
+```
+
+to persist them locally with mode `0600`.
+
+Audit events include request ID, OAuth subject, tool name, device ID, workspace, duration, and success/error category. They intentionally exclude source contents, result bodies, paths, search queries/patterns, tokens, enrollment codes, and credentials.
+
+See [docs/audit.md](docs/audit.md).
+
 ## Production hardening roadmap
 
 1. PostgreSQL account/device registry for multi-tenant deployment.
 2. Tenant isolation (`account_id` on every device and request).
 3. Per-tool and per-workspace policy.
-4. Request IDs + metadata-only audit log; never log file contents/tool result bodies.
-5. Rate limits, concurrency limits and response byte budgets.
-6. TLS/WSS deployment examples and strict proxy/origin configuration.
-7. Optional LSP / tree-sitter / code graph tools without arbitrary shell access.
+4. Run MCP Inspector OAuth flow against a real Auth0/Keycloak/Authentik tenant.
+5. Optional LSP / tree-sitter / code graph tools without arbitrary shell access.
 
 ## Non-goals for v0.3
 

@@ -60,3 +60,23 @@ func TestLimitMCPRejectsConcurrentOverflow(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestWithRequestIDOverridesClientValue(t *testing.T) {
+	var seen string
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen = r.Header.Get("X-CodeBridge-Request-ID")
+		w.WriteHeader(http.StatusNoContent)
+	})
+	h := withRequestID(next)
+	req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+	req.Header.Set("X-CodeBridge-Request-ID", "client-controlled")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if seen == "" || seen == "client-controlled" {
+		t.Fatalf("request id was not regenerated: %q", seen)
+	}
+	if got := rec.Header().Get("X-Request-ID"); got != seen {
+		t.Fatalf("response request id = %q, handler saw %q", got, seen)
+	}
+}

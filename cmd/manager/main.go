@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/edynasty/codebridge/internal/auditlog"
 	"github.com/edynasty/codebridge/internal/authstore"
 	mgr "github.com/edynasty/codebridge/internal/manager"
 	"github.com/edynasty/codebridge/internal/oauthresource"
@@ -34,6 +35,12 @@ func main() {
 	stateFile := flag.String("state-file", env("CODEBRIDGE_STATE_FILE", "./data/auth.json"), "device auth state file")
 	flag.Parse()
 
+	audit, err := auditlog.New(strings.TrimSpace(os.Getenv("CODEBRIDGE_AUDIT_LOG")))
+	if err != nil {
+		log.Fatalf("open audit log: %v", err)
+	}
+	defer audit.Close()
+
 	deviceAuth, err := authstore.Open(*stateFile)
 	if err != nil {
 		log.Fatalf("open auth state: %v", err)
@@ -48,7 +55,7 @@ func main() {
 	maxMCPRequestBytes := envInt("CODEBRIDGE_MAX_MCP_REQUEST_BYTES", 1024*1024, 64*1024, 8*1024*1024)
 
 	registry := mgr.NewRegistry(maxDeviceInflight)
-	toolService := &mgr.ToolService{Registry: registry}
+	toolService := &mgr.ToolService{Registry: registry, Audit: audit}
 	if oauthCfg != nil {
 		toolService.OAuthScopes = []string{oauthCfg.Scope}
 	}
@@ -98,9 +105,9 @@ func main() {
 		}
 	}
 
-	mux.Handle("/mcp", limitMCP(maxMCPInflight, int64(maxMCPRequestBytes), protectedMCP))
-	mux.Handle("/agent", &mgr.AgentHandler{Registry: registry, Auth: deviceAuth})
-	mux.Handle("/admin/", &mgr.AdminHandler{Auth: deviceAuth, Registry: registry, AdminToken: os.Getenv("CODEBRIDGE_ADMIN_TOKEN")})
+	mux.Handle("/mcp", withRequestID(limitMCP(maxMCPInflight, int64(maxMCPRequestBytes), protectedMCP)))
+	mux.Handle("/agent", withRequestID(&mgr.AgentHandler{Registry: registry, Auth: deviceAuth, Audit: audit}))
+	mux.Handle("/admin/", withRequestID(&mgr.AdminHandler{Auth: deviceAuth, Registry: registry, AdminToken: os.Getenv("CODEBRIDGE_ADMIN_TOKEN"), Audit: audit}))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
@@ -209,6 +216,15 @@ func validatePublicURL(raw string) error {
 	return errors.New("CODEBRIDGE_PUBLIC_URL must use https (http is allowed only for loopback development)")
 }
 
+func withRequestID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := auditlog.NewRequestID()
+		r.Header.Set("X-CodeBridge-Request-ID", id)
+		w.Header().Set("X-Request-ID", id)
+		next.ServeHTTP(w, r)
+	})
+}
+
 func limitMCP(maxInflight int, maxBodyBytes int64, next http.Handler) http.Handler {
 	sem := make(chan struct{}, maxInflight)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -249,7 +265,7 @@ func logRequests(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		next.ServeHTTP(w, r)
-		log.Printf("%s %s %s", r.Method, r.URL.Path, time.Since(start).Round(time.Millisecond))
+		log.Printf("request_id=%s method=%s path=%s duration=%s", r.Header.Get("X-CodeBridge-Request-ID"), r.Method, r.URL.Path, time.Since(start).Round(time.Millisecond))
 	})
 }
 
