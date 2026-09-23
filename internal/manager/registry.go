@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/edynasty/codebridge/internal/protocol"
@@ -32,19 +33,31 @@ type AgentConn struct {
 	mu     sync.Mutex
 	pendMu sync.Mutex
 	pend   map[string]pendingCall
+	sem    chan struct{}
 }
 
 type Registry struct {
-	mu      sync.RWMutex
-	devices map[string]*AgentConn
+	mu          sync.RWMutex
+	devices     map[string]*AgentConn
+	maxInflight int
+	seq         atomic.Uint64
 }
 
-func NewRegistry() *Registry {
-	return &Registry{devices: make(map[string]*AgentConn)}
+func NewRegistry(maxInflight ...int) *Registry {
+	n := 8
+	if len(maxInflight) > 0 && maxInflight[0] > 0 {
+		n = maxInflight[0]
+	}
+	return &Registry{devices: make(map[string]*AgentConn), maxInflight: n}
 }
 
 func (r *Registry) Put(dev Device, ws *websocket.Conn) *AgentConn {
-	conn := &AgentConn{device: dev, ws: ws, pend: make(map[string]pendingCall)}
+	conn := &AgentConn{
+		device: dev,
+		ws:     ws,
+		pend:   make(map[string]pendingCall),
+		sem:    make(chan struct{}, r.maxInflight),
+	}
 	r.mu.Lock()
 	if old := r.devices[dev.ID]; old != nil {
 		_ = old.ws.Close()
@@ -113,7 +126,15 @@ func (r *Registry) Call(ctx context.Context, deviceID string, req protocol.Agent
 	if !ok {
 		return nil, fmt.Errorf("device %q is offline or unknown", deviceID)
 	}
-	id := fmt.Sprintf("%d", time.Now().UnixNano())
+
+	select {
+	case conn.sem <- struct{}{}:
+		defer func() { <-conn.sem }()
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	id := fmt.Sprintf("%d", r.seq.Add(1))
 	payload, err := json.Marshal(req)
 	if err != nil {
 		return nil, err

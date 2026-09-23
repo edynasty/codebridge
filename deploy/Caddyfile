@@ -1,0 +1,16 @@
+{$CODEBRIDGE_DOMAIN} {
+	encode zstd gzip
+
+	# Never expose the administrative API through the public reverse proxy.
+	@admin path /admin /admin/*
+	respond @admin 404
+
+	# Caddy automatically handles WebSocket upgrades for /agent.
+	reverse_proxy manager:8080
+
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+	}
+}

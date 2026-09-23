@@ -20,7 +20,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const version = "0.2.0"
+const (
+	version               = "0.3.0"
+	maxAgentResponseBytes = 768 * 1024
+)
 
 func main() {
 	managerURL := flag.String("manager", env("CODEBRIDGE_MANAGER_URL", "ws://127.0.0.1:8080/agent"), "manager websocket URL")
@@ -100,6 +103,7 @@ func runSession(ctx context.Context, managerURL string, reg protocol.RegisterReq
 		return err
 	}
 	defer ws.Close()
+	ws.SetReadLimit(1024 * 1024)
 
 	payload, _ := json.Marshal(reg)
 	if err := ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegister, DeviceID: reg.DeviceID, Payload: payload}); err != nil {
@@ -161,8 +165,15 @@ func runSession(ctx context.Context, managerURL string, reg protocol.RegisterReq
 					if err != nil {
 						resp.Error = err.Error()
 					} else {
-						resp.OK = true
-						resp.Data, _ = json.Marshal(result)
+						data, marshalErr := json.Marshal(result)
+						if marshalErr != nil {
+							resp.Error = marshalErr.Error()
+						} else if len(data) > maxAgentResponseBytes {
+							resp.Error = fmt.Sprintf("tool response exceeds %d bytes; narrow the request", maxAgentResponseBytes)
+						} else {
+							resp.OK = true
+							resp.Data = data
+						}
 					}
 				}
 				b, _ := json.Marshal(resp)

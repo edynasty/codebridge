@@ -21,10 +21,11 @@ import (
 )
 
 const (
-	maxReadBytes   = 256 * 1024
-	maxOutputBytes = 512 * 1024
-	maxFindResults = 500
-	maxSearchLines = 200
+	maxReadBytes        = 256 * 1024
+	maxOutputBytes      = 512 * 1024
+	maxFindResults      = 500
+	maxSearchLines      = 200
+	maxDirectoryEntries = 1000
 )
 
 type Service struct {
@@ -92,6 +93,9 @@ func (s *Service) listDirectory(root, rel string) ([]DirEntry, error) {
 	entries, err := os.ReadDir(p)
 	if err != nil {
 		return nil, err
+	}
+	if len(entries) > maxDirectoryEntries {
+		return nil, fmt.Errorf("directory contains %d entries; limit is %d, narrow the path", len(entries), maxDirectoryEntries)
 	}
 	out := make([]DirEntry, 0, len(entries))
 	for _, e := range entries {

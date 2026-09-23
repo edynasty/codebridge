@@ -2,6 +2,7 @@ package manager
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -11,6 +12,8 @@ import (
 	"github.com/edynasty/codebridge/internal/protocol"
 	"github.com/gorilla/websocket"
 )
+
+const maxAgentPayloadBytes = 1024 * 1024
 
 type AgentHandler struct {
 	Registry *Registry
@@ -33,6 +36,7 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer ws.Close()
+	ws.SetReadLimit(2 * 1024 * 1024)
 	_ = ws.SetReadDeadline(time.Now().Add(15 * time.Second))
 
 	var first protocol.Envelope
@@ -44,10 +48,8 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal(first.Payload, &reg); err != nil {
 		return
 	}
-	reg.DeviceID = strings.TrimSpace(reg.DeviceID)
-	reg.DeviceName = strings.TrimSpace(reg.DeviceName)
-	if reg.DeviceID == "" || reg.DeviceName == "" {
-		_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: false, Message: "device_id and device_name are required"})})
+	if err := sanitizeRegistration(&reg); err != nil {
+		_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: false, Message: err.Error()})})
 		return
 	}
 	if h.Auth == nil {
@@ -89,10 +91,49 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case protocol.TypeResponse:
 			var resp protocol.AgentResponse
 			if json.Unmarshal(env.Payload, &resp) == nil {
+				if len(resp.Data) > maxAgentPayloadBytes {
+					resp = protocol.AgentResponse{OK: false, Error: "agent response exceeded manager payload limit"}
+				}
 				conn.Deliver(env.RequestID, resp)
 			}
 		}
 	}
+}
+
+func sanitizeRegistration(reg *protocol.RegisterRequest) error {
+	reg.DeviceID = strings.TrimSpace(reg.DeviceID)
+	reg.DeviceName = strings.TrimSpace(reg.DeviceName)
+	reg.Version = strings.TrimSpace(reg.Version)
+	if reg.DeviceID == "" || reg.DeviceName == "" {
+		return fmt.Errorf("device_id and device_name are required")
+	}
+	if len(reg.DeviceID) > 128 {
+		return fmt.Errorf("device_id exceeds 128 bytes")
+	}
+	if len(reg.DeviceName) > 256 {
+		return fmt.Errorf("device_name exceeds 256 bytes")
+	}
+	if len(reg.Version) > 64 {
+		return fmt.Errorf("version exceeds 64 bytes")
+	}
+	if len(reg.Workspaces) > 64 {
+		return fmt.Errorf("too many workspaces; maximum is 64")
+	}
+	seen := map[string]bool{}
+	for i := range reg.Workspaces {
+		name := strings.TrimSpace(reg.Workspaces[i].Name)
+		if name == "" || len(name) > 128 {
+			return fmt.Errorf("workspace name must be 1-128 bytes")
+		}
+		if seen[name] {
+			return fmt.Errorf("duplicate workspace %q", name)
+		}
+		seen[name] = true
+		reg.Workspaces[i].Name = name
+		// Never trust or forward a physical path supplied by an agent.
+		reg.Workspaces[i].Path = ""
+	}
+	return nil
 }
 
 func mustJSON(v any) json.RawMessage {

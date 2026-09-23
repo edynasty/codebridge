@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,7 +43,11 @@ func main() {
 		log.Fatalf("OAuth configuration: %v", err)
 	}
 
-	registry := mgr.NewRegistry()
+	maxDeviceInflight := envInt("CODEBRIDGE_MAX_INFLIGHT_PER_DEVICE", 8, 1, 64)
+	maxMCPInflight := envInt("CODEBRIDGE_MAX_MCP_INFLIGHT", 16, 1, 128)
+	maxMCPRequestBytes := envInt("CODEBRIDGE_MAX_MCP_REQUEST_BYTES", 1024*1024, 64*1024, 8*1024*1024)
+
+	registry := mgr.NewRegistry(maxDeviceInflight)
 	toolService := &mgr.ToolService{Registry: registry}
 	if oauthCfg != nil {
 		toolService.OAuthScopes = []string{oauthCfg.Scope}
@@ -93,7 +98,7 @@ func main() {
 		}
 	}
 
-	mux.Handle("/mcp", protectedMCP)
+	mux.Handle("/mcp", limitMCP(maxMCPInflight, int64(maxMCPRequestBytes), protectedMCP))
 	mux.Handle("/agent", &mgr.AgentHandler{Registry: registry, Auth: deviceAuth})
 	mux.Handle("/admin/", &mgr.AdminHandler{Auth: deviceAuth, Registry: registry, AdminToken: os.Getenv("CODEBRIDGE_ADMIN_TOKEN")})
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -105,9 +110,17 @@ func main() {
 		_, _ = w.Write([]byte(`{"name":"CodeBridge","mcp":"/mcp","agent":"/agent","health":"/healthz"}`))
 	})
 
-	s := &http.Server{Addr: *addr, Handler: logRequests(mux), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
+	s := &http.Server{
+		Addr:              *addr,
+		Handler:           logRequests(mux),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      45 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 	log.Printf("CodeBridge manager listening on %s", *addr)
 	log.Printf("MCP endpoint: /mcp; agent websocket: /agent")
+	log.Printf("limits: mcp_inflight=%d device_inflight=%d mcp_request_bytes=%d", maxMCPInflight, maxDeviceInflight, maxMCPRequestBytes)
 	if os.Getenv("CODEBRIDGE_ADMIN_TOKEN") == "" {
 		log.Printf("admin API disabled: CODEBRIDGE_ADMIN_TOKEN is empty")
 	} else {
@@ -196,6 +209,28 @@ func validatePublicURL(raw string) error {
 	return errors.New("CODEBRIDGE_PUBLIC_URL must use https (http is allowed only for loopback development)")
 }
 
+func limitMCP(maxInflight int, maxBodyBytes int64, next http.Handler) http.Handler {
+	sem := make(chan struct{}, maxInflight)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ContentLength > maxBodyBytes {
+			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+			return
+		}
+		if r.Body != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+		}
+		select {
+		case sem <- struct{}{}:
+			defer func() { <-sem }()
+		default:
+			w.Header().Set("Retry-After", "1")
+			http.Error(w, "too many concurrent MCP requests", http.StatusTooManyRequests)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func optionalBearer(token string, next http.Handler) http.Handler {
 	if token == "" {
 		return next
@@ -216,6 +251,18 @@ func logRequests(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 		log.Printf("%s %s %s", r.Method, r.URL.Path, time.Since(start).Round(time.Millisecond))
 	})
+}
+
+func envInt(k string, def, min, max int) int {
+	raw := strings.TrimSpace(os.Getenv(k))
+	if raw == "" {
+		return def
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < min || n > max {
+		log.Fatalf("%s must be an integer between %d and %d", k, min, max)
+	}
+	return n
 }
 
 func env(k, def string) string {

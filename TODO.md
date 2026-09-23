@@ -8,10 +8,10 @@
 - [x] Replace shared enrollment token with one-time enrollment and per-device credentials.
 - [x] Persist device identity metadata and credential hashes only; never persist source payloads.
 - [x] Add admin API for enrollment, device revoke, and credential rotation.
+- [x] Add MCP request/body limits, per-device concurrency limits, WebSocket size limits, and response-size caps.
+- [x] Add TLS/WSS deployment example with Caddy; keep /admin off the public reverse proxy.
 - [ ] Add tenant/account scoping to every Manager lookup.
-- [ ] Add request/response byte and concurrency limits at the Manager.
 - [ ] Add structured metadata-only audit logs.
-- [ ] Add TLS/WSS deployment example with Caddy or Nginx.
 - [ ] Run MCP Inspector OAuth flow against a real Auth0/Keycloak/Authentik tenant.
 
 ## P1 - coding intelligence

@@ -35,6 +35,7 @@ ChatGPT Web / MCP client
 - Device enrollment uses short-lived **one-time enrollment codes**.
 - Each enrolled device receives a random **per-device credential**. The manager persists only its SHA-256 digest; the client persists the credential locally with file mode `0600`.
 - Device credentials can be rotated or revoked through the admin API.
+- Runtime safety limits bound MCP request size/concurrency, per-device in-flight calls, WebSocket messages, directory listings, and agent response payloads.
 - MCP user access supports OAuth 2.1 with an external IdP: RFC 9728 protected-resource metadata, JWT signature/issuer/audience/expiry/scope validation, and OAuth security metadata on each tool.
 - CodeBridge deliberately does not implement passwords, login pages, authorization-code issuance, or refresh-token storage; use an established authorization server.
 
@@ -169,7 +170,7 @@ GET /.well-known/oauth-protected-resource
 POST /mcp   Authorization: Bearer <access-token>
 ```
 
-See [docs/oauth.md](docs/oauth.md) and [docs/chatgpt-web.md](docs/chatgpt-web.md).
+See [docs/oauth.md](docs/oauth.md), [docs/chatgpt-web.md](docs/chatgpt-web.md), and [docs/deployment.md](docs/deployment.md).
 
 ## Inspect MCP locally
 
@@ -196,6 +197,12 @@ https://codebridge.example.com/mcp
 ```
 
 as the remote MCP endpoint in ChatGPT's developer/plugin UI. With OAuth configured, ChatGPT can discover the protected-resource metadata and link the user's account before calling the read-only tools.
+
+## HTTPS/WSS deployment
+
+A Caddy + Docker Compose example is included under `deploy/`. It terminates TLS, forwards `/mcp` and `/agent`, and deliberately returns 404 for public `/admin/*`; the Manager admin API is bound to host loopback only.
+
+See [docs/deployment.md](docs/deployment.md).
 
 ## Production hardening roadmap
 

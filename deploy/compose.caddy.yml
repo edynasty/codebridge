@@ -11,16 +11,34 @@ services:
       CODEBRIDGE_MAX_INFLIGHT_PER_DEVICE: "${CODEBRIDGE_MAX_INFLIGHT_PER_DEVICE:-8}"
       CODEBRIDGE_MAX_MCP_INFLIGHT: "${CODEBRIDGE_MAX_MCP_INFLIGHT:-16}"
       CODEBRIDGE_MAX_MCP_REQUEST_BYTES: "${CODEBRIDGE_MAX_MCP_REQUEST_BYTES:-1048576}"
-      CODEBRIDGE_PUBLIC_URL: "${CODEBRIDGE_PUBLIC_URL:-}"
-      CODEBRIDGE_OAUTH_ISSUER: "${CODEBRIDGE_OAUTH_ISSUER:-}"
-      CODEBRIDGE_OAUTH_JWKS_URL: "${CODEBRIDGE_OAUTH_JWKS_URL:-}"
+      CODEBRIDGE_PUBLIC_URL: "https://${CODEBRIDGE_DOMAIN}"
+      CODEBRIDGE_OAUTH_ISSUER: "${CODEBRIDGE_OAUTH_ISSUER}"
+      CODEBRIDGE_OAUTH_JWKS_URL: "${CODEBRIDGE_OAUTH_JWKS_URL}"
       CODEBRIDGE_OAUTH_RESOURCE: "${CODEBRIDGE_OAUTH_RESOURCE:-}"
       CODEBRIDGE_OAUTH_SCOPE: "${CODEBRIDGE_OAUTH_SCOPE:-codebridge.read}"
-      CODEBRIDGE_MCP_TOKEN: "${CODEBRIDGE_MCP_TOKEN:-}"
     volumes:
       - codebridge-data:/data
+    # Administrative API is reachable only from the host loopback interface.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      - manager
+    environment:
+      CODEBRIDGE_DOMAIN: "${CODEBRIDGE_DOMAIN}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
 
 volumes:
   codebridge-data:
+  caddy-data:
+  caddy-config:
