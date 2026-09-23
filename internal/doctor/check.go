@@ -37,6 +37,18 @@ type protectedResourceMetadata struct {
 	ScopesSupported      []string `json:"scopes_supported"`
 }
 
+type authorizationServerMetadata struct {
+	Issuer                   string   `json:"issuer"`
+	AuthorizationEndpoint    string   `json:"authorization_endpoint"`
+	TokenEndpoint            string   `json:"token_endpoint"`
+	RegistrationEndpoint     string   `json:"registration_endpoint,omitempty"`
+	GrantTypesSupported      []string `json:"grant_types_supported,omitempty"`
+	ResponseTypesSupported   []string `json:"response_types_supported,omitempty"`
+	CodeChallengeMethods     []string `json:"code_challenge_methods_supported,omitempty"`
+	ScopesSupported          []string `json:"scopes_supported,omitempty"`
+	TokenEndpointAuthMethods []string `json:"token_endpoint_auth_methods_supported,omitempty"`
+}
+
 type adminDevice struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
@@ -65,18 +77,27 @@ func Run(ctx context.Context, opts Options) ([]Result, bool) {
 		add("health", status == http.StatusOK && strings.TrimSpace(string(body)) == "ok", fmt.Sprintf("HTTP %d", status))
 	}
 
+	var oauthMeta protectedResourceMetadata
 	status, body, _, err = request(ctx, client, http.MethodGet, base+"/.well-known/oauth-protected-resource", "")
 	if err != nil {
 		add("oauth_metadata", !opts.ExpectOAuth, err.Error())
 	} else if status == http.StatusOK {
-		var meta protectedResourceMetadata
-		decodeErr := json.Unmarshal(body, &meta)
-		ok := decodeErr == nil && meta.Resource != "" && len(meta.AuthorizationServers) > 0
-		detail := fmt.Sprintf("resource=%s authorization_servers=%d scopes=%d", meta.Resource, len(meta.AuthorizationServers), len(meta.ScopesSupported))
+		decodeErr := json.Unmarshal(body, &oauthMeta)
+		ok := decodeErr == nil && oauthMeta.Resource != "" && len(oauthMeta.AuthorizationServers) > 0
+		detail := fmt.Sprintf("resource=%s authorization_servers=%d scopes=%d", oauthMeta.Resource, len(oauthMeta.AuthorizationServers), len(oauthMeta.ScopesSupported))
 		if decodeErr != nil {
 			detail = decodeErr.Error()
 		}
 		add("oauth_metadata", ok, detail)
+		if opts.ExpectOAuth && ok {
+			for i, issuer := range oauthMeta.AuthorizationServers {
+				result := checkAuthorizationServerMetadata(ctx, client, issuer, oauthMeta.ScopesSupported)
+				if len(oauthMeta.AuthorizationServers) > 1 {
+					result.Name = fmt.Sprintf("authorization_server_%d", i+1)
+				}
+				add(result.Name, result.OK, result.Detail)
+			}
+		}
 	} else {
 		add("oauth_metadata", !opts.ExpectOAuth, fmt.Sprintf("HTTP %d", status))
 	}
@@ -344,6 +365,129 @@ func (b bearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		base = http.DefaultTransport
 	}
 	return base.RoundTrip(cloned)
+}
+
+func checkAuthorizationServerMetadata(ctx context.Context, client *http.Client, issuer string, requiredScopes []string) Result {
+	issuer = strings.TrimRight(strings.TrimSpace(issuer), "/")
+	if issuer == "" {
+		return Result{Name: "authorization_server", OK: false, Detail: "authorization server issuer is empty"}
+	}
+
+	var lastDetail string
+	for _, candidate := range authorizationMetadataCandidates(issuer) {
+		status, body, _, err := request(ctx, client, http.MethodGet, candidate, "")
+		if err != nil {
+			lastDetail = err.Error()
+			continue
+		}
+		if status != http.StatusOK {
+			lastDetail = fmt.Sprintf("%s returned HTTP %d", candidate, status)
+			continue
+		}
+
+		var meta authorizationServerMetadata
+		if err := json.Unmarshal(body, &meta); err != nil {
+			lastDetail = fmt.Sprintf("%s: %v", candidate, err)
+			continue
+		}
+		if strings.TrimRight(meta.Issuer, "/") != issuer {
+			lastDetail = fmt.Sprintf("issuer mismatch: metadata=%q expected=%q", meta.Issuer, issuer)
+			continue
+		}
+
+		missing := []string{}
+		if strings.TrimSpace(meta.AuthorizationEndpoint) == "" {
+			missing = append(missing, "authorization_endpoint")
+		}
+		if strings.TrimSpace(meta.TokenEndpoint) == "" {
+			missing = append(missing, "token_endpoint")
+		}
+		if !containsString(meta.CodeChallengeMethods, "S256") {
+			missing = append(missing, "PKCE S256")
+		}
+		authCode := containsString(meta.GrantTypesSupported, "authorization_code") ||
+			(len(meta.GrantTypesSupported) == 0 && containsString(meta.ResponseTypesSupported, "code"))
+		if !authCode {
+			missing = append(missing, "authorization_code")
+		}
+		if len(meta.ResponseTypesSupported) > 0 && !containsString(meta.ResponseTypesSupported, "code") {
+			missing = append(missing, "response_type=code")
+		}
+		if len(meta.ScopesSupported) > 0 {
+			for _, scope := range requiredScopes {
+				if scope != "" && !containsString(meta.ScopesSupported, scope) {
+					missing = append(missing, "scope:"+scope)
+				}
+			}
+		}
+		if len(missing) > 0 {
+			return Result{
+				Name:   "authorization_server",
+				OK:     false,
+				Detail: fmt.Sprintf("issuer=%s metadata=%s missing=%s", issuer, candidate, strings.Join(missing, ",")),
+			}
+		}
+
+		return Result{
+			Name: "authorization_server",
+			OK:   true,
+			Detail: fmt.Sprintf(
+				"issuer=%s pkce=S256 refresh=%t dcr=%t scopes=%d",
+				issuer,
+				containsString(meta.GrantTypesSupported, "refresh_token"),
+				strings.TrimSpace(meta.RegistrationEndpoint) != "",
+				len(meta.ScopesSupported),
+			),
+		}
+	}
+
+	if lastDetail == "" {
+		lastDetail = "no usable OAuth/OIDC metadata endpoint"
+	}
+	return Result{Name: "authorization_server", OK: false, Detail: lastDetail}
+}
+
+func authorizationMetadataCandidates(issuer string) []string {
+	u, err := url.Parse(issuer)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return []string{issuer + "/.well-known/oauth-authorization-server", issuer + "/.well-known/openid-configuration"}
+	}
+
+	path := strings.TrimSuffix(u.EscapedPath(), "/")
+	rfc8414 := *u
+	rfc8414.RawQuery = ""
+	rfc8414.Fragment = ""
+	if path == "" {
+		rfc8414.Path = "/.well-known/oauth-authorization-server"
+		rfc8414.RawPath = ""
+	} else {
+		rfc8414.Path = "/.well-known/oauth-authorization-server" + u.Path
+		rfc8414.RawPath = ""
+	}
+
+	candidates := []string{
+		rfc8414.String(),
+		issuer + "/.well-known/oauth-authorization-server",
+		issuer + "/.well-known/openid-configuration",
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		if candidate != "" && !seen[candidate] {
+			seen[candidate] = true
+			out = append(out, candidate)
+		}
+	}
+	return out
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeBaseURL(raw string) (string, error) {
