@@ -152,19 +152,26 @@ func (s *Service) findFiles(root, pattern string) ([]string, error) {
 	if pattern == "" {
 		return nil, errors.New("pattern is required")
 	}
+	rootReal, err := ResolveUnderRoot(root, ".")
+	if err != nil {
+		return nil, err
+	}
 	needle := strings.ToLower(pattern)
 	var out []string
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(rootReal, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		if d.IsDir() && shouldSkipDir(d.Name()) && path != root {
+		if d.IsDir() && shouldSkipDir(d.Name()) && path != rootReal {
 			return filepath.SkipDir
 		}
 		if d.IsDir() {
 			return nil
 		}
-		rel, _ := filepath.Rel(root, path)
+		rel, err := filepath.Rel(rootReal, path)
+		if err != nil {
+			return nil
+		}
 		rel = filepath.ToSlash(rel)
 		matched := strings.Contains(strings.ToLower(rel), needle)
 		if strings.Contains(pattern, "*") || strings.Contains(pattern, "?") {
@@ -185,6 +192,10 @@ func (s *Service) searchCode(ctx context.Context, root, query, rel string) ([]Se
 	if strings.TrimSpace(query) == "" {
 		return nil, errors.New("query is required")
 	}
+	rootReal, err := ResolveUnderRoot(root, ".")
+	if err != nil {
+		return nil, err
+	}
 	target, err := ResolveUnderRoot(root, rel)
 	if err != nil {
 		return nil, err
@@ -193,7 +204,7 @@ func (s *Service) searchCode(ctx context.Context, root, query, rel string) ([]Se
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
 		cmd := exec.CommandContext(ctx, "rg", "--fixed-strings", "--line-number", "--no-heading", "--color", "never", "--max-count", "20", "--", query, target)
-		cmd.Dir = root
+		cmd.Dir = rootReal
 		var stdout bytes.Buffer
 		cmd.Stdout = &limitedBuffer{buf: &stdout, max: maxOutputBytes}
 		cmd.Stderr = io.Discard
@@ -204,9 +215,9 @@ func (s *Service) searchCode(ctx context.Context, root, query, rel string) ([]Se
 			}
 			return nil, err
 		}
-		return parseRG(root, stdout.String()), nil
+		return parseRG(rootReal, stdout.String()), nil
 	}
-	return fallbackSearch(ctx, root, target, query)
+	return fallbackSearch(ctx, rootReal, target, query)
 }
 
 func parseRG(root, output string) []SearchMatch {
@@ -262,7 +273,10 @@ func fallbackSearch(ctx context.Context, root, target, query string) ([]SearchMa
 		for s.Scan() {
 			lineNo++
 			if strings.Contains(s.Text(), query) {
-				rel, _ := filepath.Rel(root, path)
+				rel, err := filepath.Rel(root, path)
+				if err != nil {
+					continue
+				}
 				out = append(out, SearchMatch{Path: filepath.ToSlash(rel), Line: lineNo, Text: s.Text()})
 				if len(out) >= maxSearchLines {
 					_ = f.Close()

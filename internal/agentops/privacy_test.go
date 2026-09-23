@@ -91,3 +91,84 @@ func TestResolveBrokenSymlinkErrorDoesNotExposePhysicalRoot(t *testing.T) {
 		t.Fatalf("broken symlink error leaked workspace root: %v", err)
 	}
 }
+
+func TestFindFilesWithSymlinkWorkspaceRootUsesLogicalPaths(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink permissions vary on Windows")
+	}
+
+	realRoot := t.TempDir()
+	src := filepath.Join(realRoot, "src")
+	if err := os.MkdirAll(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "needle.go"), []byte("package demo\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(t.TempDir(), "workspace-link")
+	if err := os.Symlink(realRoot, link); err != nil {
+		t.Fatal(err)
+	}
+
+	service := &Service{Roots: map[string]string{"demo": link}}
+	result, err := service.Execute(context.Background(), protocol.AgentRequest{
+		Tool:      "find_files",
+		Workspace: "demo",
+		Args:      map[string]any{"pattern": "*.go"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths, ok := result.([]string)
+	if !ok || len(paths) != 1 {
+		t.Fatalf("unexpected find_files result: %#v", result)
+	}
+	if paths[0] != "src/needle.go" {
+		t.Fatalf("find_files returned non-logical path %q", paths[0])
+	}
+	if strings.Contains(paths[0], realRoot) || strings.Contains(paths[0], link) || strings.HasPrefix(paths[0], "..") {
+		t.Fatalf("find_files leaked physical workspace path: %q", paths[0])
+	}
+}
+
+func TestSearchCodeWithSymlinkWorkspaceRootUsesLogicalPaths(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink permissions vary on Windows")
+	}
+
+	realRoot := t.TempDir()
+	src := filepath.Join(realRoot, "src")
+	if err := os.MkdirAll(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const needle = "CODEBRIDGE_PRIVACY_NEEDLE"
+	if err := os.WriteFile(filepath.Join(src, "needle.txt"), []byte("prefix "+needle+" suffix\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(t.TempDir(), "workspace-link")
+	if err := os.Symlink(realRoot, link); err != nil {
+		t.Fatal(err)
+	}
+
+	service := &Service{Roots: map[string]string{"demo": link}}
+	result, err := service.Execute(context.Background(), protocol.AgentRequest{
+		Tool:      "search_code",
+		Workspace: "demo",
+		Args:      map[string]any{"query": needle, "path": "."},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	matches, ok := result.([]SearchMatch)
+	if !ok || len(matches) == 0 {
+		t.Fatalf("unexpected search_code result: %#v", result)
+	}
+	for _, match := range matches {
+		if match.Path != "src/needle.txt" {
+			t.Fatalf("search_code returned non-logical path %q", match.Path)
+		}
+		if strings.Contains(match.Path, realRoot) || strings.Contains(match.Path, link) || strings.HasPrefix(match.Path, "..") {
+			t.Fatalf("search_code leaked physical workspace path: %q", match.Path)
+		}
+	}
+}
