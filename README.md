@@ -37,7 +37,7 @@ ChatGPT Web / MCP client
 - Device credentials can be rotated or revoked through the admin API.
 - Runtime safety limits bound MCP request size/concurrency, per-device in-flight calls, WebSocket messages, directory listings, and agent response payloads.
 - Every MCP/admin/agent request gets a Manager-generated request ID, and security-relevant actions emit structured metadata-only JSONL audit events.
-- MCP user access supports OAuth 2.1 with an external IdP: RFC 9728 protected-resource metadata, JWT signature/issuer/audience/expiry/scope validation, and OAuth security metadata on each tool.
+- MCP user access supports OAuth 2.1 with an external IdP: RFC 9728 protected-resource metadata, JWT signature/issuer/audience/expiry/subject/scope validation, optional subject allowlisting, and OAuth security metadata on each tool.
 - CodeBridge deliberately does not implement passwords, login pages, authorization-code issuance, or refresh-token storage; use an established authorization server.
 
 ## MCP tools
@@ -160,9 +160,11 @@ export CODEBRIDGE_OAUTH_ISSUER='https://auth.example.com'
 export CODEBRIDGE_OAUTH_JWKS_URL='https://auth.example.com/.well-known/jwks.json'
 export CODEBRIDGE_OAUTH_RESOURCE='https://codebridge.example.com'
 export CODEBRIDGE_OAUTH_SCOPE='codebridge.read'
+# Recommended for a private/personal deployment after you know your IdP subject:
+export CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS='your-oauth-subject'
 ```
 
-The authorization server must issue JWT access tokens with the exact issuer, the configured resource in `aud`, a valid expiration, and the required scope. It must also support the MCP/ChatGPT OAuth flow (authorization code + PKCE S256 and a compatible client registration/identification method).
+The authorization server must issue JWT access tokens with the exact issuer, the configured resource in `aud`, a non-empty `sub`, a valid expiration, and the required scope. When `CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS` is set, only those exact subjects are accepted. It must also support the MCP/ChatGPT OAuth flow (authorization code + PKCE S256 and a compatible client registration/identification method).
 
 CodeBridge exposes:
 

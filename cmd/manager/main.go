@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -23,11 +24,12 @@ import (
 )
 
 type oauthConfig struct {
-	PublicURL string
-	Resource  string
-	Issuer    string
-	JWKSURL   string
-	Scope     string
+	PublicURL      string
+	Resource       string
+	Issuer         string
+	JWKSURL        string
+	Scope          string
+	AllowedSubjects []string
 }
 
 func main() {
@@ -73,7 +75,8 @@ func main() {
 		verifier, err := oauthresource.New(oauthresource.Config{
 			Issuer:   oauthCfg.Issuer,
 			Audience: oauthCfg.Resource,
-			JWKSURL:  oauthCfg.JWKSURL,
+			JWKSURL:          oauthCfg.JWKSURL,
+			AllowedSubjects: oauthCfg.AllowedSubjects,
 		})
 		if err != nil {
 			log.Fatalf("OAuth verifier: %v", err)
@@ -95,7 +98,7 @@ func main() {
 			Scopes:              []string{oauthCfg.Scope},
 			ClockSkew:           30 * time.Second,
 		})(mcpHandler)
-		log.Printf("MCP OAuth enabled: issuer=%s resource=%s scope=%s", oauthCfg.Issuer, oauthCfg.Resource, oauthCfg.Scope)
+		log.Printf("MCP OAuth enabled: issuer=%s resource=%s scope=%s allowed_subjects=%d", oauthCfg.Issuer, oauthCfg.Resource, oauthCfg.Scope, len(oauthCfg.AllowedSubjects))
 	} else {
 		protectedMCP = optionalBearer(os.Getenv("CODEBRIDGE_MCP_TOKEN"), mcpHandler)
 		if os.Getenv("CODEBRIDGE_MCP_TOKEN") == "" {
@@ -144,8 +147,9 @@ func loadOAuthConfig() (*oauthConfig, error) {
 	jwksURL := strings.TrimSpace(os.Getenv("CODEBRIDGE_OAUTH_JWKS_URL"))
 	resource := strings.TrimSpace(os.Getenv("CODEBRIDGE_OAUTH_RESOURCE"))
 	scope := strings.TrimSpace(env("CODEBRIDGE_OAUTH_SCOPE", "codebridge.read"))
+	allowedRaw := strings.TrimSpace(os.Getenv("CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS"))
 
-	enabled := publicURL != "" || issuer != "" || jwksURL != "" || resource != ""
+	enabled := publicURL != "" || issuer != "" || jwksURL != "" || resource != "" || allowedRaw != ""
 	if !enabled {
 		return nil, nil
 	}
@@ -164,13 +168,44 @@ func loadOAuthConfig() (*oauthConfig, error) {
 	if err := validateResourceURI(resource); err != nil {
 		return nil, err
 	}
+	allowedSubjects, err := parseCSVValues(allowedRaw, 100, 256)
+	if err != nil {
+		return nil, fmt.Errorf("CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS: %w", err)
+	}
 	return &oauthConfig{
-		PublicURL: publicURL,
-		Resource:  resource,
-		Issuer:    issuer,
-		JWKSURL:   jwksURL,
-		Scope:     scope,
+		PublicURL:       publicURL,
+		Resource:        resource,
+		Issuer:          issuer,
+		JWKSURL:         jwksURL,
+		Scope:           scope,
+		AllowedSubjects: allowedSubjects,
 	}, nil
+}
+
+func parseCSVValues(raw string, maxItems, maxLen int) ([]string, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0)
+	for _, part := range strings.Split(raw, ",") {
+		value := strings.TrimSpace(part)
+		if value == "" {
+			continue
+		}
+		if len(value) > maxLen {
+			return nil, fmt.Errorf("value exceeds %d bytes", maxLen)
+		}
+		if seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+		if len(out) > maxItems {
+			return nil, fmt.Errorf("too many values; maximum is %d", maxItems)
+		}
+	}
+	return out, nil
 }
 
 func validateResourceURI(raw string) error {

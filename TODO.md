@@ -4,7 +4,8 @@
 
 - [x] Add OAuth 2.1 resource-server authentication for MCP users (external IdP).
 - [x] Publish RFC 9728 protected-resource metadata and OAuth security metadata on tools.
-- [x] Verify access-token signature, issuer, audience/resource, expiration, nbf, and scope.
+- [x] Verify access-token signature, issuer, audience/resource, expiration, nbf, subject, and scope.
+- [x] Add optional OAuth subject allowlist for single-user/private deployments.
 - [x] Replace shared enrollment token with one-time enrollment and per-device credentials.
 - [x] Persist device identity metadata and credential hashes only; never persist source payloads.
 - [x] Add admin API for enrollment, device revoke, and credential rotation.

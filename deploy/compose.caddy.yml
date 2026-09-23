@@ -17,6 +17,7 @@ services:
       CODEBRIDGE_OAUTH_JWKS_URL: "${CODEBRIDGE_OAUTH_JWKS_URL}"
       CODEBRIDGE_OAUTH_RESOURCE: "${CODEBRIDGE_OAUTH_RESOURCE:-}"
       CODEBRIDGE_OAUTH_SCOPE: "${CODEBRIDGE_OAUTH_SCOPE:-codebridge.read}"
+      CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS: "${CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS:-}"
     volumes:
       - codebridge-data:/data
     # Administrative API is reachable only from the host loopback interface.

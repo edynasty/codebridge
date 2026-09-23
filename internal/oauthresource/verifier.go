@@ -23,16 +23,18 @@ import (
 )
 
 type Config struct {
-	Issuer   string
-	Audience string
-	JWKSURL  string
+	Issuer          string
+	Audience        string
+	JWKSURL         string
+	AllowedSubjects []string
 }
 
 type Verifier struct {
-	issuer   string
-	audience string
-	jwksURL  string
-	client   *http.Client
+	issuer          string
+	audience        string
+	jwksURL         string
+	allowedSubjects map[string]struct{}
+	client           *http.Client
 
 	mu        sync.RWMutex
 	keys      map[string]signingKey
@@ -74,13 +76,22 @@ func New(cfg Config) (*Verifier, error) {
 	if err := requireHTTPSOrLoopback(cfg.JWKSURL); err != nil {
 		return nil, fmt.Errorf("jwks URL: %w", err)
 	}
+	allowed := map[string]struct{}{}
+	for _, subject := range cfg.AllowedSubjects {
+		subject = strings.TrimSpace(subject)
+		if subject == "" {
+			continue
+		}
+		allowed[subject] = struct{}{}
+	}
 	return &Verifier{
-		issuer:   cfg.Issuer,
-		audience: cfg.Audience,
-		jwksURL:  cfg.JWKSURL,
-		client:   &http.Client{Timeout: 10 * time.Second},
-		keys:     map[string]signingKey{},
-		cacheTTL: 15 * time.Minute,
+		issuer:          cfg.Issuer,
+		audience:        cfg.Audience,
+		jwksURL:         cfg.JWKSURL,
+		allowedSubjects: allowed,
+		client:           &http.Client{Timeout: 10 * time.Second},
+		keys:             map[string]signingKey{},
+		cacheTTL:         15 * time.Minute,
 	}, nil
 }
 
@@ -115,7 +126,15 @@ func (v *Verifier) Verify(ctx context.Context, tokenString string, _ *http.Reque
 	if err != nil || exp == nil {
 		return nil, fmt.Errorf("%w: missing expiration", mcpauth.ErrInvalidToken)
 	}
-	sub, _ := claims.GetSubject()
+	sub, err := claims.GetSubject()
+	if err != nil || strings.TrimSpace(sub) == "" {
+		return nil, fmt.Errorf("%w: missing subject", mcpauth.ErrInvalidToken)
+	}
+	if len(v.allowedSubjects) > 0 {
+		if _, ok := v.allowedSubjects[sub]; !ok {
+			return nil, fmt.Errorf("%w: subject is not allowed", mcpauth.ErrInvalidToken)
+		}
+	}
 	scopes := extractScopes(claims)
 	return &mcpauth.TokenInfo{
 		Scopes:     scopes,

@@ -122,3 +122,62 @@ func contains(values []string, want string) bool {
 	}
 	return false
 }
+
+func TestVerifyRejectsMissingSubject(t *testing.T) {
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	kid := "test-key"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"keys": []any{rsaJWK(kid, &key.PublicKey)}})
+	}))
+	defer server.Close()
+
+	audience := "https://codebridge.example.test"
+	v, err := New(Config{Issuer: server.URL, Audience: audience, JWKSURL: server.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"iss": server.URL, "aud": audience,
+		"exp": now.Add(time.Minute).Unix(), "scope": "codebridge.read",
+	})
+	tok.Header["kid"] = kid
+	signed, _ := tok.SignedString(key)
+	if _, err := v.Verify(context.Background(), signed, nil); err == nil {
+		t.Fatal("token without subject was accepted")
+	}
+}
+
+func TestVerifySubjectAllowlist(t *testing.T) {
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	kid := "test-key"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"keys": []any{rsaJWK(kid, &key.PublicKey)}})
+	}))
+	defer server.Close()
+
+	audience := "https://codebridge.example.test"
+	v, err := New(Config{
+		Issuer: server.URL, Audience: audience, JWKSURL: server.URL,
+		AllowedSubjects: []string{"allowed-user"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	makeToken := func(sub string) string {
+		tok := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+			"iss": server.URL, "aud": audience, "sub": sub,
+			"exp": now.Add(time.Minute).Unix(), "scope": "codebridge.read",
+		})
+		tok.Header["kid"] = kid
+		signed, _ := tok.SignedString(key)
+		return signed
+	}
+	if _, err := v.Verify(context.Background(), makeToken("blocked-user"), nil); err == nil {
+		t.Fatal("non-allowlisted subject was accepted")
+	}
+	if _, err := v.Verify(context.Background(), makeToken("allowed-user"), nil); err != nil {
+		t.Fatalf("allowlisted subject was rejected: %v", err)
+	}
+}

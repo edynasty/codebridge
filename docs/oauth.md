@@ -28,6 +28,7 @@ CODEBRIDGE_OAUTH_ISSUER=https://auth.example.com
 CODEBRIDGE_OAUTH_JWKS_URL=https://auth.example.com/.well-known/jwks.json
 CODEBRIDGE_OAUTH_RESOURCE=https://codebridge.example.com
 CODEBRIDGE_OAUTH_SCOPE=codebridge.read
+CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS=
 ```
 
 ### `CODEBRIDGE_PUBLIC_URL`
@@ -51,6 +52,20 @@ If omitted, CodeBridge uses `CODEBRIDGE_PUBLIC_URL`.
 ### `CODEBRIDGE_OAUTH_SCOPE`
 
 Required scope for all current read-only tools. Default: `codebridge.read`.
+
+### `CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS`
+
+Optional comma-separated allowlist of exact OAuth `sub` values.
+
+All accepted access tokens must contain a non-empty `sub`. When the allowlist is empty, any authenticated subject with the required audience/scope is allowed. When it is configured, only listed subjects are accepted.
+
+For a personal deployment, setting this after the first successful OAuth login is recommended:
+
+```env
+CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS=auth0|abc123
+```
+
+Do not use email addresses unless your IdP intentionally uses a stable email as `sub`; normally the opaque immutable subject identifier is safer.
 
 ## Protected resource metadata
 
@@ -89,7 +104,9 @@ Every protected MCP request must pass all of these checks:
 5. expected audience/resource is present;
 6. `exp` exists and is valid;
 7. `nbf`, when present, is valid;
-8. required scope is present in `scope` or `scp`.
+8. a non-empty `sub` is present;
+9. if configured, `sub` is in `CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS`;
+10. required scope is present in `scope` or `scp`.
 
 The MCP middleware also returns a `WWW-Authenticate` challenge containing the resource-metadata URL and required scope.
 
