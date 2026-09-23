@@ -13,6 +13,7 @@
 - [x] Add TLS/WSS deployment example with Caddy; keep /admin off the public reverse proxy.
 - [x] Add Manager-generated request IDs and structured metadata-only audit logs.
 - [x] Add version-injected cross-platform binary release packaging and checksums.
+- [x] Add non-secret local Client JSON config and launchd/systemd user-service examples.
 - [ ] Add tenant/account scoping to every Manager lookup.
 - [ ] Run MCP Inspector OAuth flow against a real Auth0/Keycloak/Authentik tenant.
 

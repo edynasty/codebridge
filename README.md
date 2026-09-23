@@ -77,6 +77,25 @@ Both binaries support `--version`. Tagged GitHub releases automatically publish 
 
 See [docs/releases.md](docs/releases.md).
 
+## Local Client configuration
+
+The Client optionally reads `~/.config/codebridge/client.json`, so Manager URL, device identity, and workspace roots do not need to live in shell environment variables. CLI flags override environment variables, which override the JSON configuration.
+
+```json
+{
+  "manager_url": "wss://codebridge.example.com/agent",
+  "device_id": "mbp-m1",
+  "device_name": "MacBook Pro",
+  "workspaces": {
+    "pms": "/Users/me/code/pms"
+  }
+}
+```
+
+Device credentials remain in the separate `credentials.json` file with mode `0600`; enrollment codes and credentials should not be put in `client.json`.
+
+macOS launchd and Linux systemd user-service examples are included. See [docs/client.md](docs/client.md).
+
 ## Run locally
 
 ### 1. Start the Manager

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/edynasty/codebridge/internal/agentops"
+	"github.com/edynasty/codebridge/internal/clientconfig"
 	"github.com/edynasty/codebridge/internal/clientcred"
 	"github.com/edynasty/codebridge/internal/config"
 	"github.com/edynasty/codebridge/internal/protocol"
@@ -25,13 +26,23 @@ var version = "dev"
 const maxAgentResponseBytes = 768 * 1024
 
 func main() {
-	managerURL := flag.String("manager", env("CODEBRIDGE_MANAGER_URL", "ws://127.0.0.1:8080/agent"), "manager websocket URL")
-	deviceID := flag.String("device-id", env("CODEBRIDGE_DEVICE_ID", hostnameSlug()), "stable device ID")
-	deviceName := flag.String("device-name", env("CODEBRIDGE_DEVICE_NAME", hostname()), "device display name")
-	workspacesRaw := flag.String("workspaces", os.Getenv("CODEBRIDGE_WORKSPACES"), "name=/path,name2=/path")
+	configPath, configRequired, err := clientconfig.ResolvePath(os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
+	fileConfig, err := clientconfig.Load(configPath, configRequired)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	managerURL := flag.String("manager", firstNonEmpty(os.Getenv("CODEBRIDGE_MANAGER_URL"), fileConfig.ManagerURL, "ws://127.0.0.1:8080/agent"), "manager websocket URL")
+	deviceID := flag.String("device-id", firstNonEmpty(os.Getenv("CODEBRIDGE_DEVICE_ID"), fileConfig.DeviceID, hostnameSlug()), "stable device ID")
+	deviceName := flag.String("device-name", firstNonEmpty(os.Getenv("CODEBRIDGE_DEVICE_NAME"), fileConfig.DeviceName, hostname()), "device display name")
+	workspacesRaw := flag.String("workspaces", os.Getenv("CODEBRIDGE_WORKSPACES"), "name=/path,name2=/path; overrides config workspaces")
 	enrollmentCode := flag.String("enrollment-code", os.Getenv("CODEBRIDGE_ENROLL_CODE"), "one-time manager enrollment code")
-	credentialFile := flag.String("credential-file", env("CODEBRIDGE_CREDENTIAL_FILE", clientcred.DefaultPath()), "device credential file")
+	credentialFile := flag.String("credential-file", firstNonEmpty(os.Getenv("CODEBRIDGE_CREDENTIAL_FILE"), fileConfig.CredentialFile, clientcred.DefaultPath()), "device credential file")
 	credentialOverride := flag.String("device-credential", os.Getenv("CODEBRIDGE_DEVICE_CREDENTIAL"), "device credential override (normally loaded from credential file)")
+	_ = flag.String("config", configPath, "client JSON config file")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 	if *showVersion {
@@ -39,7 +50,13 @@ func main() {
 		return
 	}
 
-	roots, advertised, err := config.ParseWorkspaces(*workspacesRaw)
+	var roots map[string]string
+	var advertised []protocol.Workspace
+	if strings.TrimSpace(*workspacesRaw) != "" {
+		roots, advertised, err = config.ParseWorkspaces(*workspacesRaw)
+	} else {
+		roots, advertised, err = config.ParseWorkspaceMap(fileConfig.Workspaces)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -200,6 +217,15 @@ func runSession(ctx context.Context, managerURL string, reg protocol.RegisterReq
 			}
 		}
 	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func env(k, def string) string {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/edynasty/codebridge/internal/protocol"
@@ -13,8 +14,7 @@ import (
 //
 //	pms=/Users/me/code/pms,portal=/Users/me/code/portal
 func ParseWorkspaces(raw string) (map[string]string, []protocol.Workspace, error) {
-	roots := map[string]string{}
-	var advertised []protocol.Workspace
+	entries := map[string]string{}
 	if strings.TrimSpace(raw) == "" {
 		return nil, nil, fmt.Errorf("CODEBRIDGE_WORKSPACES is required")
 	}
@@ -24,7 +24,43 @@ func ParseWorkspaces(raw string) (map[string]string, []protocol.Workspace, error
 			return nil, nil, fmt.Errorf("invalid workspace entry %q; expected name=/absolute/path", item)
 		}
 		name := strings.TrimSpace(parts[0])
-		path := strings.TrimSpace(parts[1])
+		if _, exists := entries[name]; exists {
+			return nil, nil, fmt.Errorf("duplicate workspace name %q", name)
+		}
+		entries[name] = strings.TrimSpace(parts[1])
+	}
+	return ParseWorkspaceMap(entries)
+}
+
+// ParseWorkspaceMap validates workspace names and local roots while advertising
+// only logical names upstream. JSON config files use this form so filesystem
+// paths can safely contain commas.
+func ParseWorkspaceMap(entries map[string]string) (map[string]string, []protocol.Workspace, error) {
+	if len(entries) == 0 {
+		return nil, nil, fmt.Errorf("at least one workspace is required")
+	}
+	names := make([]string, 0, len(entries))
+	for rawName := range entries {
+		names = append(names, rawName)
+	}
+	sort.Strings(names)
+
+	roots := make(map[string]string, len(entries))
+	advertised := make([]protocol.Workspace, 0, len(entries))
+	for _, rawName := range names {
+		name := strings.TrimSpace(rawName)
+		path := strings.TrimSpace(entries[rawName])
+		if name == "" || path == "" {
+			return nil, nil, fmt.Errorf("workspace name and path are required")
+		}
+		if len(name) > 128 {
+			return nil, nil, fmt.Errorf("workspace name %q exceeds 128 bytes", name)
+		}
+		if name != rawName {
+			if _, exists := entries[name]; exists {
+				return nil, nil, fmt.Errorf("duplicate workspace name %q", name)
+			}
+		}
 		abs, err := filepath.Abs(path)
 		if err != nil {
 			return nil, nil, fmt.Errorf("workspace %s: %w", name, err)
@@ -40,7 +76,6 @@ func ParseWorkspaces(raw string) (map[string]string, []protocol.Workspace, error
 			return nil, nil, fmt.Errorf("duplicate workspace name %q", name)
 		}
 		roots[name] = abs
-		// Do not expose the physical local path to ChatGPT/Manager users.
 		advertised = append(advertised, protocol.Workspace{Name: name})
 	}
 	return roots, advertised, nil
