@@ -39,3 +39,47 @@ func TestResolveUnderRootRejectsSymlinkEscape(t *testing.T) {
 		t.Fatal("expected symlink escape to be rejected")
 	}
 }
+
+func TestWorkspaceRootHandleRejectsSymlinkSwapOutsideRoot(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink permissions vary on Windows")
+	}
+
+	root := t.TempDir()
+	outside := t.TempDir()
+	safe := filepath.Join(root, "safe.txt")
+	secret := filepath.Join(outside, "secret.txt")
+	if err := os.WriteFile(safe, []byte("safe"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(secret, []byte("secret"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(root, "alias")
+	if err := os.Symlink("safe.txt", alias); err != nil {
+		t.Fatal(err)
+	}
+
+	// Simulate a successful pre-open policy/path validation.
+	if _, err := ResolveUnderRoot(root, "alias"); err != nil {
+		t.Fatalf("initial in-root symlink should validate: %v", err)
+	}
+
+	handle, err := openWorkspaceRoot(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+
+	if err := os.Remove(alias); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(secret, alias); err != nil {
+		t.Fatal(err)
+	}
+
+	if f, err := handle.Open("alias"); err == nil {
+		_ = f.Close()
+		t.Fatal("os.Root followed swapped symlink outside workspace")
+	}
+}

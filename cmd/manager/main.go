@@ -62,6 +62,7 @@ func main() {
 	maxDeviceInflight := envInt("CODEBRIDGE_MAX_INFLIGHT_PER_DEVICE", 8, 1, 64)
 	maxMCPInflight := envInt("CODEBRIDGE_MAX_MCP_INFLIGHT", 16, 1, 128)
 	maxMCPRequestBytes := envInt("CODEBRIDGE_MAX_MCP_REQUEST_BYTES", 1024*1024, 64*1024, 8*1024*1024)
+	maxAgentConnections := envInt("CODEBRIDGE_MAX_AGENT_CONNECTIONS", 32, 1, 512)
 
 	registry := mgr.NewRegistry(maxDeviceInflight)
 	toolService := &mgr.ToolService{Registry: registry, Audit: audit}
@@ -116,7 +117,7 @@ func main() {
 	}
 
 	mux.Handle("/mcp", withRequestID(limitMCP(maxMCPInflight, int64(maxMCPRequestBytes), protectedMCP)))
-	mux.Handle("/agent", withRequestID(&mgr.AgentHandler{Registry: registry, Auth: deviceAuth, Audit: audit}))
+	mux.Handle("/agent", withRequestID(limitAgentConnections(maxAgentConnections, &mgr.AgentHandler{Registry: registry, Auth: deviceAuth, Audit: audit})))
 	mux.Handle("/admin/", withRequestID(&mgr.AdminHandler{Auth: deviceAuth, Registry: registry, AdminToken: os.Getenv("CODEBRIDGE_ADMIN_TOKEN"), Audit: audit}))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -137,7 +138,7 @@ func main() {
 	}
 	log.Printf("CodeBridge manager listening on %s", *addr)
 	log.Printf("MCP endpoint: /mcp; agent websocket: /agent")
-	log.Printf("limits: mcp_inflight=%d device_inflight=%d mcp_request_bytes=%d", maxMCPInflight, maxDeviceInflight, maxMCPRequestBytes)
+	log.Printf("limits: mcp_inflight=%d device_inflight=%d agent_connections=%d mcp_request_bytes=%d", maxMCPInflight, maxDeviceInflight, maxAgentConnections, maxMCPRequestBytes)
 	if os.Getenv("CODEBRIDGE_ADMIN_TOKEN") == "" {
 		log.Printf("admin API disabled: CODEBRIDGE_ADMIN_TOKEN is empty")
 	} else {
@@ -263,6 +264,21 @@ func withRequestID(next http.Handler) http.Handler {
 		id := auditlog.NewRequestID()
 		r.Header.Set("X-CodeBridge-Request-ID", id)
 		w.Header().Set("X-Request-ID", id)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func limitAgentConnections(maxConnections int, next http.Handler) http.Handler {
+	sem := make(chan struct{}, maxConnections)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case sem <- struct{}{}:
+			defer func() { <-sem }()
+		default:
+			w.Header().Set("Retry-After", "1")
+			http.Error(w, "too many agent connections", http.StatusTooManyRequests)
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }

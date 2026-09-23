@@ -95,3 +95,11 @@ func logicalChildPath(dir, name string) string {
 	}
 	return filepath.ToSlash(filepath.Join(dir, name))
 }
+
+func openWorkspaceRoot(root string) (*os.Root, error) {
+	handle, err := os.OpenRoot(root)
+	if err != nil {
+		return nil, errors.New("workspace root is unavailable")
+	}
+	return handle, nil
+}

@@ -42,7 +42,9 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer ws.Close()
-	ws.SetReadLimit(2 * 1024 * 1024)
+	// Registration is small and unauthenticated. Keep this limit tight until
+	// the device credential/enrollment code has been verified.
+	ws.SetReadLimit(64 * 1024)
 	_ = ws.SetReadDeadline(time.Now().Add(15 * time.Second))
 
 	var first protocol.Envelope
@@ -79,6 +81,9 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		issuedCredential = credential
 		_ = h.Audit.Log(auditlog.Event{Event: "device.enroll", RequestID: requestID, DeviceID: reg.DeviceID, Success: auditlog.Bool(true)})
 	}
+
+	// Authenticated agent responses are bounded separately below.
+	ws.SetReadLimit(maxAgentPayloadBytes + 64*1024)
 
 	now := time.Now().UTC()
 	conn := h.Registry.Put(Device{ID: reg.DeviceID, Name: reg.DeviceName, Version: reg.Version, Online: true, ConnectedAt: now, LastSeen: now, Workspaces: reg.Workspaces}, ws)

@@ -79,11 +79,20 @@ func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, 
 }
 
 func (s *Service) listDirectory(root, rel string) ([]DirEntry, error) {
-	p, err := s.resolveAllowedPath(root, rel)
+	if _, err := s.resolveAllowedPath(root, rel); err != nil {
+		return nil, err
+	}
+	rootHandle, err := openWorkspaceRoot(root)
 	if err != nil {
 		return nil, err
 	}
-	entries, err := os.ReadDir(p)
+	defer rootHandle.Close()
+	dir, err := rootHandle.Open(logicalPath(rel))
+	if err != nil {
+		return nil, safePathError("list directory", rel, err)
+	}
+	defer dir.Close()
+	entries, err := dir.ReadDir(-1)
 	if err != nil {
 		return nil, safePathError("list directory", rel, err)
 	}
@@ -124,11 +133,15 @@ func (s *Service) readFile(root, rel string, limit int) (ReadFileResult, error) 
 	if limit <= 0 || limit > maxReadBytes {
 		limit = maxReadBytes
 	}
-	p, err := s.resolveAllowedPath(root, rel)
+	if _, err := s.resolveAllowedPath(root, rel); err != nil {
+		return ReadFileResult{}, err
+	}
+	rootHandle, err := openWorkspaceRoot(root)
 	if err != nil {
 		return ReadFileResult{}, err
 	}
-	f, err := os.Open(p)
+	defer rootHandle.Close()
+	f, err := rootHandle.Open(logicalPath(rel))
 	if err != nil {
 		return ReadFileResult{}, safePathError("read file", rel, err)
 	}

@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/url"
 	"os"
 	"os/signal"
@@ -125,12 +126,8 @@ func main() {
 }
 
 func runSession(ctx context.Context, managerURL string, reg protocol.RegisterRequest, service *agentops.Service, onCredential func(string) error) error {
-	u, err := url.Parse(managerURL)
-	if err != nil {
+	if _, err := validateManagerURL(managerURL); err != nil {
 		return err
-	}
-	if u.Scheme != "ws" && u.Scheme != "wss" {
-		return fmt.Errorf("manager URL must use ws:// or wss://")
 	}
 	ws, _, err := websocket.DefaultDialer.DialContext(ctx, managerURL, nil)
 	if err != nil {
@@ -230,6 +227,30 @@ func runSession(ctx context.Context, managerURL string, reg protocol.RegisterReq
 			}
 		}
 	}
+}
+
+func validateManagerURL(raw string) (*url.URL, error) {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Hostname() == "" {
+		return nil, fmt.Errorf("invalid manager URL")
+	}
+	if u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return nil, fmt.Errorf("manager URL must not contain user info, query, or fragment")
+	}
+	if u.Scheme == "wss" {
+		return u, nil
+	}
+	if u.Scheme == "ws" {
+		host := u.Hostname()
+		if host == "localhost" {
+			return u, nil
+		}
+		if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+			return u, nil
+		}
+		return nil, fmt.Errorf("remote manager URL must use wss://; ws:// is allowed only for loopback development")
+	}
+	return nil, fmt.Errorf("manager URL must use wss:// (or ws:// for loopback development)")
 }
 
 func firstNonEmpty(values ...string) string {
