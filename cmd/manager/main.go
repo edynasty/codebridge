@@ -9,16 +9,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/edynasty/codebridge/internal/authstore"
 	mgr "github.com/edynasty/codebridge/internal/manager"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func main() {
 	addr := flag.String("addr", env("CODEBRIDGE_ADDR", ":8080"), "listen address")
+	stateFile := flag.String("state-file", env("CODEBRIDGE_STATE_FILE", "./data/auth.json"), "device auth state file")
 	flag.Parse()
 
+	auth, err := authstore.Open(*stateFile)
+	if err != nil {
+		log.Fatalf("open auth state: %v", err)
+	}
 	registry := mgr.NewRegistry()
-	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "CodeBridge", Version: "0.1.0"}, nil)
+	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "CodeBridge", Version: "0.2.0"}, nil)
 	(&mgr.ToolService{Registry: registry}).Register(mcpServer)
 
 	mcpHandler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server { return mcpServer }, &mcp.StreamableHTTPOptions{
@@ -28,7 +34,8 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", optionalBearer(os.Getenv("CODEBRIDGE_MCP_TOKEN"), mcpHandler))
-	mux.Handle("/agent", &mgr.AgentHandler{Registry: registry, EnrollToken: os.Getenv("CODEBRIDGE_ENROLL_TOKEN")})
+	mux.Handle("/agent", &mgr.AgentHandler{Registry: registry, Auth: auth})
+	mux.Handle("/admin/", &mgr.AdminHandler{Auth: auth, Registry: registry, AdminToken: os.Getenv("CODEBRIDGE_ADMIN_TOKEN")})
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
@@ -41,6 +48,11 @@ func main() {
 	s := &http.Server{Addr: *addr, Handler: logRequests(mux), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
 	log.Printf("CodeBridge manager listening on %s", *addr)
 	log.Printf("MCP endpoint: /mcp; agent websocket: /agent")
+	if os.Getenv("CODEBRIDGE_ADMIN_TOKEN") == "" {
+		log.Printf("admin API disabled: CODEBRIDGE_ADMIN_TOKEN is empty")
+	} else {
+		log.Printf("admin API enabled at /admin/")
+	}
 	if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}

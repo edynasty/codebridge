@@ -6,7 +6,13 @@ services:
     restart: unless-stopped
     environment:
       CODEBRIDGE_ADDR: ":8080"
-      CODEBRIDGE_ENROLL_TOKEN: "${CODEBRIDGE_ENROLL_TOKEN}"
+      CODEBRIDGE_STATE_FILE: "/data/auth.json"
+      CODEBRIDGE_ADMIN_TOKEN: "${CODEBRIDGE_ADMIN_TOKEN}"
       CODEBRIDGE_MCP_TOKEN: "${CODEBRIDGE_MCP_TOKEN:-}"
+    volumes:
+      - codebridge-data:/data
     ports:
       - "8080:8080"
+
+volumes:
+  codebridge-data:

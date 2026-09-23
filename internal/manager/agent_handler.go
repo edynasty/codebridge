@@ -7,13 +7,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/edynasty/codebridge/internal/authstore"
 	"github.com/edynasty/codebridge/internal/protocol"
 	"github.com/gorilla/websocket"
 )
 
 type AgentHandler struct {
-	Registry    *Registry
-	EnrollToken string
+	Registry *Registry
+	Auth     *authstore.Store
 }
 
 var upgrader = websocket.Upgrader{
@@ -43,20 +44,35 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal(first.Payload, &reg); err != nil {
 		return
 	}
-	if h.EnrollToken != "" && reg.EnrollToken != h.EnrollToken {
-		_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: false, Message: "invalid enrollment token"})})
-		return
-	}
 	reg.DeviceID = strings.TrimSpace(reg.DeviceID)
 	reg.DeviceName = strings.TrimSpace(reg.DeviceName)
 	if reg.DeviceID == "" || reg.DeviceName == "" {
 		_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: false, Message: "device_id and device_name are required"})})
 		return
 	}
+	if h.Auth == nil {
+		_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: false, Message: "device authentication is not configured"})})
+		return
+	}
+
+	issuedCredential := ""
+	if h.Auth.VerifyDevice(reg.DeviceID, reg.DeviceCredential) {
+		if err := h.Auth.UpdateDeviceName(reg.DeviceID, reg.DeviceName); err != nil {
+			log.Printf("update device identity: %v", err)
+		}
+	} else {
+		credential, err := h.Auth.EnrollDevice(reg.EnrollmentCode, reg.DeviceID, reg.DeviceName)
+		if err != nil {
+			_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: false, Message: err.Error()})})
+			return
+		}
+		issuedCredential = credential
+	}
+
 	now := time.Now().UTC()
 	conn := h.Registry.Put(Device{ID: reg.DeviceID, Name: reg.DeviceName, Version: reg.Version, Online: true, ConnectedAt: now, LastSeen: now, Workspaces: reg.Workspaces}, ws)
 	defer h.Registry.Remove(reg.DeviceID, conn)
-	_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: true})})
+	_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: true, DeviceCredential: issuedCredential})})
 	_ = ws.SetReadDeadline(time.Time{})
 	log.Printf("agent online: %s (%s), workspaces=%d", reg.DeviceName, reg.DeviceID, len(reg.Workspaces))
 

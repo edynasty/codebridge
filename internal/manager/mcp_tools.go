@@ -54,7 +54,7 @@ func readOnlyTool(name, description string) *mcp.Tool {
 		Description: description,
 		Annotations: &mcp.ToolAnnotations{
 			ReadOnlyHint:  true,
-			OpenWorldHint: false,
+			OpenWorldHint: boolPtr(false),
 		},
 	}
 }
@@ -132,3 +132,5 @@ func protocolRequest(tool, workspace string, args map[string]any) protocol.Agent
 	}
 	return protocol.AgentRequest{Tool: tool, Workspace: workspace, Args: args}
 }
+
+func boolPtr(v bool) *bool { return &v }

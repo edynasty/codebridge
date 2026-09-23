@@ -14,19 +14,22 @@ import (
 	"time"
 
 	"github.com/edynasty/codebridge/internal/agentops"
+	"github.com/edynasty/codebridge/internal/clientcred"
 	"github.com/edynasty/codebridge/internal/config"
 	"github.com/edynasty/codebridge/internal/protocol"
 	"github.com/gorilla/websocket"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 func main() {
 	managerURL := flag.String("manager", env("CODEBRIDGE_MANAGER_URL", "ws://127.0.0.1:8080/agent"), "manager websocket URL")
 	deviceID := flag.String("device-id", env("CODEBRIDGE_DEVICE_ID", hostnameSlug()), "stable device ID")
 	deviceName := flag.String("device-name", env("CODEBRIDGE_DEVICE_NAME", hostname()), "device display name")
 	workspacesRaw := flag.String("workspaces", os.Getenv("CODEBRIDGE_WORKSPACES"), "name=/path,name2=/path")
-	enrollToken := flag.String("enroll-token", os.Getenv("CODEBRIDGE_ENROLL_TOKEN"), "manager enrollment token")
+	enrollmentCode := flag.String("enrollment-code", os.Getenv("CODEBRIDGE_ENROLL_CODE"), "one-time manager enrollment code")
+	credentialFile := flag.String("credential-file", env("CODEBRIDGE_CREDENTIAL_FILE", clientcred.DefaultPath()), "device credential file")
+	credentialOverride := flag.String("device-credential", os.Getenv("CODEBRIDGE_DEVICE_CREDENTIAL"), "device credential override (normally loaded from credential file)")
 	flag.Parse()
 
 	roots, advertised, err := config.ParseWorkspaces(*workspacesRaw)
@@ -34,12 +37,41 @@ func main() {
 		log.Fatal(err)
 	}
 	service := &agentops.Service{Roots: roots}
+	credKey := clientcred.Key(*managerURL, *deviceID)
+	credential := strings.TrimSpace(*credentialOverride)
+	if credential == "" {
+		credential, err = clientcred.Load(*credentialFile, credKey)
+		if err != nil {
+			log.Fatalf("load device credential: %v", err)
+		}
+	} else if err := clientcred.Save(*credentialFile, credKey, credential); err != nil {
+		log.Fatalf("save device credential override: %v", err)
+	}
+	if credential == "" && strings.TrimSpace(*enrollmentCode) == "" {
+		log.Fatal("device is not enrolled: set CODEBRIDGE_ENROLL_CODE once, or provide an existing device credential")
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	backoff := time.Second
 	for ctx.Err() == nil {
-		err := runSession(ctx, *managerURL, protocol.RegisterRequest{EnrollToken: *enrollToken, DeviceID: *deviceID, DeviceName: *deviceName, Version: version, Workspaces: advertised}, service)
+		reg := protocol.RegisterRequest{
+			EnrollmentCode:   strings.TrimSpace(*enrollmentCode),
+			DeviceCredential: credential,
+			DeviceID:         *deviceID,
+			DeviceName:       *deviceName,
+			Version:          version,
+			Workspaces:       advertised,
+		}
+		err := runSession(ctx, *managerURL, reg, service, func(issued string) error {
+			if err := clientcred.Save(*credentialFile, credKey, issued); err != nil {
+				return err
+			}
+			credential = issued
+			*enrollmentCode = ""
+			log.Printf("device enrollment completed; credential stored in %s", *credentialFile)
+			return nil
+		})
 		if ctx.Err() != nil {
 			break
 		}
@@ -55,7 +87,7 @@ func main() {
 	}
 }
 
-func runSession(ctx context.Context, managerURL string, reg protocol.RegisterRequest, service *agentops.Service) error {
+func runSession(ctx context.Context, managerURL string, reg protocol.RegisterRequest, service *agentops.Service, onCredential func(string) error) error {
 	u, err := url.Parse(managerURL)
 	if err != nil {
 		return err
@@ -86,6 +118,11 @@ func runSession(ctx context.Context, managerURL string, reg protocol.RegisterReq
 	}
 	if !rr.Accepted {
 		return fmt.Errorf("registration rejected: %s", rr.Message)
+	}
+	if rr.DeviceCredential != "" && onCredential != nil {
+		if err := onCredential(rr.DeviceCredential); err != nil {
+			return fmt.Errorf("persist issued device credential: %w", err)
+		}
 	}
 	log.Printf("registered with manager as %s; workspaces=%d", reg.DeviceID, len(reg.Workspaces))
 
@@ -156,6 +193,7 @@ func env(k, def string) string {
 	}
 	return def
 }
+
 func hostname() string {
 	h, _ := os.Hostname()
 	if h == "" {
@@ -163,6 +201,7 @@ func hostname() string {
 	}
 	return h
 }
+
 func hostnameSlug() string {
 	h := strings.ToLower(hostname())
 	h = strings.Map(func(r rune) rune {

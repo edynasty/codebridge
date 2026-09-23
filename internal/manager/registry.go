@@ -89,6 +89,17 @@ func (r *Registry) Get(id string) (*AgentConn, bool) {
 	return c, ok
 }
 
+func (r *Registry) Disconnect(id string) bool {
+	r.mu.RLock()
+	c := r.devices[id]
+	r.mu.RUnlock()
+	if c == nil {
+		return false
+	}
+	_ = c.ws.Close()
+	return true
+}
+
 func (r *Registry) Workspaces(id string) ([]protocol.Workspace, error) {
 	c, ok := r.Get(id)
 	if !ok {

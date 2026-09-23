@@ -24,16 +24,18 @@ type Envelope struct {
 }
 
 type RegisterRequest struct {
-	EnrollToken string      `json:"enroll_token"`
-	DeviceID    string      `json:"device_id"`
-	DeviceName  string      `json:"device_name"`
-	Version     string      `json:"version"`
-	Workspaces  []Workspace `json:"workspaces"`
+	EnrollmentCode   string      `json:"enrollment_code,omitempty"`
+	DeviceCredential string      `json:"device_credential,omitempty"`
+	DeviceID         string      `json:"device_id"`
+	DeviceName       string      `json:"device_name"`
+	Version          string      `json:"version"`
+	Workspaces       []Workspace `json:"workspaces"`
 }
 
 type RegisterResponse struct {
-	Accepted bool   `json:"accepted"`
-	Message  string `json:"message,omitempty"`
+	Accepted         bool   `json:"accepted"`
+	Message          string `json:"message,omitempty"`
+	DeviceCredential string `json:"device_credential,omitempty"`
 }
 
 type AgentRequest struct {

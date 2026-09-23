@@ -3,9 +3,9 @@
 ## P0 - make the MVP production-safe enough for personal use
 
 - [ ] Add OAuth 2.1 for MCP user authentication.
-- [ ] Replace shared enrollment token with one-time enrollment and per-device credentials.
-- [ ] Persist account/device metadata only; never persist source payloads.
-- [ ] Add device revoke/rotate commands.
+- [x] Replace shared enrollment token with one-time enrollment and per-device credentials.
+- [x] Persist device identity metadata and credential hashes only; never persist source payloads.
+- [x] Add admin API for enrollment, device revoke, and credential rotation.
 - [ ] Add tenant/account scoping to every Manager lookup.
 - [ ] Add request/response byte and concurrency limits at the Manager.
 - [ ] Add structured metadata-only audit logs.
