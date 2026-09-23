@@ -238,6 +238,8 @@ See [docs/deployment.md](docs/deployment.md).
 codebridge-doctor --url https://codebridge.example.com
 ```
 
+If `CODEBRIDGE_ACCESS_TOKEN` is set, Doctor also performs an authenticated MCP handshake and `list_devices` call with the real token. With `--device-id` and `--workspace`, it can additionally cross the live Agent path using metadata-only `project_info`.
+
 See [docs/doctor.md](docs/doctor.md).
 
 ## Audit logging

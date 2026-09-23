@@ -18,7 +18,9 @@ func main() {
 	publicURL := flag.String("url", os.Getenv("CODEBRIDGE_PUBLIC_URL"), "public CodeBridge origin, for example https://codebridge.example.com")
 	adminURL := flag.String("admin-url", "", "optional private/loopback Manager origin for admin checks")
 	adminToken := flag.String("admin-token", os.Getenv("CODEBRIDGE_ADMIN_TOKEN"), "admin bearer token; prefer environment variable")
-	deviceID := flag.String("device-id", "", "optional enrolled device ID that must be online")
+	accessToken := strings.TrimSpace(os.Getenv("CODEBRIDGE_ACCESS_TOKEN"))
+	deviceID := flag.String("device-id", "", "optional enrolled device ID to validate")
+	workspace := flag.String("workspace", "", "optional logical workspace for a live project_info MCP round-trip; requires --device-id")
 	timeout := flag.Duration("timeout", 10*time.Second, "per-request timeout")
 	noOAuth := flag.Bool("no-oauth", false, "do not require OAuth protected-resource metadata/challenge")
 	noAdminBlock := flag.Bool("no-admin-block-check", false, "skip checking that public /admin is blocked")
@@ -35,7 +37,9 @@ func main() {
 		PublicURL:        strings.TrimSpace(*publicURL),
 		AdminURL:         strings.TrimSpace(*adminURL),
 		AdminToken:       strings.TrimSpace(*adminToken),
+		AccessToken:      accessToken,
 		DeviceID:         strings.TrimSpace(*deviceID),
+		Workspace:        strings.TrimSpace(*workspace),
 		Timeout:          *timeout,
 		ExpectOAuth:      !*noOAuth,
 		ExpectAdminBlock: !*noAdminBlock,

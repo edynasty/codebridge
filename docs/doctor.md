@@ -27,6 +27,47 @@ Example output:
 
 The process exits non-zero if any required check fails.
 
+## Authenticated MCP smoke with a real access token
+
+When you have a real access token from Auth0, Keycloak, Authentik, or another configured authorization server, export it only for the Doctor process:
+
+```bash
+export CODEBRIDGE_ACCESS_TOKEN='eyJ...'
+
+codebridge-doctor --url https://codebridge.example.com
+```
+
+When `CODEBRIDGE_ACCESS_TOKEN` is present, Doctor additionally uses the official MCP Go client to:
+
+- authenticate to `/mcp` with the real bearer token;
+- complete the MCP initialization handshake;
+- list tools;
+- invoke `list_devices`.
+
+The token is intentionally environment-only; there is no `--access-token` flag, so the bearer token does not need to appear in the process command line.
+
+To also verify a live Agent without reading source contents:
+
+```bash
+CODEBRIDGE_ACCESS_TOKEN='eyJ...' codebridge-doctor \
+  --url https://codebridge.example.com \
+  --device-id mbp-m1 \
+  --workspace pms
+```
+
+This additionally calls `list_workspaces` and the read-only `project_info` tool. `project_info` crosses the real Manager → WebSocket Client path but only returns project markers such as `pom.xml`, `go.mod`, or `package.json`; it does not return file contents.
+
+A successful run separates two classes of failure:
+
+- if authenticated Doctor fails, investigate the IdP token, issuer/audience/scope/subject mapping, CodeBridge OAuth configuration, or MCP endpoint;
+- if authenticated Doctor succeeds but ChatGPT linking fails, investigate the external authorization-code/PKCE/client-registration/UI flow.
+
+Unset the token after the test:
+
+```bash
+unset CODEBRIDGE_ACCESS_TOKEN
+```
+
 ## Check the private Admin API and one device
 
 Run this on the Manager host, or through an SSH tunnel:
@@ -87,10 +128,10 @@ This is suitable for deployment smoke tests, CI, or an external monitor.
 
 The doctor does not:
 
-- obtain an OAuth token;
+- obtain an OAuth token for you;
 - perform the interactive ChatGPT OAuth linking flow;
-- call `read_file`, `search_code`, or any other source-reading tool;
+- call `read_file`, `search_code`, or any other source-content tool;
 - reveal device credentials;
 - expose workspace paths.
 
-A complete release still needs an actual ChatGPT/IdP MCP smoke test after deployment.
+A complete release still needs the interactive ChatGPT/IdP linking flow after deployment. The authenticated Doctor smoke can validate a real IdP-issued access token independently of that UI flow.

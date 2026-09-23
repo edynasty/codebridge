@@ -59,11 +59,15 @@ func (r *Registry) Put(dev Device, ws *websocket.Conn) *AgentConn {
 		sem:    make(chan struct{}, r.maxInflight),
 	}
 	r.mu.Lock()
-	if old := r.devices[dev.ID]; old != nil {
-		_ = old.ws.Close()
-	}
+	old := r.devices[dev.ID]
 	r.devices[dev.ID] = conn
 	r.mu.Unlock()
+	if old != nil {
+		old.FailPending("agent connection replaced")
+		if old.ws != nil {
+			_ = old.ws.Close()
+		}
+	}
 	return conn
 }
 
@@ -73,6 +77,9 @@ func (r *Registry) Remove(id string, target *AgentConn) {
 		delete(r.devices, id)
 	}
 	r.mu.Unlock()
+	if target != nil {
+		target.FailPending("agent disconnected")
+	}
 }
 
 func (r *Registry) Touch(id string) {
@@ -109,7 +116,10 @@ func (r *Registry) Disconnect(id string) bool {
 	if c == nil {
 		return false
 	}
-	_ = c.ws.Close()
+	c.FailPending("agent disconnected")
+	if c.ws != nil {
+		_ = c.ws.Close()
+	}
 	return true
 }
 
@@ -177,6 +187,30 @@ func (c *AgentConn) Deliver(requestID string, resp protocol.AgentResponse) {
 	if ok {
 		select {
 		case p.ch <- resp:
+		default:
+		}
+	}
+}
+
+func (c *AgentConn) FailPending(message string) {
+	if c == nil {
+		return
+	}
+	if message == "" {
+		message = "agent disconnected"
+	}
+
+	c.pendMu.Lock()
+	waiters := make([]chan protocol.AgentResponse, 0, len(c.pend))
+	for _, pending := range c.pend {
+		waiters = append(waiters, pending.ch)
+	}
+	c.pendMu.Unlock()
+
+	resp := protocol.AgentResponse{OK: false, Error: message}
+	for _, ch := range waiters {
+		select {
+		case ch <- resp:
 		default:
 		}
 	}

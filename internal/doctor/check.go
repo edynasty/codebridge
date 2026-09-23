@@ -9,13 +9,17 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 type Options struct {
 	PublicURL        string
 	AdminURL         string
 	AdminToken       string
+	AccessToken      string
 	DeviceID         string
+	Workspace        string
 	Timeout          time.Duration
 	ExpectOAuth      bool
 	ExpectAdminBlock bool
@@ -99,6 +103,16 @@ func Run(ctx context.Context, opts Options) ([]Result, bool) {
 		}
 	}
 
+	if strings.TrimSpace(opts.AccessToken) != "" {
+		for _, result := range authenticatedMCPSmoke(ctx, base, opts) {
+			add(result.Name, result.OK, result.Detail)
+		}
+	}
+
+	if strings.TrimSpace(opts.Workspace) != "" && strings.TrimSpace(opts.DeviceID) == "" {
+		add("mcp_project_info", false, "--workspace requires --device-id")
+	}
+
 	if strings.TrimSpace(opts.AdminURL) != "" {
 		adminBase, parseErr := normalizeBaseURL(opts.AdminURL)
 		if parseErr != nil {
@@ -148,6 +162,188 @@ func Run(ctx context.Context, opts Options) ([]Result, bool) {
 		}
 	}
 	return results, allOK
+}
+
+func authenticatedMCPSmoke(ctx context.Context, base string, opts Options) []Result {
+	results := []Result{}
+	add := func(name string, ok bool, detail string) {
+		results = append(results, Result{Name: name, OK: ok, Detail: detail})
+	}
+
+	timeout := opts.Timeout
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+	smokeCtx, cancel := context.WithTimeout(ctx, 2*timeout)
+	defer cancel()
+
+	httpClient := &http.Client{
+		Timeout: timeout,
+		Transport: bearerTransport{
+			token: strings.TrimSpace(opts.AccessToken),
+			base:  http.DefaultTransport,
+		},
+	}
+	client := mcp.NewClient(&mcp.Implementation{Name: "CodeBridge Doctor", Version: "doctor"}, nil)
+	session, err := client.Connect(smokeCtx, &mcp.StreamableClientTransport{
+		Endpoint:   base + "/mcp",
+		HTTPClient: httpClient,
+	}, nil)
+	if err != nil {
+		add("mcp_authenticated", false, err.Error())
+		return results
+	}
+	defer session.Close()
+
+	tools, err := session.ListTools(smokeCtx, nil)
+	if err != nil {
+		add("mcp_authenticated", false, "list tools: "+err.Error())
+		return results
+	}
+	hasListDevices := false
+	for _, tool := range tools.Tools {
+		if tool.Name == "list_devices" {
+			hasListDevices = true
+			break
+		}
+	}
+	if !hasListDevices {
+		add("mcp_authenticated", false, "list_devices tool is not advertised")
+		return results
+	}
+
+	deviceResult, err := session.CallTool(smokeCtx, &mcp.CallToolParams{Name: "list_devices"})
+	if err != nil {
+		add("mcp_authenticated", false, "list_devices: "+err.Error())
+		return results
+	}
+	if deviceResult.IsError {
+		add("mcp_authenticated", false, "list_devices returned a tool error")
+		return results
+	}
+	var devices []struct {
+		ID string `json:"id"`
+	}
+	if err := decodeToolJSON(deviceResult, &devices); err != nil {
+		add("mcp_authenticated", false, "decode list_devices: "+err.Error())
+		return results
+	}
+	add("mcp_authenticated", true, fmt.Sprintf("tools=%d devices=%d", len(tools.Tools), len(devices)))
+
+	deviceID := strings.TrimSpace(opts.DeviceID)
+	if deviceID == "" {
+		return results
+	}
+	foundDevice := false
+	for _, device := range devices {
+		if device.ID == deviceID {
+			foundDevice = true
+			break
+		}
+	}
+	if !foundDevice {
+		add("mcp_device", false, fmt.Sprintf("device %q is not listed by MCP", deviceID))
+		return results
+	}
+
+	workspaceResult, err := session.CallTool(smokeCtx, &mcp.CallToolParams{
+		Name:      "list_workspaces",
+		Arguments: map[string]any{"device_id": deviceID},
+	})
+	if err != nil {
+		add("mcp_device", false, "list_workspaces: "+err.Error())
+		return results
+	}
+	if workspaceResult.IsError {
+		add("mcp_device", false, "list_workspaces returned a tool error")
+		return results
+	}
+	var workspaces []struct {
+		Name string `json:"name"`
+		Path string `json:"path,omitempty"`
+	}
+	if err := decodeToolJSON(workspaceResult, &workspaces); err != nil {
+		add("mcp_device", false, "decode list_workspaces: "+err.Error())
+		return results
+	}
+	for _, workspace := range workspaces {
+		if workspace.Path != "" {
+			add("mcp_device", false, "workspace response exposed a physical path")
+			return results
+		}
+	}
+	add("mcp_device", true, fmt.Sprintf("device=%s workspaces=%d", deviceID, len(workspaces)))
+
+	workspaceName := strings.TrimSpace(opts.Workspace)
+	if workspaceName == "" {
+		return results
+	}
+	foundWorkspace := false
+	for _, workspace := range workspaces {
+		if workspace.Name == workspaceName {
+			foundWorkspace = true
+			break
+		}
+	}
+	if !foundWorkspace {
+		add("mcp_project_info", false, fmt.Sprintf("workspace %q is not advertised by device %q", workspaceName, deviceID))
+		return results
+	}
+
+	projectResult, err := session.CallTool(smokeCtx, &mcp.CallToolParams{
+		Name: "project_info",
+		Arguments: map[string]any{
+			"device_id": deviceID,
+			"workspace": workspaceName,
+		},
+	})
+	if err != nil {
+		add("mcp_project_info", false, "project_info: "+err.Error())
+		return results
+	}
+	if projectResult.IsError {
+		add("mcp_project_info", false, "project_info returned a tool error")
+		return results
+	}
+	var projectInfo struct {
+		Markers []string `json:"markers"`
+		HasGit  bool     `json:"has_git"`
+	}
+	if err := decodeToolJSON(projectResult, &projectInfo); err != nil {
+		add("mcp_project_info", false, "decode project_info: "+err.Error())
+		return results
+	}
+	add("mcp_project_info", true, fmt.Sprintf("workspace=%s markers=%d has_git=%t", workspaceName, len(projectInfo.Markers), projectInfo.HasGit))
+	return results
+}
+
+func decodeToolJSON(result *mcp.CallToolResult, out any) error {
+	if result == nil || len(result.Content) == 0 {
+		return fmt.Errorf("tool returned no content")
+	}
+	text, ok := result.Content[0].(*mcp.TextContent)
+	if !ok {
+		return fmt.Errorf("unexpected content type %T", result.Content[0])
+	}
+	if err := json.Unmarshal([]byte(text.Text), out); err != nil {
+		return err
+	}
+	return nil
+}
+
+type bearerTransport struct {
+	token string
+	base  http.RoundTripper
+}
+
+func (b bearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	cloned := req.Clone(req.Context())
+	cloned.Header.Set("Authorization", "Bearer "+b.token)
+	base := b.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	return base.RoundTrip(cloned)
 }
 
 func normalizeBaseURL(raw string) (string, error) {

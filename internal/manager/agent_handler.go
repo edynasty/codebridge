@@ -14,12 +14,16 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const maxAgentPayloadBytes = 1024 * 1024
+const (
+	maxAgentPayloadBytes         = 1024 * 1024
+	defaultAgentHeartbeatTimeout = 75 * time.Second
+)
 
 type AgentHandler struct {
-	Registry *Registry
-	Auth     *authstore.Store
-	Audit    *auditlog.Logger
+	Registry         *Registry
+	Auth             *authstore.Store
+	Audit            *auditlog.Logger
+	HeartbeatTimeout time.Duration
 }
 
 var upgrader = websocket.Upgrader{
@@ -80,7 +84,11 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn := h.Registry.Put(Device{ID: reg.DeviceID, Name: reg.DeviceName, Version: reg.Version, Online: true, ConnectedAt: now, LastSeen: now, Workspaces: reg.Workspaces}, ws)
 	defer h.Registry.Remove(reg.DeviceID, conn)
 	_ = ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegistered, Payload: mustJSON(protocol.RegisterResponse{Accepted: true, DeviceCredential: issuedCredential})})
-	_ = ws.SetReadDeadline(time.Time{})
+	heartbeatTimeout := h.HeartbeatTimeout
+	if heartbeatTimeout <= 0 {
+		heartbeatTimeout = defaultAgentHeartbeatTimeout
+	}
+	_ = ws.SetReadDeadline(time.Now().Add(heartbeatTimeout))
 	log.Printf("agent online: %s (%s), workspaces=%d", reg.DeviceName, reg.DeviceID, len(reg.Workspaces))
 	_ = h.Audit.Log(auditlog.Event{Event: "device.connect", RequestID: requestID, DeviceID: reg.DeviceID, Success: auditlog.Bool(true)})
 	defer h.Audit.Log(auditlog.Event{Event: "device.disconnect", RequestID: requestID, DeviceID: reg.DeviceID, Success: auditlog.Bool(true)})
@@ -91,6 +99,7 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Printf("agent offline: %s (%s): %v", reg.DeviceName, reg.DeviceID, err)
 			return
 		}
+		_ = ws.SetReadDeadline(time.Now().Add(heartbeatTimeout))
 		h.Registry.Touch(reg.DeviceID)
 		switch env.Type {
 		case protocol.TypeHeartbeat:
