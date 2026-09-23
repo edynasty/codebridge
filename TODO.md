@@ -15,6 +15,7 @@
 - [x] Add version-injected cross-platform binary release packaging and checksums.
 - [x] Add non-secret local Client JSON config and launchd/systemd user-service examples.
 - [x] Add metadata-only deployment doctor for public OAuth/Admin/device checks.
+- [x] Add real Manager↔Client WebSocket integration test covering enrollment, tool execution, one-time codes, and credential reconnect.
 - [ ] Add tenant/account scoping to every Manager lookup.
 - [ ] Run MCP Inspector OAuth flow against a real Auth0/Keycloak/Authentik tenant.
 
