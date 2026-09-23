@@ -1,5 +1,10 @@
 # Roadmap
 
+Engineering execution rules: [docs/development-standards.md](docs/development-standards.md)
+
+Engineering quality/CI/security delivery backlog: [docs/development-todo.md](docs/development-todo.md)
+
+
 ## P0 - make the MVP production-safe enough for personal use
 
 - [x] Add OAuth 2.1 resource-server authentication for MCP users (external IdP).

@@ -66,6 +66,17 @@ All tools are declared `readOnlyHint=true` and `openWorldHint=false`. When OAuth
 
 The project uses the official `github.com/modelcontextprotocol/go-sdk` and exposes MCP Streamable HTTP at `/mcp`.
 
+## Development standards
+
+All human and AI contributors must follow [docs/development-standards.md](docs/development-standards.md).
+
+Use:
+
+- [TODO.md](TODO.md) for product capability milestones;
+- [docs/development-todo.md](docs/development-todo.md) for engineering quality, CI, security regression, integration, and delivery work.
+
+A non-trivial task starts with a Todo/acceptance checklist and is complete only after implementation, tests, documentation/config synchronization, and the final commit's CI are green.
+
 ## Build
 
 ```bash
