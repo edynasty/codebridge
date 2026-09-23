@@ -17,6 +17,7 @@ Example:
   "manager_url": "wss://codebridge.example.com/agent",
   "device_id": "mbp-m1",
   "device_name": "MacBook Pro",
+  "allow_sensitive_files": false,
   "workspaces": {
     "pms": "/Users/me/code/pms",
     "portal": "/Users/me/code/portal"
@@ -67,6 +68,34 @@ codebridge-client
 ```
 
 An explicitly configured file must exist. The default `~/.config/codebridge/client.json` is optional so environment/flag-only operation remains supported.
+
+## Sensitive file protection
+
+By default the Client blocks source-content access to common credential and secret locations even when they are inside an allowed workspace. This includes:
+
+- `.git`, `.ssh`, `.gnupg`, `.aws`, `.azure`, `.kube`, `.docker`, and `.secrets`;
+- `.env` and environment-specific `.env.*` files, while example/sample/template/dist variants remain readable;
+- common private-key and keystore formats such as `.pem`, `.key`, `.p12`, `.pfx`, `.jks`, and `.keystore`;
+- Terraform state and variable files;
+- common credential files such as `.npmrc`, `.pypirc`, `.netrc`, and `.git-credentials`.
+
+The protection applies to direct reads, directory/file discovery, code search, and `git_diff`. A full `git_diff` is generated only after sensitive changed files have been removed from the path list.
+
+For an exceptional local workflow, protection can be disabled explicitly:
+
+```json
+{
+  "allow_sensitive_files": true
+}
+```
+
+or:
+
+```bash
+CODEBRIDGE_ALLOW_SENSITIVE_FILES=true codebridge-client
+```
+
+or with `--allow-sensitive-files`. The Client prints a warning when this protection is disabled. Keep the default `false` for normal ChatGPT/MCP use.
 
 ## First enrollment
 

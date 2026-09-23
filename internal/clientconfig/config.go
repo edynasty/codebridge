@@ -10,11 +10,12 @@ import (
 )
 
 type Config struct {
-	ManagerURL     string            `json:"manager_url,omitempty"`
-	DeviceID       string            `json:"device_id,omitempty"`
-	DeviceName     string            `json:"device_name,omitempty"`
-	Workspaces     map[string]string `json:"workspaces,omitempty"`
-	CredentialFile string            `json:"credential_file,omitempty"`
+	ManagerURL          string            `json:"manager_url,omitempty"`
+	DeviceID            string            `json:"device_id,omitempty"`
+	DeviceName          string            `json:"device_name,omitempty"`
+	Workspaces          map[string]string `json:"workspaces,omitempty"`
+	CredentialFile      string            `json:"credential_file,omitempty"`
+	AllowSensitiveFiles bool              `json:"allow_sensitive_files,omitempty"`
 }
 
 func DefaultPath() string {

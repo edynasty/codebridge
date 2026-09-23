@@ -2,6 +2,7 @@
   "manager_url": "wss://codebridge.example.com/agent",
   "device_id": "mbp-m1",
   "device_name": "MacBook Pro",
+  "allow_sensitive_files": false,
   "workspaces": {
     "pms": "/Users/me/code/pms",
     "portal": "/Users/me/code/portal"

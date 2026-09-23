@@ -30,7 +30,8 @@ ChatGPT Web / MCP client
 - Every file path is resolved under an allow-listed workspace root; `..` traversal, absolute paths, and symlink escapes are rejected.
 - `search_code` invokes `rg` with argument arrays, not a shell. It falls back to a bounded Go scanner when ripgrep is unavailable.
 - File reads are capped at 256 KiB per call.
-- Git commands are fixed read-only commands (`status`, `diff`).
+- Git commands are fixed read-only commands (`status`, `diff`). Sensitive paths are filtered from status and diff output by default.
+- Common sensitive workspace content such as `.env`, private keys, cloud credentials, `.git` internals, and Terraform state/variables is blocked by default across read/search/discovery tools. Disabling this requires an explicit local Client opt-in.
 - The manager does not persist source code or tool responses.
 - Device enrollment uses short-lived **one-time enrollment codes**.
 - Each enrolled device receives a random **per-device credential**. The manager persists only its SHA-256 digest; the client persists the credential locally with file mode `0600`.
@@ -86,6 +87,7 @@ The Client optionally reads `~/.config/codebridge/client.json`, so Manager URL, 
   "manager_url": "wss://codebridge.example.com/agent",
   "device_id": "mbp-m1",
   "device_name": "MacBook Pro",
+  "allow_sensitive_files": false,
   "workspaces": {
     "pms": "/Users/me/code/pms"
   }

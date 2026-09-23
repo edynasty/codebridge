@@ -29,7 +29,8 @@ const (
 )
 
 type Service struct {
-	Roots map[string]string
+	Roots               map[string]string
+	AllowSensitiveFiles bool
 }
 
 type DirEntry struct {
@@ -67,17 +68,9 @@ func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, 
 	case "search_code":
 		return s.searchCode(ctx, root, stringArg(req.Args, "query", ""), stringArg(req.Args, "path", "."))
 	case "git_status":
-		return gitRun(ctx, root, "status", "--short", "--branch")
+		return s.gitStatus(ctx, root)
 	case "git_diff":
-		path := stringArg(req.Args, "path", "")
-		args := []string{"diff", "--no-ext-diff", "--no-textconv", "--"}
-		if path != "" {
-			if _, err := ResolveUnderRoot(root, path); err != nil {
-				return nil, err
-			}
-			args = append(args, path)
-		}
-		return gitRun(ctx, root, args...)
+		return s.gitDiff(ctx, root, stringArg(req.Args, "path", ""))
 	case "project_info":
 		return s.projectInfo(root)
 	default:
@@ -86,7 +79,7 @@ func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, 
 }
 
 func (s *Service) listDirectory(root, rel string) ([]DirEntry, error) {
-	p, err := ResolveUnderRoot(root, rel)
+	p, err := s.resolveAllowedPath(root, rel)
 	if err != nil {
 		return nil, err
 	}
@@ -103,13 +96,17 @@ func (s *Service) listDirectory(root, rel string) ([]DirEntry, error) {
 		if err != nil {
 			continue
 		}
+		childPath := logicalChildPath(rel, e.Name())
+		if !s.AllowSensitiveFiles && isSensitivePath(childPath) {
+			continue
+		}
 		typ := "file"
 		if e.IsDir() {
 			typ = "dir"
 		} else if info.Mode()&os.ModeSymlink != 0 {
 			typ = "symlink"
 		}
-		out = append(out, DirEntry{Name: e.Name(), Path: logicalChildPath(rel, e.Name()), Type: typ, Size: info.Size()})
+		out = append(out, DirEntry{Name: e.Name(), Path: childPath, Type: typ, Size: info.Size()})
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Type != out[j].Type {
@@ -127,7 +124,7 @@ func (s *Service) readFile(root, rel string, limit int) (ReadFileResult, error) 
 	if limit <= 0 || limit > maxReadBytes {
 		limit = maxReadBytes
 	}
-	p, err := ResolveUnderRoot(root, rel)
+	p, err := s.resolveAllowedPath(root, rel)
 	if err != nil {
 		return ReadFileResult{}, err
 	}
@@ -152,7 +149,7 @@ func (s *Service) findFiles(root, pattern string) ([]string, error) {
 	if pattern == "" {
 		return nil, errors.New("pattern is required")
 	}
-	rootReal, err := ResolveUnderRoot(root, ".")
+	rootReal, err := s.resolveWorkspaceRoot(root)
 	if err != nil {
 		return nil, err
 	}
@@ -162,17 +159,20 @@ func (s *Service) findFiles(root, pattern string) ([]string, error) {
 		if err != nil {
 			return nil
 		}
-		if d.IsDir() && shouldSkipDir(d.Name()) && path != rootReal {
-			return filepath.SkipDir
-		}
-		if d.IsDir() {
-			return nil
-		}
 		rel, err := filepath.Rel(rootReal, path)
 		if err != nil {
 			return nil
 		}
 		rel = filepath.ToSlash(rel)
+		if d.IsDir() {
+			if path != rootReal && (shouldSkipDir(d.Name()) || (!s.AllowSensitiveFiles && isSensitivePath(rel))) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !s.AllowSensitiveFiles && isSensitivePath(rel) {
+			return nil
+		}
 		matched := strings.Contains(strings.ToLower(rel), needle)
 		if strings.Contains(pattern, "*") || strings.Contains(pattern, "?") {
 			matched, _ = filepath.Match(pattern, d.Name())
@@ -192,11 +192,11 @@ func (s *Service) searchCode(ctx context.Context, root, query, rel string) ([]Se
 	if strings.TrimSpace(query) == "" {
 		return nil, errors.New("query is required")
 	}
-	rootReal, err := ResolveUnderRoot(root, ".")
+	rootReal, err := s.resolveWorkspaceRoot(root)
 	if err != nil {
 		return nil, err
 	}
-	target, err := ResolveUnderRoot(root, rel)
+	target, err := s.resolveAllowedPath(root, rel)
 	if err != nil {
 		return nil, err
 	}
@@ -215,12 +215,12 @@ func (s *Service) searchCode(ctx context.Context, root, query, rel string) ([]Se
 			}
 			return nil, err
 		}
-		return parseRG(rootReal, stdout.String()), nil
+		return parseRG(rootReal, stdout.String(), s.AllowSensitiveFiles), nil
 	}
-	return fallbackSearch(ctx, rootReal, target, query)
+	return fallbackSearch(ctx, rootReal, target, query, s.AllowSensitiveFiles)
 }
 
-func parseRG(root, output string) []SearchMatch {
+func parseRG(root, output string, allowSensitive bool) []SearchMatch {
 	var out []SearchMatch
 	s := bufio.NewScanner(strings.NewReader(output))
 	for s.Scan() {
@@ -235,7 +235,11 @@ func parseRG(root, output string) []SearchMatch {
 		if err != nil {
 			continue
 		}
-		out = append(out, SearchMatch{Path: filepath.ToSlash(rel), Line: n, Text: parts[2]})
+		rel = filepath.ToSlash(rel)
+		if !allowSensitive && isSensitivePath(rel) {
+			continue
+		}
+		out = append(out, SearchMatch{Path: rel, Line: n, Text: parts[2]})
 		if len(out) >= maxSearchLines {
 			break
 		}
@@ -243,7 +247,7 @@ func parseRG(root, output string) []SearchMatch {
 	return out
 }
 
-func fallbackSearch(ctx context.Context, root, target, query string) ([]SearchMatch, error) {
+func fallbackSearch(ctx context.Context, root, target, query string, allowSensitive bool) ([]SearchMatch, error) {
 	var out []SearchMatch
 	err := filepath.WalkDir(target, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -254,10 +258,18 @@ func fallbackSearch(ctx context.Context, root, target, query string) ([]SearchMa
 			return ctx.Err()
 		default:
 		}
-		if d.IsDir() && shouldSkipDir(d.Name()) && path != target {
-			return filepath.SkipDir
+		rel, relErr := filepath.Rel(root, path)
+		if relErr != nil {
+			return nil
 		}
+		rel = filepath.ToSlash(rel)
 		if d.IsDir() {
+			if path != target && (shouldSkipDir(d.Name()) || (!allowSensitive && isSensitivePath(rel))) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !allowSensitive && isSensitivePath(rel) {
 			return nil
 		}
 		info, err := d.Info()
@@ -273,11 +285,7 @@ func fallbackSearch(ctx context.Context, root, target, query string) ([]SearchMa
 		for s.Scan() {
 			lineNo++
 			if strings.Contains(s.Text(), query) {
-				rel, err := filepath.Rel(root, path)
-				if err != nil {
-					continue
-				}
-				out = append(out, SearchMatch{Path: filepath.ToSlash(rel), Line: lineNo, Text: s.Text()})
+				out = append(out, SearchMatch{Path: rel, Line: lineNo, Text: s.Text()})
 				if len(out) >= maxSearchLines {
 					_ = f.Close()
 					return fs.SkipAll
@@ -288,6 +296,106 @@ func fallbackSearch(ctx context.Context, root, target, query string) ([]SearchMa
 		return nil
 	})
 	return out, err
+}
+
+func (s *Service) gitStatus(ctx context.Context, root string) (map[string]any, error) {
+	result, err := gitRun(ctx, root, "status", "--short", "--branch")
+	if err != nil || s.AllowSensitiveFiles {
+		return result, err
+	}
+	output, _ := result["output"].(string)
+	result["output"] = filterGitStatus(output)
+	return result, nil
+}
+
+func filterGitStatus(output string) string {
+	lines := strings.Split(output, "\n")
+	filtered := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "## ") {
+			filtered = append(filtered, line)
+			continue
+		}
+		if len(line) < 3 {
+			filtered = append(filtered, line)
+			continue
+		}
+		pathField := strings.TrimSpace(line[3:])
+		sensitive := false
+		for _, path := range strings.Split(pathField, " -> ") {
+			path = strings.Trim(path, "\"")
+			if isSensitivePath(path) {
+				sensitive = true
+				break
+			}
+		}
+		if !sensitive {
+			filtered = append(filtered, line)
+		}
+	}
+	if len(filtered) == 0 {
+		return ""
+	}
+	return strings.Join(filtered, "\n") + "\n"
+}
+
+func (s *Service) gitDiff(ctx context.Context, root, rel string) (map[string]any, error) {
+	if _, err := s.resolveWorkspaceRoot(root); err != nil {
+		return nil, err
+	}
+	if rel != "" {
+		if _, err := s.resolveAllowedPath(root, rel); err != nil {
+			return nil, err
+		}
+	}
+
+	nameArgs := []string{"diff", "--name-only", "-z", "--"}
+	if rel != "" {
+		nameArgs = append(nameArgs, rel)
+	}
+	names, err := gitOutput(ctx, root, nameArgs...)
+	if err != nil {
+		return nil, err
+	}
+
+	var safe []string
+	for _, name := range strings.Split(names, "\x00") {
+		if name == "" {
+			continue
+		}
+		if !s.AllowSensitiveFiles && isSensitivePath(name) {
+			continue
+		}
+		safe = append(safe, name)
+	}
+	if len(safe) == 0 {
+		return map[string]any{"output": "", "truncated": false}, nil
+	}
+
+	args := []string{"diff", "--no-ext-diff", "--no-textconv", "--"}
+	args = append(args, safe...)
+	return gitRun(ctx, root, args...)
+}
+
+func gitOutput(ctx context.Context, root string, args ...string) (string, error) {
+	if _, err := exec.LookPath("git"); err != nil {
+		return "", fmt.Errorf("git not found in PATH")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	gitArgs := append([]string{"-c", "core.fsmonitor=false", "-C", root}, args...)
+	cmd := exec.CommandContext(ctx, "git", gitArgs...)
+	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "GIT_PAGER=cat")
+	var stdout bytes.Buffer
+	cmd.Stdout = &limitedBuffer{buf: &stdout, max: maxOutputBytes}
+	cmd.Stderr = io.Discard
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("git command failed: %v", err)
+	}
+	return stdout.String(), nil
 }
 
 func (s *Service) projectInfo(root string) (map[string]any, error) {

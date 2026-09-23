@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -42,6 +43,15 @@ func main() {
 	enrollmentCode := flag.String("enrollment-code", os.Getenv("CODEBRIDGE_ENROLL_CODE"), "one-time manager enrollment code")
 	credentialFile := flag.String("credential-file", firstNonEmpty(os.Getenv("CODEBRIDGE_CREDENTIAL_FILE"), fileConfig.CredentialFile, clientcred.DefaultPath()), "device credential file")
 	credentialOverride := flag.String("device-credential", os.Getenv("CODEBRIDGE_DEVICE_CREDENTIAL"), "device credential override (normally loaded from credential file)")
+	allowSensitiveDefault := fileConfig.AllowSensitiveFiles
+	if raw, exists := os.LookupEnv("CODEBRIDGE_ALLOW_SENSITIVE_FILES"); exists {
+		value, parseErr := strconv.ParseBool(strings.TrimSpace(raw))
+		if parseErr != nil {
+			log.Fatal("CODEBRIDGE_ALLOW_SENSITIVE_FILES must be true or false")
+		}
+		allowSensitiveDefault = value
+	}
+	allowSensitiveFiles := flag.Bool("allow-sensitive-files", allowSensitiveDefault, "allow MCP tools to read normally blocked sensitive files inside workspaces")
 	_ = flag.String("config", configPath, "client JSON config file")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
@@ -60,7 +70,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	service := &agentops.Service{Roots: roots}
+	service := &agentops.Service{Roots: roots, AllowSensitiveFiles: *allowSensitiveFiles}
+	if *allowSensitiveFiles {
+		log.Printf("WARNING: sensitive workspace file protection is disabled for this client")
+	}
 	credKey := clientcred.Key(*managerURL, *deviceID)
 	credential := strings.TrimSpace(*credentialOverride)
 	if credential == "" {

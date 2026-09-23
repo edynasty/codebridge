@@ -1,6 +1,7 @@
 package agentops
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -73,4 +74,45 @@ func isSafeEnvExample(base string) bool {
 	default:
 		return false
 	}
+}
+
+func sensitivePathError(rel string) error {
+	return fmt.Errorf("sensitive path %q is blocked by local policy", logicalPath(rel))
+}
+
+func (s *Service) resolveWorkspaceRoot(root string) (string, error) {
+	rootReal, err := ResolveUnderRoot(root, ".")
+	if err != nil {
+		return "", err
+	}
+	if !s.AllowSensitiveFiles && isSensitivePath(filepath.Base(rootReal)) {
+		return "", fmt.Errorf("workspace root is blocked by local sensitive-file policy")
+	}
+	return rootReal, nil
+}
+
+func (s *Service) resolveAllowedPath(root, rel string) (string, error) {
+	if !s.AllowSensitiveFiles && isSensitivePath(rel) {
+		return "", sensitivePathError(rel)
+	}
+	rootReal, err := s.resolveWorkspaceRoot(root)
+	if err != nil {
+		return "", err
+	}
+	target, err := ResolveUnderRoot(root, rel)
+	if err != nil {
+		return "", err
+	}
+	if s.AllowSensitiveFiles {
+		return target, nil
+	}
+	resolvedRel, err := filepath.Rel(rootReal, target)
+	if err != nil {
+		return "", fmt.Errorf("resolve workspace-relative path failed")
+	}
+	resolvedRel = filepath.ToSlash(resolvedRel)
+	if isSensitivePath(resolvedRel) {
+		return "", sensitivePathError(rel)
+	}
+	return target, nil
 }
