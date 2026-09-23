@@ -25,13 +25,14 @@ ChatGPT Web / MCP client
 
 ## Security model
 
-- Read-only MCP tools only. There is **no arbitrary shell tool** and no file-write tool.
+- Read-only MCP tools by default. There is **no arbitrary shell tool**. File writes exist only as the structured `apply_patch` tool, are disabled by default, and require an explicit **local** per-workspace opt-in (`CODEBRIDGE_WRITABLE_WORKSPACES`) that a remote MCP caller can never enable.
 - Local paths never need to be exposed to ChatGPT. Agents advertise logical workspace names.
 - Every file path is resolved under an allow-listed workspace root; `..` traversal, absolute paths, and symlink escapes are rejected.
 - `search_code` invokes `rg` with argument arrays, not a shell. It falls back to a bounded Go scanner when ripgrep is unavailable.
 - File reads are capped at 256 KiB per call.
 - Git commands are fixed read-only commands (`status`, `diff`). Sensitive paths are filtered from status and diff output by default.
-- Common sensitive workspace content such as `.env`, private keys, cloud credentials, `.git` internals, and Terraform state/variables is blocked by default across read/search/discovery tools. Disabling this requires an explicit local Client opt-in.
+- Common sensitive workspace content such as `.env`, private keys, cloud credentials, `.git` internals, and Terraform state/variables is blocked by default across read/search/discovery tools. Disabling this requires an explicit local Client opt-in. Sensitive paths are **never writable**, even with that opt-in.
+- `apply_patch` is all-or-nothing, requires `preview` then `confirm`, always creates a git checkpoint before writing, rejects binary content and sensitive paths, and can be undone with `rollback_patch`. It never runs shell commands and never pushes.
 - The manager does not persist source code or tool responses.
 - Device enrollment uses short-lived **one-time enrollment codes**.
 - Each enrolled device receives a random **per-device credential**. The manager persists only its SHA-256 digest; the client persists the credential locally with file mode `0600`.
@@ -47,7 +48,7 @@ ChatGPT Web / MCP client
 | Tool | Purpose |
 | --- | --- |
 | `list_devices` | List connected agents |
-| `list_workspaces` | List logical workspaces on a device |
+| `list_workspaces` | List logical workspaces on a device (writable ones are flagged) |
 | `list_directory` | List a workspace-relative directory |
 | `read_file` | Read a bounded source/text file |
 | `find_files` | Find files by glob/path substring |
@@ -55,8 +56,14 @@ ChatGPT Web / MCP client
 | `git_status` | Read git status |
 | `git_diff` | Read unstaged git diff |
 | `project_info` | Detect build/project markers |
+| `find_symbol` | Find symbol declarations in Go/Java/TypeScript/JavaScript by name substring and kind |
+| `find_references` | Find references to a symbol (language server when enabled, bounded textual fallback) |
+| `read_symbol` | Read the smallest useful declaration range of one symbol |
+| `dependency_graph` | Module/dependency graph from pom.xml, package.json or go.mod |
+| `apply_patch` | Structured all-or-nothing text edits; write-opt-in workspaces only; preview + confirm + git checkpoint |
+| `rollback_patch` | Undo an `apply_patch` using its checkpoint ID |
 
-All tools are declared `readOnlyHint=true` and `openWorldHint=false`. When OAuth is enabled, each tool also advertises the `codebridge.read` OAuth scope (or your configured scope).
+All tools are declared `readOnlyHint=true` and `openWorldHint=false`, except `apply_patch`/`rollback_patch`, which are declared mutating. When OAuth is enabled, each tool also advertises the `codebridge.read` OAuth scope (or your configured scope).
 
 ## Requirements
 
@@ -102,9 +109,13 @@ The Client optionally reads `~/.config/codebridge/client.json`, so Manager URL, 
   "allow_sensitive_files": false,
   "workspaces": {
     "pms": "/Users/me/code/pms"
-  }
+  },
+  "writable_workspaces": ["pms"],
+  "enable_lsp": true
 }
 ```
+
+`writable_workspaces` is the local write opt-in for `apply_patch`/`rollback_patch`; the same list can be set with `CODEBRIDGE_WRITABLE_WORKSPACES`. `enable_lsp` (or `CODEBRIDGE_ENABLE_LSP=true`) makes the symbol tools prefer locally installed language servers (`gopls`, `typescript-language-server --stdio`, `jdtls`), falling back to the built-in portable parser. Local symbol-index and write-checkpoint caches live under `~/.cache/codebridge/` (override with `CODEBRIDGE_STATE_DIR`/`CODEBRIDGE_INDEX_DIR`) and are never uploaded.
 
 Device credentials remain in the separate `credentials.json` file with mode `0600`; enrollment codes and credentials should not be put in `client.json`.
 
@@ -310,7 +321,7 @@ The remaining OAuth gap is an external-provider/UI smoke test against a provider
 
 ## Non-goals for v0.3
 
-- Editing files
+- Arbitrary file writes outside the structured, opt-in `apply_patch` flow
 - Running arbitrary commands
 - Building/deploying projects
 - Persistent source-code indexing on the manager

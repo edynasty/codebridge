@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -53,6 +55,19 @@ func main() {
 		allowSensitiveDefault = value
 	}
 	allowSensitiveFiles := flag.Bool("allow-sensitive-files", allowSensitiveDefault, "allow MCP tools to read normally blocked sensitive files inside workspaces")
+	writableRaw := flag.String("writable-workspaces", firstNonEmpty(os.Getenv("CODEBRIDGE_WRITABLE_WORKSPACES"), strings.Join(fileConfig.WritableWorkspaces, ",")), "comma-separated workspaces with explicit local write opt-in (empty disables write mode)")
+	enableLSPDefault := fileConfig.EnableLSP
+	if raw, exists := os.LookupEnv("CODEBRIDGE_ENABLE_LSP"); exists {
+		value, parseErr := strconv.ParseBool(strings.TrimSpace(raw))
+		if parseErr != nil {
+			log.Fatal("CODEBRIDGE_ENABLE_LSP must be true or false")
+		}
+		enableLSPDefault = value
+	}
+	enableLSP := flag.Bool("enable-lsp", enableLSPDefault, "use locally installed language servers (gopls, typescript-language-server, jdtls) for symbol tools")
+	stateDir := firstNonEmpty(os.Getenv("CODEBRIDGE_STATE_DIR"), fileConfig.CheckpointDir, agentops.DefaultClientStateDir())
+	indexDir := firstNonEmpty(os.Getenv("CODEBRIDGE_INDEX_DIR"), filepath.Join(stateDir, "index"))
+	checkpointDir := filepath.Join(stateDir, "checkpoints")
 	_ = flag.String("config", configPath, "client JSON config file")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
@@ -61,19 +76,44 @@ func main() {
 		return
 	}
 
+	writable := map[string]bool{}
+	for _, name := range strings.Split(*writableRaw, ",") {
+		if name = strings.TrimSpace(name); name != "" {
+			writable[name] = true
+		}
+	}
+
 	var roots map[string]string
 	var advertised []protocol.Workspace
 	if strings.TrimSpace(*workspacesRaw) != "" {
-		roots, advertised, err = config.ParseWorkspaces(*workspacesRaw)
+		roots, advertised, err = config.ParseWorkspaces(*workspacesRaw, writable)
 	} else {
-		roots, advertised, err = config.ParseWorkspaceMap(fileConfig.Workspaces)
+		roots, advertised, err = config.ParseWorkspaceMap(fileConfig.Workspaces, writable)
 	}
 	if err != nil {
 		log.Fatal(err)
 	}
-	service := &agentops.Service{Roots: roots, AllowSensitiveFiles: *allowSensitiveFiles}
+	service := &agentops.Service{
+		Roots:               roots,
+		AllowSensitiveFiles: *allowSensitiveFiles,
+		Writable:            writable,
+		IndexDir:            indexDir,
+		CheckpointDir:       checkpointDir,
+		EnableLSP:           *enableLSP,
+	}
 	if *allowSensitiveFiles {
 		log.Printf("WARNING: sensitive workspace file protection is disabled for this client")
+	}
+	if len(writable) > 0 {
+		names := make([]string, 0, len(writable))
+		for name := range writable {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		log.Printf("write mode enabled for workspace(s): %s (git checkpoints active)", strings.Join(names, ", "))
+	}
+	if *enableLSP {
+		log.Printf("LSP symbol tools enabled: language servers run locally and fall back to the portable parser when unavailable")
 	}
 	credKey := clientcred.Key(*managerURL, *deviceID)
 	credential := strings.TrimSpace(*credentialOverride)

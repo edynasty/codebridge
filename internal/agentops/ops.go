@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/edynasty/codebridge/internal/protocol"
@@ -29,8 +30,20 @@ const (
 )
 
 type Service struct {
-	Roots               map[string]string
+	Roots map[string]string
+	// AllowSensitiveFiles is a local-only relaxation of the sensitive-file
+	// read policy; it never enables writes to sensitive paths.
 	AllowSensitiveFiles bool
+	// Writable lists workspace names with explicit local write opt-in.
+	Writable map[string]bool
+	// IndexDir/CheckpointDir are local-only caches on the agent machine.
+	IndexDir      string
+	CheckpointDir string
+	// EnableLSP opts into local language-server usage for symbol tools.
+	EnableLSP bool
+
+	lspMu      sync.Mutex
+	lspClients map[string]*lspClient
 }
 
 type DirEntry struct {
@@ -73,9 +86,125 @@ func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, 
 		return s.gitDiff(ctx, root, stringArg(req.Args, "path", ""))
 	case "project_info":
 		return s.projectInfo(root)
+	case "find_symbol":
+		return s.findSymbol(ctx, root, req.Workspace, stringArg(req.Args, "pattern", ""), stringArg(req.Args, "kind", ""))
+	case "find_references":
+		return s.findReferences(ctx, root, req.Workspace, stringArg(req.Args, "symbol", ""), stringArg(req.Args, "path", ""))
+	case "read_symbol":
+		return s.readSymbol(root, stringArg(req.Args, "path", ""), stringArg(req.Args, "symbol", ""), intArg(req.Args, "max_lines", 512))
+	case "dependency_graph":
+		return s.dependencyGraph(ctx, root)
+	case "apply_patch":
+		return s.applyPatch(ctx, req.Workspace, root, parseFileEdits(req.Args["edits"]), boolArg(req.Args, "preview", false), boolArg(req.Args, "confirm", false))
+	case "rollback_patch":
+		return s.rollbackPatch(ctx, req.Workspace, root, stringArg(req.Args, "checkpoint_id", ""))
 	default:
 		return nil, fmt.Errorf("unsupported tool %q", req.Tool)
 	}
+}
+
+// findReferences resolves references to a symbol. It prefers a local LSP
+// server when enabled and available, and falls back to bounded word-boundary
+// textual matching otherwise.
+func (s *Service) findReferences(ctx context.Context, root, workspace, symbol, rel string) (any, error) {
+	symbol = strings.TrimSpace(symbol)
+	if !validIdentifier(symbol) {
+		return nil, errSymbolRequired("symbol")
+	}
+	if rel != "" {
+		hits, useLSP := s.referencesViaLSP(ctx, root, workspace, rel, symbol)
+		if len(hits) > 0 {
+			return map[string]any{"engine": refEngine(useLSP), "references": hits}, nil
+		}
+	}
+	hits, err := s.findReferencesTextual(ctx, root, symbol)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"engine": "textual", "references": hits}, nil
+}
+
+func (s *Service) referencesViaLSP(ctx context.Context, root, workspace, rel, symbol string) ([]SymbolHit, bool) {
+	lang := languageForFile(rel)
+	if lang == "" {
+		return nil, false
+	}
+	client := s.lspClientFor(ctx, workspace, root, lang)
+	if client == nil {
+		return nil, false
+	}
+	abs, err := s.resolveAllowedPath(root, rel)
+	if err != nil {
+		return nil, false
+	}
+	data, err := os.ReadFile(abs)
+	if err != nil || len(data) > maxSymbolFileBytes {
+		return nil, false
+	}
+	syms := parseSymbols(logicalPath(rel), data)
+	lines := strings.Split(string(data), "\n")
+	for _, sym := range syms {
+		if sym.Name != symbol || sym.Line-1 >= len(lines) {
+			continue
+		}
+		byteIdx := strings.Index(lines[sym.Line-1], symbol)
+		if byteIdx < 0 {
+			continue
+		}
+		col := utf16Column(lines[sym.Line-1], byteIdx)
+		locations, err := client.references(ctx, abs, sym.Line-1, col, true)
+		if err != nil {
+			return nil, false
+		}
+		hits := make([]SymbolHit, 0, len(locations))
+		for _, loc := range locations {
+			absRef := strings.TrimPrefix(loc.URI, "file://")
+			refRel, relErr := filepath.Rel(root, absRef)
+			if relErr != nil || (!s.AllowSensitiveFiles && isSensitivePath(filepath.ToSlash(refRel))) {
+				continue
+			}
+			hits = append(hits, SymbolHit{Path: filepath.ToSlash(refRel), Line: loc.Range.Start.Line + 1})
+		}
+		return hits, true
+	}
+	return nil, false
+}
+
+func refEngine(useLSP bool) string {
+	if useLSP {
+		return "lsp"
+	}
+	return "textual"
+}
+
+func parseFileEdits(raw any) []FileEdit {
+	items, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	edits := make([]FileEdit, 0, len(items))
+	for _, item := range items {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		edit := FileEdit{
+			Path:    stringArg(m, "path", ""),
+			OldText: stringArg(m, "old_text", ""),
+			NewText: stringArg(m, "new_text", ""),
+		}
+		if edit.Path != "" {
+			edits = append(edits, edit)
+		}
+	}
+	return edits
+}
+
+func boolArg(m map[string]any, key string, def bool) bool {
+	if v, ok := m[key].(bool); ok {
+		return v
+	}
+	return def
 }
 
 func (s *Service) listDirectory(root, rel string) ([]DirEntry, error) {

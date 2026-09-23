@@ -14,8 +14,11 @@ type Config struct {
 	DeviceID            string            `json:"device_id,omitempty"`
 	DeviceName          string            `json:"device_name,omitempty"`
 	Workspaces          map[string]string `json:"workspaces,omitempty"`
+	WritableWorkspaces  []string          `json:"writable_workspaces,omitempty"`
 	CredentialFile      string            `json:"credential_file,omitempty"`
 	AllowSensitiveFiles bool              `json:"allow_sensitive_files,omitempty"`
+	EnableLSP           bool              `json:"enable_lsp,omitempty"`
+	CheckpointDir       string            `json:"checkpoint_dir,omitempty"`
 }
 
 func DefaultPath() string {

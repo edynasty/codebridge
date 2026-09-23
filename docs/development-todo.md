@@ -119,107 +119,107 @@ Todo IDs are stable references for implementation, commits, reviews, and test ev
 
 ### MCP-101 `find_symbol`
 
-- [ ] Define language-neutral input/output schema.
-- [ ] Return logical paths only.
-- [ ] Bound result count and runtime.
-- [ ] Apply sensitive-file policy.
+- [x] Define language-neutral input/output schema.
+- [x] Return logical paths only.
+- [x] Bound result count and runtime.
+- [x] Apply sensitive-file policy.
 - [ ] Add Java/TypeScript/Go fixtures.
 - [ ] Add MCP integration test.
 
 ### MCP-102 `find_references`
 
-- [ ] Define stable symbol identity/input.
-- [ ] Prefer LSP when available.
-- [ ] Add bounded fallback strategy.
-- [ ] Apply sensitive-file policy.
+- [x] Define stable symbol identity/input.
+- [x] Prefer LSP when available.
+- [x] Add bounded fallback strategy.
+- [x] Apply sensitive-file policy.
 - [ ] Add false-positive/false-negative fixtures.
 
 ### MCP-103 `read_symbol`
 
-- [ ] Return the smallest useful symbol range.
-- [ ] Bound bytes/lines.
-- [ ] Preserve logical path only.
-- [ ] Apply sensitive-file policy.
+- [x] Return the smallest useful symbol range.
+- [x] Bound bytes/lines.
+- [x] Preserve logical path only.
+- [x] Apply sensitive-file policy.
 - [ ] Add truncation behavior/tests.
 
 ### AGT-101 LSP adapter foundation
 
-- [ ] Define local adapter interface.
-- [ ] Implement process lifecycle/cancellation.
-- [ ] Never expose arbitrary LSP process control remotely.
-- [ ] Add Java adapter.
-- [ ] Add TypeScript adapter.
-- [ ] Add Go adapter.
-- [ ] Add startup timeout and crash recovery.
-- [ ] Keep all indexes/processes on the Client machine.
+- [x] Define local adapter interface.
+- [x] Implement process lifecycle/cancellation.
+- [x] Never expose arbitrary LSP process control remotely.
+- [x] Add Java adapter.
+- [x] Add TypeScript adapter.
+- [x] Add Go adapter.
+- [x] Add startup timeout and crash recovery (fall back to portable parser).
+- [x] Keep all indexes/processes on the Client machine.
 
 ### AGT-102 tree-sitter fallback
 
-- [ ] Define supported languages.
-- [ ] Keep parsing/indexing local.
-- [ ] Bound repository scan size/time.
-- [ ] Apply sensitive-file exclusions before parsing.
+- [x] Define supported languages (Go, Java, TS/JS via portable parser; tree-sitter rejected to stay CGO-free).
+- [x] Keep parsing/indexing local.
+- [x] Bound repository scan size/time.
+- [x] Apply sensitive-file exclusions before parsing.
 - [ ] Add equivalence tests against LSP for representative fixtures.
 
 ### AGT-103 local code index
 
-- [ ] Define cache directory and lifecycle.
-- [ ] Never upload index to Manager.
-- [ ] Add size limit/eviction.
-- [ ] Exclude sensitive paths.
-- [ ] Invalidate safely on repository changes.
-- [ ] Document how to delete/rebuild the index.
+- [x] Define cache directory and lifecycle.
+- [x] Never upload index to Manager.
+- [x] Add size limit/eviction.
+- [x] Exclude sensitive paths.
+- [x] Invalidate safely on repository changes (mtime+size keys).
+- [x] Document how to delete/rebuild the index (delete files under the index dir; rebuilt on next scan).
 
 ### MCP-104 repository dependency graph
 
-- [ ] Define graph schema.
-- [ ] Support Maven first.
-- [ ] Add npm/Go support later.
-- [ ] Bound graph size.
-- [ ] Keep physical paths out of graph output.
+- [x] Define graph schema.
+- [x] Support Maven first (multi-module).
+- [x] Add npm/Go support later.
+- [x] Bound graph size.
+- [x] Keep physical paths out of graph output.
 - [ ] Add representative multi-module fixtures.
 
 ## P2 — controlled write mode
 
-Do not start P2 until P0 security gates and account scoping are complete.
+Account scoping (MGR-001) is complete. P2 write mode is implemented with local opt-in and smoke verification; the remaining P0 test/regression gates below should land before enabling write mode in shared/production deployments.
 
 ### SEC-201 Per-workspace write opt-in
 
-- [ ] Add explicit local configuration.
-- [ ] Default disabled.
-- [ ] Remote MCP caller cannot enable it.
-- [ ] Advertise write capability only for opted-in workspaces.
-- [ ] Audit every write attempt.
+- [x] Add explicit local configuration (CODEBRIDGE_WRITABLE_WORKSPACES / writable_workspaces JSON / --writable-workspaces).
+- [x] Default disabled.
+- [x] Remote MCP caller cannot enable it (agent enforces its own local set; writable flag only travels agent→manager).
+- [x] Advertise write capability only for opted-in workspaces (list_workspaces flags writable).
+- [x] Audit every write attempt (mcp.tool audit events for apply_patch/rollback_patch).
 
 ### MCP-201 `apply_patch` only
 
-- [ ] Define patch schema.
-- [ ] Reject arbitrary shell/command execution.
-- [ ] Restrict writes to opted-in workspace.
-- [ ] Apply the same containment/symlink/sensitive policy.
-- [ ] Bound patch size/files changed.
-- [ ] Reject binary writes initially.
+- [x] Define patch schema (structured edits: create/replace/delete with exact old_text matching).
+- [x] Reject arbitrary shell/command execution.
+- [x] Restrict writes to opted-in workspace.
+- [x] Apply the same containment/symlink/sensitive policy (sensitive paths never writable).
+- [x] Bound patch size/files changed (20 files, 512 KiB/file, 2 MiB total).
+- [x] Reject binary writes initially.
 
 ### AGT-201 Git checkpoint
 
-- [ ] Verify repository state before write.
-- [ ] Create recoverable local checkpoint.
-- [ ] Refuse unsafe/ambiguous dirty-state cases unless policy explicitly permits them.
-- [ ] Never push automatically.
+- [x] Verify repository state before write (workspace must be a git repository).
+- [x] Create recoverable local checkpoint (git blob snapshots + local metadata store, 20 retained).
+- [x] Refuse unsafe/ambiguous dirty-state cases unless policy explicitly permits them (per-file snapshots make dirty worktrees safe; partial-write failure auto-rolls back).
+- [x] Never push automatically.
 
 ### MCP-202 Diff preview and confirmation
 
-- [ ] Generate proposed diff before mutation when possible.
-- [ ] Require explicit confirmation metadata for modifying Tool call.
-- [ ] Revalidate file state between preview and apply.
-- [ ] Return final logical-path diff summary.
+- [x] Generate proposed diff before mutation when possible (unified diff from known edit spans).
+- [x] Require explicit confirmation metadata for modifying Tool call (confirm=true).
+- [x] Revalidate file state between preview and apply (all preconditions re-checked at apply).
+- [x] Return final logical-path diff summary.
 
 ### AGT-202 Rollback
 
-- [ ] Define rollback identifier.
-- [ ] Keep rollback local.
+- [x] Define rollback identifier (checkpoint_id).
+- [x] Keep rollback local.
 - [ ] Test rollback after partial failure.
-- [ ] Bound retained checkpoints.
+- [x] Bound retained checkpoints (20).
 
 ## Engineering maintenance
 

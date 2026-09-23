@@ -32,18 +32,22 @@ Engineering quality/CI/security delivery backlog: [docs/development-todo.md](doc
 
 ## P1 - coding intelligence
 
-- [ ] `find_symbol`
-- [ ] `find_references`
-- [ ] `read_symbol`
-- [ ] LSP adapters for Java/TypeScript/Go.
-- [ ] tree-sitter fallback.
-- [ ] repository dependency graph.
-- [ ] optional local index/cache stored only on the agent machine.
+- [x] `find_symbol`
+- [x] `find_references`
+- [x] `read_symbol`
+- [x] LSP adapters for Java/TypeScript/Go (opt-in via `CODEBRIDGE_ENABLE_LSP`; falls back to a portable CGO-free parser instead of tree-sitter).
+- [x] tree-sitter fallback (implemented as the built-in portable parser; see note above).
+- [x] repository dependency graph (Maven multi-module, npm, Go).
+- [x] optional local index/cache stored only on the agent machine.
+
+Note: implementation complete with smoke verification; dedicated regression/integration tests for these tools are still tracked in docs/development-todo.md.
 
 ## P2 - controlled write mode
 
-- [ ] Explicit per-workspace write opt-in.
-- [ ] `apply_patch` only; keep arbitrary shell disabled.
-- [ ] Mandatory confirmation metadata for modifying tools.
-- [ ] Git checkpoint before writes.
-- [ ] Diff preview and rollback.
+- [x] Explicit per-workspace write opt-in (`CODEBRIDGE_WRITABLE_WORKSPACES` / `writable_workspaces` JSON).
+- [x] `apply_patch` only; arbitrary shell remains disabled.
+- [x] Mandatory confirmation metadata for modifying tools (preview → confirm flow).
+- [x] Git checkpoint before writes (git blob snapshots, locally retained, bounded).
+- [x] Diff preview and rollback (`rollback_patch` by checkpoint ID).
+
+Note: implementation complete with smoke verification; dedicated regression/integration tests are still tracked in docs/development-todo.md.

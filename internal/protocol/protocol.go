@@ -14,6 +14,9 @@ const (
 type Workspace struct {
 	Name string `json:"name"`
 	Path string `json:"path,omitempty"`
+	// Writable is advertised by the local client from its own configuration;
+	// a remote MCP caller can never enable it.
+	Writable bool `json:"writable,omitempty"`
 }
 
 type Envelope struct {

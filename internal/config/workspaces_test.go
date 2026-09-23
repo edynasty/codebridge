@@ -8,7 +8,7 @@ import (
 
 func TestParseWorkspacesDoesNotAdvertisePhysicalPath(t *testing.T) {
 	d := t.TempDir()
-	roots, adv, err := ParseWorkspaces("demo=" + d)
+	roots, adv, err := ParseWorkspaces("demo="+d, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +26,7 @@ func TestParseWorkspaceMapSupportsCommaInPath(t *testing.T) {
 	if err := os.MkdirAll(d, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	roots, adv, err := ParseWorkspaceMap(map[string]string{"demo": d})
+	roots, adv, err := ParseWorkspaceMap(map[string]string{"demo": d}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
