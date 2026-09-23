@@ -12,15 +12,19 @@ The default production profile checks:
 
 1. `GET /healthz` returns healthy;
 2. RFC 9728 protected-resource metadata is reachable and contains a resource + authorization server;
-3. unauthenticated `/mcp` returns `401`;
-4. the Bearer challenge contains `resource_metadata=...`;
-5. public `/admin/devices` returns `404`.
+3. each advertised authorization server exposes usable OAuth/OIDC metadata;
+4. authorization-code endpoints and PKCE `S256` are advertised;
+5. CodeBridge resource scopes are compatible with the authorization server's advertised scopes when that list is present;
+6. unauthenticated `/mcp` returns `401`;
+7. the Bearer challenge contains `resource_metadata=...`;
+8. public `/admin/devices` returns `404`.
 
 Example output:
 
 ```text
 [PASS] health                 HTTP 200
 [PASS] oauth_metadata         resource=https://codebridge.example.com authorization_servers=1 scopes=1
+[PASS] authorization_server   issuer=https://auth.example.com pkce=S256 refresh=true dcr=true scopes=4
 [PASS] mcp_auth_challenge     HTTP 401; Bearer resource_metadata="..."
 [PASS] public_admin_blocked   HTTP 404
 ```
