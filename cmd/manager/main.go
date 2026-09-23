@@ -23,19 +23,26 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
 )
 
+var version = "dev"
+
 type oauthConfig struct {
-	PublicURL      string
-	Resource       string
-	Issuer         string
-	JWKSURL        string
-	Scope          string
+	PublicURL       string
+	Resource        string
+	Issuer          string
+	JWKSURL         string
+	Scope           string
 	AllowedSubjects []string
 }
 
 func main() {
 	addr := flag.String("addr", env("CODEBRIDGE_ADDR", ":8080"), "listen address")
 	stateFile := flag.String("state-file", env("CODEBRIDGE_STATE_FILE", "./data/auth.json"), "device auth state file")
+	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	audit, err := auditlog.New(strings.TrimSpace(os.Getenv("CODEBRIDGE_AUDIT_LOG")))
 	if err != nil {
@@ -61,7 +68,7 @@ func main() {
 	if oauthCfg != nil {
 		toolService.OAuthScopes = []string{oauthCfg.Scope}
 	}
-	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "CodeBridge", Version: "0.3.0"}, nil)
+	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "CodeBridge", Version: version}, nil)
 	toolService.Register(mcpServer)
 
 	mcpHandler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server { return mcpServer }, &mcp.StreamableHTTPOptions{
@@ -73,9 +80,9 @@ func main() {
 	var protectedMCP http.Handler = mcpHandler
 	if oauthCfg != nil {
 		verifier, err := oauthresource.New(oauthresource.Config{
-			Issuer:   oauthCfg.Issuer,
-			Audience: oauthCfg.Resource,
-			JWKSURL:          oauthCfg.JWKSURL,
+			Issuer:          oauthCfg.Issuer,
+			Audience:        oauthCfg.Resource,
+			JWKSURL:         oauthCfg.JWKSURL,
 			AllowedSubjects: oauthCfg.AllowedSubjects,
 		})
 		if err != nil {

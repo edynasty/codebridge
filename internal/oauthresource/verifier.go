@@ -34,7 +34,7 @@ type Verifier struct {
 	audience        string
 	jwksURL         string
 	allowedSubjects map[string]struct{}
-	client           *http.Client
+	client          *http.Client
 
 	mu        sync.RWMutex
 	keys      map[string]signingKey
@@ -89,9 +89,9 @@ func New(cfg Config) (*Verifier, error) {
 		audience:        cfg.Audience,
 		jwksURL:         cfg.JWKSURL,
 		allowedSubjects: allowed,
-		client:           &http.Client{Timeout: 10 * time.Second},
-		keys:             map[string]signingKey{},
-		cacheTTL:         15 * time.Minute,
+		client:          &http.Client{Timeout: 10 * time.Second},
+		keys:            map[string]signingKey{},
+		cacheTTL:        15 * time.Minute,
 	}, nil
 }
 

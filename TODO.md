@@ -12,6 +12,7 @@
 - [x] Add MCP request/body limits, per-device concurrency limits, WebSocket size limits, and response-size caps.
 - [x] Add TLS/WSS deployment example with Caddy; keep /admin off the public reverse proxy.
 - [x] Add Manager-generated request IDs and structured metadata-only audit logs.
+- [x] Add version-injected cross-platform binary release packaging and checksums.
 - [ ] Add tenant/account scoping to every Manager lookup.
 - [ ] Run MCP Inspector OAuth flow against a real Auth0/Keycloak/Authentik tenant.
 

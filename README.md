@@ -73,6 +73,10 @@ make test
 make build
 ```
 
+Both binaries support `--version`. Tagged GitHub releases automatically publish Client/Manager binaries for macOS Intel/Apple Silicon, Linux amd64/arm64, and Windows amd64 with a `SHA256SUMS` file.
+
+See [docs/releases.md](docs/releases.md).
+
 ## Run locally
 
 ### 1. Start the Manager

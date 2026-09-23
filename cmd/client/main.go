@@ -20,10 +20,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const (
-	version               = "0.3.0"
-	maxAgentResponseBytes = 768 * 1024
-)
+var version = "dev"
+
+const maxAgentResponseBytes = 768 * 1024
 
 func main() {
 	managerURL := flag.String("manager", env("CODEBRIDGE_MANAGER_URL", "ws://127.0.0.1:8080/agent"), "manager websocket URL")
@@ -33,7 +32,12 @@ func main() {
 	enrollmentCode := flag.String("enrollment-code", os.Getenv("CODEBRIDGE_ENROLL_CODE"), "one-time manager enrollment code")
 	credentialFile := flag.String("credential-file", env("CODEBRIDGE_CREDENTIAL_FILE", clientcred.DefaultPath()), "device credential file")
 	credentialOverride := flag.String("device-credential", os.Getenv("CODEBRIDGE_DEVICE_CREDENTIAL"), "device credential override (normally loaded from credential file)")
+	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	roots, advertised, err := config.ParseWorkspaces(*workspacesRaw)
 	if err != nil {
