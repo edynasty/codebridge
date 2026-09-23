@@ -254,6 +254,16 @@ Audit events include request ID, OAuth subject, tool name, device ID, workspace,
 
 See [docs/audit.md](docs/audit.md).
 
+## Integration coverage
+
+CI now exercises three real protocol layers:
+
+- Manager ↔ Client WebSocket enrollment, one-time enrollment-code consumption, tool round-trip, disconnect cleanup, and credential reconnect;
+- official MCP Go SDK Streamable HTTP discovery and tool invocation;
+- signed JWT/JWKS OAuth authentication through `/mcp`, then `read_file` across Manager → WebSocket Client → local workspace, including OAuth `sub` propagation into metadata-only audit records.
+
+The remaining OAuth gap is an external-provider/UI smoke test against a real Auth0/Keycloak/Authentik tenant and ChatGPT linking flow.
+
 ## Production hardening roadmap
 
 1. PostgreSQL account/device registry for multi-tenant deployment.
