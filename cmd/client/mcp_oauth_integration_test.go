@@ -111,7 +111,7 @@ func TestOAuthMCPToRealClientReadFileEndToEnd(t *testing.T) {
 	agentDone := make(chan error, 1)
 	issued := make(chan string, 1)
 	go func() {
-		agentDone <- runSession(agentCtx, "ws"+strings.TrimPrefix(server.URL, "http")+"/agent", protocol.RegisterRequest{
+		agentDone <- runSession(agentCtx, "ws"+strings.TrimPrefix(server.URL, "http")+"/agent", false, protocol.RegisterRequest{
 			EnrollmentCode: enrollmentCode,
 			DeviceID:       "oauth-device",
 			DeviceName:     "OAuth Integration Device",

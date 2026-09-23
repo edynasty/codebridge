@@ -5,3 +5,9 @@ bin/
 .vscode/
 *.log
 dist/
+deploy/.env
+deploy/client-state/
+
+# Local docker preview state (client credential, checkpoints, index)
+deploy/client-state/
+deploy/.env

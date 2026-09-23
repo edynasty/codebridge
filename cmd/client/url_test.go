@@ -10,9 +10,13 @@ func TestValidateManagerURL(t *testing.T) {
 		"ws://[::1]:8080/agent",
 	}
 	for _, raw := range good {
-		if _, err := validateManagerURL(raw); err != nil {
+		if _, err := validateManagerURL(raw, false); err != nil {
 			t.Errorf("%s rejected: %v", raw, err)
 		}
+	}
+
+	if _, err := validateManagerURL("ws://manager:8080/agent", true); err != nil {
+		t.Errorf("insecure-allowed ws URL rejected: %v", err)
 	}
 
 	bad := []string{
@@ -24,7 +28,7 @@ func TestValidateManagerURL(t *testing.T) {
 		"wss://codebridge.example.com/agent#fragment",
 	}
 	for _, raw := range bad {
-		if _, err := validateManagerURL(raw); err == nil {
+		if _, err := validateManagerURL(raw, false); err == nil {
 			t.Errorf("%s was accepted", raw)
 		}
 	}

@@ -54,6 +54,15 @@ func main() {
 		}
 		allowSensitiveDefault = value
 	}
+	allowInsecureWSDefault := false
+	if raw, exists := os.LookupEnv("CODEBRIDGE_ALLOW_INSECURE_WS"); exists {
+		value, parseErr := strconv.ParseBool(strings.TrimSpace(raw))
+		if parseErr != nil {
+			log.Fatal("CODEBRIDGE_ALLOW_INSECURE_WS must be true or false")
+		}
+		allowInsecureWSDefault = value
+	}
+	_ = flag.Bool("allow-insecure-ws", allowInsecureWSDefault, "allow plaintext ws:// to a non-loopback manager (local container networking only)")
 	allowSensitiveFiles := flag.Bool("allow-sensitive-files", allowSensitiveDefault, "allow MCP tools to read normally blocked sensitive files inside workspaces")
 	writableRaw := flag.String("writable-workspaces", firstNonEmpty(os.Getenv("CODEBRIDGE_WRITABLE_WORKSPACES"), strings.Join(fileConfig.WritableWorkspaces, ",")), "comma-separated workspaces with explicit local write opt-in (empty disables write mode)")
 	enableLSPDefault := fileConfig.EnableLSP
@@ -141,7 +150,7 @@ func main() {
 			Version:          version,
 			Workspaces:       advertised,
 		}
-		err := runSession(ctx, *managerURL, reg, service, func(issued string) error {
+		err := runSession(ctx, *managerURL, allowInsecureWSDefault, reg, service, func(issued string) error {
 			if err := clientcred.Save(*credentialFile, credKey, issued); err != nil {
 				return err
 			}
@@ -165,8 +174,8 @@ func main() {
 	}
 }
 
-func runSession(ctx context.Context, managerURL string, reg protocol.RegisterRequest, service *agentops.Service, onCredential func(string) error) error {
-	if _, err := validateManagerURL(managerURL); err != nil {
+func runSession(ctx context.Context, managerURL string, allowInsecureWS bool, reg protocol.RegisterRequest, service *agentops.Service, onCredential func(string) error) error {
+	if _, err := validateManagerURL(managerURL, allowInsecureWS); err != nil {
 		return err
 	}
 	ws, _, err := websocket.DefaultDialer.DialContext(ctx, managerURL, nil)
@@ -269,7 +278,11 @@ func runSession(ctx context.Context, managerURL string, reg protocol.RegisterReq
 	}
 }
 
-func validateManagerURL(raw string) (*url.URL, error) {
+// validateManagerURL enforces WSS for remote managers. allowInsecureWS is the
+// CODEBRIDGE_ALLOW_INSECURE_WS local opt-in: it exists so the client can run
+// in a container next to a local compose manager over plaintext ws; it must
+// never be enabled against a public manager.
+func validateManagerURL(raw string, allowInsecureWS bool) (*url.URL, error) {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || u.Hostname() == "" {
 		return nil, fmt.Errorf("invalid manager URL")
@@ -282,13 +295,16 @@ func validateManagerURL(raw string) (*url.URL, error) {
 	}
 	if u.Scheme == "ws" {
 		host := u.Hostname()
-		if host == "localhost" {
+		ip := net.ParseIP(host)
+		isLoopback := host == "localhost" || host == "host.docker.internal" ||
+			(ip != nil && (ip.IsLoopback() || ip.IsLinkLocalUnicast()))
+		if isLoopback || allowInsecureWS {
+			if !isLoopback {
+				log.Printf("WARNING: insecure ws:// manager connection allowed by CODEBRIDGE_ALLOW_INSECURE_WS; use only on a trusted local network")
+			}
 			return u, nil
 		}
-		if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
-			return u, nil
-		}
-		return nil, fmt.Errorf("remote manager URL must use wss://; ws:// is allowed only for loopback development")
+		return nil, fmt.Errorf("remote manager URL must use wss://; ws:// is allowed only for loopback development (or with CODEBRIDGE_ALLOW_INSECURE_WS for local container networking)")
 	}
 	return nil, fmt.Errorf("manager URL must use wss:// (or ws:// for loopback development)")
 }

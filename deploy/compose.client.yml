@@ -1,0 +1,73 @@
+# Local preview stack: Manager + Client on this machine.
+#
+# Purpose: try CodeBridge end-to-end locally before deploying the real
+# (public, OAuth-protected) Manager on a server.
+#
+# When you deploy the real server, switch the client to it by setting in
+# deploy/.env:
+#   CODEBRIDGE_MANAGER_URL=wss://<your-server>/agent
+#   CODEBRIDGE_ALLOW_INSECURE_WS=false
+#   # fresh enrollment: CODEBRIDGE_ENROLL_CODE=<code from the real server's admin API>
+#   # and start with an empty client-state directory (the local credential only
+#   # verifies against this local Manager)
+# then run: docker compose -f deploy/compose.client.yml up -d client
+# (the manager service below can stay local-only or be stopped with `stop manager`).
+
+name: codebridge-local
+
+services:
+  manager:
+    build:
+      context: ..
+      dockerfile: Dockerfile.manager
+    image: codebridge-manager:local
+    container_name: codebridge-local-manager
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      CODEBRIDGE_ADDR: ":8080"
+      CODEBRIDGE_STATE_FILE: /data/auth.json
+      CODEBRIDGE_AUDIT_LOG: /data/audit.jsonl
+      CODEBRIDGE_ADMIN_TOKEN: ${CODEBRIDGE_ADMIN_TOKEN}
+      # Local dev bearer token for MCP (doctor / smoke testing). The real
+      # deployment uses OAuth instead of CODEBRIDGE_MCP_TOKEN.
+      CODEBRIDGE_MCP_TOKEN: ${CODEBRIDGE_MCP_TOKEN:-local-dev-mcp-token}
+    volumes:
+      - codebridge-data:/data
+    ports:
+      - "127.0.0.1:${CODEBRIDGE_MANAGER_PORT:-8180}:8080"
+
+  client:
+    build:
+      context: ..
+      dockerfile: Dockerfile.client
+    image: codebridge-client:local
+    container_name: codebridge-local-client
+    restart: unless-stopped
+    depends_on:
+      - manager
+    environment:
+      TZ: Asia/Shanghai
+      CODEBRIDGE_MANAGER_URL: ${CODEBRIDGE_MANAGER_URL:-ws://manager:8080/agent}
+      # plaintext ws inside the compose network only; never enable against a
+      # public manager
+      CODEBRIDGE_ALLOW_INSECURE_WS: ${CODEBRIDGE_ALLOW_INSECURE_WS:-true}
+      CODEBRIDGE_DEVICE_ID: ${CODEBRIDGE_DEVICE_ID:-codebridge-local}
+      CODEBRIDGE_DEVICE_NAME: ${CODEBRIDGE_DEVICE_NAME:-CodeBridge Docker Local}
+      # Add workspaces as CODEBRIDGE_WORKSPACES=name1=/workspaces/name1,name2=/workspaces/name2
+      # plus matching read-only volume mounts below.
+      CODEBRIDGE_WORKSPACES: ${CODEBRIDGE_WORKSPACES:-codebridge=/workspaces/codebridge}
+      CODEBRIDGE_CREDENTIAL_FILE: /state/credentials.json
+      CODEBRIDGE_STATE_DIR: /state
+      CODEBRIDGE_ENROLL_CODE: ${CODEBRIDGE_ENROLL_CODE:-}
+      # Write mode stays off unless you set e.g. CODEBRIDGE_WRITABLE_WORKSPACES=codebridge
+      # AND mount the workspace read-write.
+      CODEBRIDGE_WRITABLE_WORKSPACES: ${CODEBRIDGE_WRITABLE_WORKSPACES:-}
+      CODEBRIDGE_ENABLE_LSP: ${CODEBRIDGE_ENABLE_LSP:-false}
+    volumes:
+      - ./client-state:/state
+      # Preview workspace: the codebridge repo itself, read-only.
+      - ..:/workspaces/codebridge:ro
+
+volumes:
+  codebridge-data:

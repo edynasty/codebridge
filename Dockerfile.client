@@ -1,0 +1,17 @@
+FROM golang:1.25-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/codebridge-client ./cmd/client
+
+# git and ripgrep back the git_status/git_diff and ripgrep-accelerated
+# search_code tools; the distroless base used by the manager cannot ship them.
+FROM alpine:3.20
+RUN apk add --no-cache git ripgrep ca-certificates tzdata && \
+    addgroup -S codebridge && adduser -S codebridge -G codebridge && \
+    mkdir -p /state && chown -R codebridge:codebridge /state
+COPY --from=build /out/codebridge-client /usr/local/bin/codebridge-client
+USER codebridge
+WORKDIR /state
+ENTRYPOINT ["codebridge-client"]

@@ -98,7 +98,7 @@ func TestOAuthAccountScopingCrossTenant(t *testing.T) {
 	defer agentCancel()
 	agentDone := make(chan error, 1)
 	go func() {
-		agentDone <- runSession(agentCtx, "ws"+strings.TrimPrefix(server.URL, "http")+"/agent", protocol.RegisterRequest{
+		agentDone <- runSession(agentCtx, "ws"+strings.TrimPrefix(server.URL, "http")+"/agent", false, protocol.RegisterRequest{
 			EnrollmentCode: enrollmentCode,
 			DeviceID:       "scoped-device",
 			DeviceName:     "Scoping Test Device",
