@@ -6,7 +6,7 @@ The release workflow first runs formatting checks, unit tests, and `go vet`, the
 
 ## Release assets
 
-Each release contains both `codebridge-client` and `codebridge-manager`.
+Each release contains `codebridge-client`, `codebridge-manager`, and `codebridge-doctor`.
 
 | Platform | Asset |
 | --- | --- |
@@ -73,7 +73,7 @@ make test
 make build VERSION=dev
 ```
 
-The binaries are written to `bin/`.
+The three binaries are written to `bin/`.
 
 ## Creating a release
 

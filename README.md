@@ -73,7 +73,7 @@ make test
 make build
 ```
 
-Both binaries support `--version`. Tagged GitHub releases automatically publish Client/Manager binaries for macOS Intel/Apple Silicon, Linux amd64/arm64, and Windows amd64 with a `SHA256SUMS` file.
+Client, Manager, and Doctor support `--version`. Tagged GitHub releases automatically publish all three binaries for macOS Intel/Apple Silicon, Linux amd64/arm64, and Windows amd64 with a `SHA256SUMS` file.
 
 See [docs/releases.md](docs/releases.md).
 
@@ -229,6 +229,16 @@ as the remote MCP endpoint in ChatGPT's developer/plugin UI. With OAuth configur
 A Caddy + Docker Compose example is included under `deploy/`. It terminates TLS, forwards `/mcp` and `/agent`, and deliberately returns 404 for public `/admin/*`; the Manager admin API is bound to host loopback only.
 
 See [docs/deployment.md](docs/deployment.md).
+
+## Deployment doctor
+
+`codebridge-doctor` performs metadata-only deployment checks for HTTPS health, OAuth protected-resource discovery, the unauthenticated MCP Bearer challenge, public `/admin` blocking, and optionally private Admin/device-online state.
+
+```bash
+codebridge-doctor --url https://codebridge.example.com
+```
+
+See [docs/doctor.md](docs/doctor.md).
 
 ## Audit logging
 

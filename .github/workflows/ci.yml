@@ -42,7 +42,7 @@ jobs:
           go-version: '1.25.x'
           cache: true
       - run: go mod download
-      - name: Cross-build Client and Manager
+      - name: Cross-build Client, Manager and Doctor
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -52,3 +52,4 @@ jobs:
           if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
           go build -trimpath -o "/tmp/codebridge-client${ext}" ./cmd/client
           go build -trimpath -o "/tmp/codebridge-manager${ext}" ./cmd/manager
+          go build -trimpath -o "/tmp/codebridge-doctor${ext}" ./cmd/doctor

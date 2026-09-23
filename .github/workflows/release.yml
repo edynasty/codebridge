@@ -63,6 +63,10 @@ jobs:
               go build -trimpath -ldflags="${LDFLAGS}" \
               -o "${dir}/codebridge-manager${ext}" ./cmd/manager
 
+            CGO_ENABLED=0 GOOS="${GOOS}" GOARCH="${GOARCH}" \
+              go build -trimpath -ldflags="${LDFLAGS}" \
+              -o "${dir}/codebridge-doctor${ext}" ./cmd/doctor
+
             cp README.md LICENSE "${dir}/"
 
             if [[ "${GOOS}" == "windows" ]]; then
