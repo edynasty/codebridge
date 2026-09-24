@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -90,7 +89,15 @@ func TestOAuthAccountScopingCrossTenant(t *testing.T) {
 
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", protectedMCP)
-	mux.Handle("/agent", &manager.AgentHandler{Registry: registry, Auth: authStore})
+	grpcSrv, grpcLis, err := manager.ServeGRPC("127.0.0.1:0", &manager.GRPCAgentServer{
+		Registry: registry,
+		Auth:     authStore,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer grpcSrv.Stop()
+	grpcTarget := grpcLis.Addr().String()
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
@@ -98,7 +105,7 @@ func TestOAuthAccountScopingCrossTenant(t *testing.T) {
 	defer agentCancel()
 	agentDone := make(chan error, 1)
 	go func() {
-		agentDone <- runSession(agentCtx, &runtime{managerURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/agent", reg: protocol.RegisterRequest{
+		agentDone <- runGRPCSession(agentCtx, &runtime{grpcTarget: grpcTarget, reg: protocol.RegisterRequest{
 			EnrollmentCode: enrollmentCode,
 			DeviceID:       "scoped-device",
 			DeviceName:     "Scoping Test Device",

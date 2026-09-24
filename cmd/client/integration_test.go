@@ -5,11 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"strings"
 	"testing"
 	"time"
-
-	"net/http/httptest"
 
 	"github.com/edynasty/codebridge/internal/agentops"
 	"github.com/edynasty/codebridge/internal/authstore"
@@ -34,12 +31,15 @@ func TestManagerClientEnrollmentToolCallAndCredentialReconnect(t *testing.T) {
 	}
 
 	registry := manager.NewRegistry(4)
-	server := httptest.NewServer(&manager.AgentHandler{
+	grpcSrv, grpcLis, err := manager.ServeGRPC("127.0.0.1:0", &manager.GRPCAgentServer{
 		Registry: registry,
 		Auth:     store,
 	})
-	defer server.Close()
-	managerURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer grpcSrv.Stop()
+	grpcTarget := grpcLis.Addr().String()
 
 	service := &agentops.Service{Roots: map[string]string{"demo": workspace}}
 	firstReg := protocol.RegisterRequest{
@@ -54,7 +54,7 @@ func TestManagerClientEnrollmentToolCallAndCredentialReconnect(t *testing.T) {
 	firstDone := make(chan error, 1)
 	issued := make(chan string, 1)
 	go func() {
-		firstDone <- runSession(firstCtx, &runtime{managerURL: managerURL, reg: firstReg, service: service}, &clientState{}, func(credential string) error {
+		firstDone <- runGRPCSession(firstCtx, &runtime{grpcTarget: grpcTarget, reg: firstReg, service: service}, &clientState{}, func(credential string) error {
 			issued <- credential
 			return nil
 		})
@@ -111,7 +111,7 @@ func TestManagerClientEnrollmentToolCallAndCredentialReconnect(t *testing.T) {
 		Workspaces:       []protocol.Workspace{{Name: "demo"}},
 	}
 	go func() {
-		secondDone <- runSession(secondCtx, &runtime{managerURL: managerURL, reg: secondReg, service: service}, &clientState{}, func(newCredential string) error {
+		secondDone <- runGRPCSession(secondCtx, &runtime{grpcTarget: grpcTarget, reg: secondReg, service: service}, &clientState{}, func(newCredential string) error {
 			reissued <- newCredential
 			return nil
 		})

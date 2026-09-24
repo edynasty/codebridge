@@ -17,13 +17,14 @@ import (
 // budget, and extra CLI flags (e.g. opencode headless flags). The MCP agent
 // tool selects a profile by name.
 type SubagentProfile struct {
-	Name       string   `json:"name"`
-	Client     string   `json:"client,omitempty"` // opencode (default) | codex
-	Agent      string   `json:"agent,omitempty"`  // opencode agent / codex profile
-	Model      string   `json:"model,omitempty"`
-	Thinking   string   `json:"thinking,omitempty"` // off|minimal|low|medium|high|xhigh|max
-	TimeoutSec int      `json:"timeout_seconds,omitempty"`
-	ExtraArgs  []string `json:"extra_args,omitempty"` // appended verbatim before the task
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"` // surfaced to AI clients via agents_list
+	Client      string   `json:"client,omitempty"`      // opencode (default) | codex
+	Agent       string   `json:"agent,omitempty"`       // opencode agent / codex profile
+	Model       string   `json:"model,omitempty"`
+	Thinking    string   `json:"thinking,omitempty"` // off|minimal|low|medium|high|xhigh|max
+	TimeoutSec  int      `json:"timeout_seconds,omitempty"`
+	ExtraArgs   []string `json:"extra_args,omitempty"` // appended verbatim before the task
 }
 
 type Config struct {

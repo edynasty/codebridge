@@ -98,11 +98,15 @@ func TestOAuthMCPToRealClientReadFileEndToEnd(t *testing.T) {
 
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", protectedMCP)
-	mux.Handle("/agent", &manager.AgentHandler{
+	grpcSrv, grpcLis, err := manager.ServeGRPC("127.0.0.1:0", &manager.GRPCAgentServer{
 		Registry: registry,
 		Auth:     authStore,
-		Audit:    audit,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer grpcSrv.Stop()
+	grpcTarget := grpcLis.Addr().String()
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
@@ -111,7 +115,7 @@ func TestOAuthMCPToRealClientReadFileEndToEnd(t *testing.T) {
 	agentDone := make(chan error, 1)
 	issued := make(chan string, 1)
 	go func() {
-		agentDone <- runSession(agentCtx, &runtime{managerURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/agent", reg: protocol.RegisterRequest{
+		agentDone <- runGRPCSession(agentCtx, &runtime{grpcTarget: grpcTarget, reg: protocol.RegisterRequest{
 			EnrollmentCode: enrollmentCode,
 			DeviceID:       "oauth-device",
 			DeviceName:     "OAuth Integration Device",

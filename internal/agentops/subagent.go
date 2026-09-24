@@ -56,13 +56,14 @@ type SubagentResult struct {
 // SubagentProfileConfig is the exported wire form of a profile (used by the
 // UI config API); it mirrors clientconfig.SubagentProfile.
 type SubagentProfileConfig struct {
-	Name       string   `json:"name"`
-	Client     string   `json:"client,omitempty"`
-	Agent      string   `json:"agent,omitempty"`
-	Model      string   `json:"model,omitempty"`
-	Thinking   string   `json:"thinking,omitempty"`
-	TimeoutSec int      `json:"timeout_seconds,omitempty"`
-	ExtraArgs  []string `json:"extra_args,omitempty"`
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	Client      string   `json:"client,omitempty"`
+	Agent       string   `json:"agent,omitempty"`
+	Model       string   `json:"model,omitempty"`
+	Thinking    string   `json:"thinking,omitempty"`
+	TimeoutSec  int      `json:"timeout_seconds,omitempty"`
+	ExtraArgs   []string `json:"extra_args,omitempty"`
 }
 
 // SubagentProfiles is the profile table the client injects at boot; the
@@ -72,13 +73,37 @@ var SubagentProfiles []SubagentProfile
 // SubagentProfile mirrors clientconfig.SubagentProfile; duplicated to keep
 // agentops free of a config dependency.
 type SubagentProfile struct {
-	Name       string
-	Client     string
-	Agent      string
-	Model      string
-	Thinking   string
-	TimeoutSec int
-	ExtraArgs  []string
+	Name        string
+	Description string
+	Client      string
+	Agent       string
+	Model       string
+	Thinking    string
+	TimeoutSec  int
+	ExtraArgs   []string
+}
+
+// AgentCatalogEntry is one entry of the agents_list answer.
+type AgentCatalogEntry struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Client      string `json:"client,omitempty"`
+	Agent       string `json:"agent,omitempty"`
+	Model       string `json:"model,omitempty"`
+	Thinking    string `json:"thinking,omitempty"`
+	Timeout     int    `json:"timeout_seconds,omitempty"`
+}
+
+// AgentCatalog returns the configured subagent profiles for AI clients.
+func AgentCatalog() []AgentCatalogEntry {
+	out := make([]AgentCatalogEntry, 0, len(SubagentProfiles))
+	for _, p := range SubagentProfiles {
+		out = append(out, AgentCatalogEntry{
+			Name: p.Name, Description: p.Description, Client: p.Client, Agent: p.Agent,
+			Model: p.Model, Thinking: p.Thinking, Timeout: p.TimeoutSec,
+		})
+	}
+	return out
 }
 
 // resolveSubagentCall merges an explicit profile selection with per-call
@@ -91,7 +116,9 @@ func resolveSubagentCall(client, agent, model, thinking string, timeoutSeconds i
 		if p.Name != "" && p.Name == strings.TrimSpace(agent) {
 			if client == "" || client == p.Client {
 				client = orDefault(p.Client, "opencode")
-				agent = p.Agent
+				// The profile name doubles as the agent selector when the
+				// profile does not pin a separate agent explicitly.
+				agent = orDefault(p.Agent, p.Name)
 				if model == "" {
 					model = p.Model
 				}

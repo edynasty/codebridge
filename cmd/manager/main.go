@@ -191,7 +191,6 @@ func main() {
 	}
 
 	mux.Handle("/mcp", withRequestID(limitMCP(maxMCPInflight, int64(maxMCPRequestBytes), protectedMCP)))
-	mux.Handle("/agent", withRequestID(limitAgentConnections(maxAgentConnections, &mgr.AgentHandler{Registry: registry, Auth: deviceAuth, Audit: audit})))
 	mux.Handle("/admin/", withRequestID(adminHandler))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -199,7 +198,7 @@ func main() {
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"name":"CodeBridge","mcp":"/mcp","agent":"/agent","health":"/healthz"}`))
+		_, _ = w.Write([]byte(`{"name":"CodeBridge","mcp":"/mcp","agent_transport":"grpc","health":"/healthz"}`))
 	})
 
 	s := &http.Server{
@@ -211,7 +210,7 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 	log.Printf("CodeBridge manager listening on %s", *addr)
-	log.Printf("MCP endpoint: /mcp; agent websocket: /agent")
+	log.Printf("MCP endpoint: /mcp; agent gRPC: %s", grpcLis.Addr())
 	log.Printf("limits: mcp_inflight=%d device_inflight=%d agent_connections=%d mcp_request_bytes=%d", maxMCPInflight, maxDeviceInflight, maxAgentConnections, maxMCPRequestBytes)
 	if os.Getenv("CODEBRIDGE_ADMIN_TOKEN") == "" {
 		log.Printf("admin API disabled: CODEBRIDGE_ADMIN_TOKEN is empty")
@@ -378,21 +377,6 @@ func withRequestID(next http.Handler) http.Handler {
 		id := auditlog.NewRequestID()
 		r.Header.Set("X-CodeBridge-Request-ID", id)
 		w.Header().Set("X-Request-ID", id)
-		next.ServeHTTP(w, r)
-	})
-}
-
-func limitAgentConnections(maxConnections int, next http.Handler) http.Handler {
-	sem := make(chan struct{}, maxConnections)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case sem <- struct{}{}:
-			defer func() { <-sem }()
-		default:
-			w.Header().Set("Retry-After", "1")
-			http.Error(w, "too many agent connections", http.StatusTooManyRequests)
-			return
-		}
 		next.ServeHTTP(w, r)
 	})
 }

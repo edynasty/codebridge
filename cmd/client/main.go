@@ -18,6 +18,10 @@ import (
 	"syscall"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
+
 	"github.com/edynasty/codebridge/internal/agentops"
 	"github.com/edynasty/codebridge/internal/clientconfig"
 	"github.com/edynasty/codebridge/internal/clientcred"
@@ -25,10 +29,6 @@ import (
 	"github.com/edynasty/codebridge/internal/pb"
 	"github.com/edynasty/codebridge/internal/protocol"
 	"github.com/edynasty/codebridge/internal/ui"
-	"github.com/gorilla/websocket"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 )
 
 var version = "dev"
@@ -40,7 +40,6 @@ const maxAgentResponseBytes = 768 * 1024
 type runtime struct {
 	managerURL      string
 	grpcTarget      string // host:port for the gRPC agent transport
-	transport       string // grpc | ws
 	allowInsecureWS bool
 	reg             protocol.RegisterRequest
 	service         *agentops.Service
@@ -92,7 +91,7 @@ func main() {
 	allowSensitiveDefault, allowSensitivePinned := envBoolPinned("CODEBRIDGE_ALLOW_SENSITIVE_FILES", fileConfig.AllowSensitiveFiles)
 	enableLSPDefault, enableLSPPinned := envBoolPinned("CODEBRIDGE_ENABLE_LSP", fileConfig.EnableLSP)
 	uiAddr := flag.String("ui-addr", firstNonEmpty(os.Getenv("CODEBRIDGE_UI_ADDR"), "127.0.0.1:8190"), "local configuration UI listen address; empty disables the UI")
-	transport := flag.String("transport", firstNonEmpty(os.Getenv("CODEBRIDGE_AGENT_TRANSPORT"), "grpc"), "agent transport: grpc (preferred) or ws")
+	_ = flag.String("transport", "grpc", "agent transport (gRPC only; kept for flag compatibility)")
 	_ = flag.Bool("allow-insecure-ws", allowInsecureWSDefault, "allow plaintext ws:// to a non-loopback manager (local container networking only)")
 	_ = flag.Bool("allow-sensitive-files", allowSensitiveDefault, "allow MCP tools to read normally blocked sensitive files inside workspaces (equivalent to CODEBRIDGE_ALLOW_SENSITIVE_FILES)")
 	writableRaw := flag.String("writable-workspaces", firstNonEmpty(os.Getenv("CODEBRIDGE_WRITABLE_WORKSPACES"), strings.Join(fileConfig.WritableWorkspaces, ",")), "comma-separated workspaces with explicit local write opt-in (empty disables write mode)")
@@ -119,7 +118,6 @@ func main() {
 	// flags override the JSON file, and those origins cannot be changed by
 	// the UI (only the JSON file is editable at runtime).
 	boot := bootOptions{
-		transport:               *transport,
 		managerURLFromEnvOrFlag: *managerURL,
 		workspacesFromEnv:       strings.TrimSpace(*workspacesRaw),
 		deviceID:                *deviceID,
@@ -183,7 +181,7 @@ func main() {
 		sessionCtx, cancelSession := context.WithCancel(ctx)
 		sessionDone := make(chan error, 1)
 		go func() {
-			sessionDone <- runSessionTransport(sessionCtx, rt, state, func(issued string) error {
+			sessionDone <- runGRPCSession(sessionCtx, rt, state, func(issued string) error {
 				return persistCredential(rt, issued, state)
 			})
 		}()
@@ -245,7 +243,6 @@ func persistCredential(rt *runtime, issued string, state *clientState) error {
 // bootOptions captures the flag/env origin of each setting so reloads can
 // tell "user edited the JSON file" apart from "operator pinned this via env".
 type bootOptions struct {
-	transport               string
 	managerURLFromEnvOrFlag string
 	workspacesFromEnv       string
 	deviceID                string
@@ -398,7 +395,6 @@ func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots m
 		credentialFile:  boot.credentialFile,
 		managerURL:      managerURL,
 		grpcTarget:      grpcTarget,
-		transport:       strings.TrimSpace(boot.transport),
 		allowInsecureWS: allowInsecureWS,
 		reg: protocol.RegisterRequest{
 			EnrollmentCode:   state.EnrollmentCode(),
@@ -412,156 +408,6 @@ func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots m
 		service: service,
 		credKey: clientcred.Key(managerURL, deviceID),
 	}, nil
-}
-
-func runSession(ctx context.Context, rt *runtime, state *clientState, onCredential func(string) error) error {
-	if _, err := validateManagerURL(rt.managerURL, rt.allowInsecureWS); err != nil {
-		return err
-	}
-	reg := rt.reg
-	ws, _, err := websocket.DefaultDialer.DialContext(ctx, rt.managerURL, nil)
-	if err != nil {
-		return err
-	}
-	defer ws.Close()
-	ws.SetReadLimit(1024 * 1024)
-
-	payload, _ := json.Marshal(reg)
-	if err := ws.WriteJSON(protocol.Envelope{Type: protocol.TypeRegister, DeviceID: reg.DeviceID, Payload: payload}); err != nil {
-		return err
-	}
-	var ack protocol.Envelope
-	if err := ws.ReadJSON(&ack); err != nil {
-		return err
-	}
-	if ack.Type != protocol.TypeRegistered {
-		return fmt.Errorf("unexpected register response %q", ack.Type)
-	}
-	var rr protocol.RegisterResponse
-	if err := json.Unmarshal(ack.Payload, &rr); err != nil {
-		return err
-	}
-	if !rr.Accepted {
-		return fmt.Errorf("registration rejected: %s", rr.Message)
-	}
-	if rr.DeviceCredential != "" && onCredential != nil {
-		if err := onCredential(rr.DeviceCredential); err != nil {
-			return fmt.Errorf("persist issued device credential: %w", err)
-		}
-	}
-	state.connected.Store(true)
-	log.Printf("registered with manager as %s; workspaces=%d", reg.DeviceID, len(reg.Workspaces))
-	defer state.connected.Store(false)
-
-	writeMu := make(chan struct{}, 1)
-	writeMu <- struct{}{}
-	write := func(v any) error {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-writeMu:
-		}
-		defer func() { writeMu <- struct{}{} }()
-		return ws.WriteJSON(v)
-	}
-
-	done := make(chan error, 1)
-	go func() {
-		for {
-			var env protocol.Envelope
-			if err := ws.ReadJSON(&env); err != nil {
-				done <- err
-				return
-			}
-			if env.Type != protocol.TypeRequest {
-				continue
-			}
-			go func(env protocol.Envelope) {
-				var req protocol.AgentRequest
-				resp := protocol.AgentResponse{OK: false}
-				if err := json.Unmarshal(env.Payload, &req); err != nil {
-					resp.Error = err.Error()
-				} else {
-					// Live progress: subagent event lines stream to the manager
-					// as progress envelopes while the tool is still running.
-					agentProgress := func(tool, line string) {
-						b, _ := json.Marshal(protocol.ProgressEvent{RequestID: env.RequestID, Tool: tool, Event: line})
-						_ = write(protocol.Envelope{Type: protocol.TypeProgress, RequestID: env.RequestID, DeviceID: reg.DeviceID, Payload: b})
-					}
-					if req.Tool == "agent" {
-						agentops.OnSubagentEvent = agentProgress
-					} else {
-						agentops.OnSubagentEvent = nil
-					}
-					// Subagent runs are long; every other tool stays bounded.
-					// A non-positive timeout_seconds means no wall-clock
-					// budget: the subagent runs until its harness exits.
-					budget := 30 * time.Second
-					if req.Tool == "agent" {
-						if secs := intArgAny(req.Args, "timeout_seconds", 0); secs > 0 {
-							budget = time.Duration(secs) * time.Second
-						} else {
-							budget = 0 // no client-side deadline; harness budget applies
-						}
-					}
-					var callCtx context.Context
-					var cancel context.CancelFunc
-					if budget > 0 {
-						callCtx, cancel = context.WithTimeout(ctx, budget)
-					} else {
-						callCtx, cancel = context.WithCancel(ctx)
-					}
-					result, err := rt.service.Execute(callCtx, req)
-					cancel()
-					if err != nil {
-						resp.Error = err.Error()
-					} else {
-						data, marshalErr := json.Marshal(result)
-						if marshalErr != nil {
-							resp.Error = marshalErr.Error()
-						} else if len(data) > maxAgentResponseBytes {
-							resp.Error = fmt.Sprintf("tool response exceeds %d bytes; narrow the request", maxAgentResponseBytes)
-						} else {
-							resp.OK = true
-							resp.Data = data
-						}
-					}
-				}
-				b, _ := json.Marshal(resp)
-				_ = write(protocol.Envelope{Type: protocol.TypeResponse, RequestID: env.RequestID, DeviceID: reg.DeviceID, Payload: b})
-			}(env)
-		}
-	}()
-
-	ticker := time.NewTicker(20 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case err := <-done:
-			return err
-		case <-ticker.C:
-			if err := write(protocol.Envelope{Type: protocol.TypeHeartbeat, DeviceID: reg.DeviceID}); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func intArgAny(m map[string]any, key string, def int) int {
-	if v, ok := m[key].(float64); ok {
-		return int(v)
-	}
-	return def
-}
-
-// runSessionTransport picks the gRPC stream or the legacy WebSocket.
-func runSessionTransport(ctx context.Context, rt *runtime, state *clientState, onCredential func(string) error) error {
-	if rt.transport == "grpc" && rt.grpcTarget != "" {
-		return runGRPCSession(ctx, rt, state, onCredential)
-	}
-	return runSession(ctx, rt, state, onCredential)
 }
 
 // runGRPCSession is the gRPC counterpart of runSession: one bidi stream,
@@ -701,6 +547,13 @@ func runGRPCSession(ctx context.Context, rt *runtime, state *clientState, onCred
 			}
 		}
 	}
+}
+
+func intArgAny(m map[string]any, key string, def int) int {
+	if v, ok := m[key].(float64); ok {
+		return int(v)
+	}
+	return def
 }
 
 func envBool(name string, def bool) bool {
@@ -857,7 +710,7 @@ func subagentProfilesToDTO(in []clientconfig.SubagentProfile) []agentops.Subagen
 	out := make([]agentops.SubagentProfileConfig, 0, len(in))
 	for _, p := range in {
 		out = append(out, agentops.SubagentProfileConfig{
-			Name: p.Name, Client: p.Client, Agent: p.Agent, Model: p.Model,
+			Name: p.Name, Description: p.Description, Client: p.Client, Agent: p.Agent, Model: p.Model,
 			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs,
 		})
 	}
@@ -868,7 +721,7 @@ func subagentProfilesFromDTO(in []agentops.SubagentProfileConfig) []clientconfig
 	out := make([]clientconfig.SubagentProfile, 0, len(in))
 	for _, p := range in {
 		out = append(out, clientconfig.SubagentProfile{
-			Name: p.Name, Client: p.Client, Agent: p.Agent, Model: p.Model,
+			Name: p.Name, Description: p.Description, Client: p.Client, Agent: p.Agent, Model: p.Model,
 			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs,
 		})
 	}
@@ -885,7 +738,7 @@ func subagentProfilesFrom(cfg clientconfig.Config) []agentops.SubagentProfile {
 		}
 		seen[name] = true
 		out = append(out, agentops.SubagentProfile{
-			Name: name, Client: p.Client, Agent: p.Agent, Model: p.Model,
+			Name: name, Description: p.Description, Client: p.Client, Agent: p.Agent, Model: p.Model,
 			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs,
 		})
 	}

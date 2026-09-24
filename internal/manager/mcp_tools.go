@@ -116,6 +116,10 @@ type BashInput struct {
 	Command   string `json:"command" jsonschema:"Shell command to run in the workspace root"`
 }
 
+type AgentsListInput struct {
+	DeviceID string `json:"device_id" jsonschema:"ID of the connected device"`
+}
+
 type AgentInput struct {
 	DeviceID       string `json:"device_id" jsonschema:"ID of the connected device"`
 	Workspace      string `json:"workspace" jsonschema:"Workspace the subagent works in"`
@@ -225,8 +229,17 @@ var toolTable = map[string]func(t *ToolService, server *mcp.Server){
 		})
 	},
 
+	"agents_list": func(t *ToolService, server *mcp.Server) {
+		mcp.AddTool(server, t.readOnlyTool("agents_list", "List the subagent profiles available on a device, with each profile's description, harness, model, reasoning effort and timeout. Call this before the agent tool to pick the right profile for the task."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentsListInput) (*mcp.CallToolResult, any, error) {
+			account := t.accountFor(req)
+			return t.invoke(req, "agents_list", in.DeviceID, "", func() (*mcp.CallToolResult, any, error) {
+				return t.forward(ctx, account, in.DeviceID, "__catalog__", "agents_list", nil)
+			})
+		})
+	},
+
 	"agent": func(t *ToolService, server *mcp.Server) {
-		mcp.AddTool(server, t.writeTool("agent", "Delegate a self-contained task to a local coding-agent subagent that works autonomously inside one workspace and returns its final output. The agent parameter can name an opencode agent, a codex profile, or a subagent profile configured in the client UI (which may pin model, reasoning effort, timeout and extra CLI flags). Needs a local permission rule allowing the client (allow agent opencode / allow agent codex)."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentInput) (*mcp.CallToolResult, any, error) {
+		mcp.AddTool(server, t.writeTool("agent", "Delegate a self-contained task to a local coding-agent subagent that works autonomously inside one workspace and returns its final output. Usage: call agents_list first, pick a profile, pass its name as the agent parameter, and write a complete task description (the subagent shares no conversation context with you). The client must allow the harness with a permission rule (allow agent opencode / allow agent codex); the first call otherwise returns a permission request id to resolve with permission_grant."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentInput) (*mcp.CallToolResult, any, error) {
 			account := t.accountFor(req)
 			return t.invokeArgs(req, "agent", in.DeviceID, in.Workspace, map[string]any{
 				"task": in.Task, "client": in.Client, "agent": in.Agent,

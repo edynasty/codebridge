@@ -417,14 +417,14 @@
       <div class="card-h"><b>子代理配置</b><span class="hint">agent 工具按名称选择</span></div>
       <div class="card-b">
         <table class="grid">
-          <thead><tr><th style="width:14%">名称</th><th style="width:12%">客户端</th><th style="width:13%">Agent</th><th style="width:16%">模型</th><th style="width:10%">思考</th><th style="width:9%">超时(s)</th><th>额外参数（空格分隔，如 opencode 无头参数）</th><th style="width:36px"></th></tr></thead>
+          <thead><tr><th style="width:16%">名称（即 agent）</th><th style="width:12%">客户端</th><th style="width:22%">说明（给 AI 看）</th><th style="width:14%">模型</th><th style="width:10%">思考</th><th style="width:8%">超时(s)</th><th>额外参数（空格分隔）</th><th style="width:36px"></th></tr></thead>
           <tbody id="subagent-body"></tbody>
         </table>
         <div class="bar" style="margin-top:12px">
           <button class="ghost" id="subagent-add">添加子代理配置</button>
         </div>
         <div class="hint" style="color:var(--text-4);font-size:11.5px;margin-top:10px;line-height:1.5">
-          ChatGPT 调用 <span style="font-family:var(--mono)">agent</span> 工具时把 <span style="font-family:var(--mono)">agent</span> 参数设为配置名称即可套用整套参数（客户端/模型/思考强度/超时/额外 CLI 参数）。超时留空 = 永不超时（跑到子代理自然结束）。额外参数原样追加在命令中（无头模式示例 <span style="font-family:var(--mono)">--print-logs=false --log-level WARN</span>）。预置的 omo catalog（explore/librarian/general/build/oracle/metis/momus 等）直接复用本机 opencode 的同名 agent。
+          配置名称即 opencode 的 agent 名：ChatGPT 在 <span style="font-family:var(--mono)">agent</span> 工具里把 <span style="font-family:var(--mono)">agent</span> 参数设为该名称即套用整套参数，说明文案会通过 <span style="font-family:var(--mono)">agents_list</span> 展示给 AI。超时留空 = 永不超时（跑到子代理自然结束）。额外参数原样追加在命令中（无头模式示例 <span style="font-family:var(--mono)">--print-logs=false --log-level WARN</span>）。预置的 omo catalog（explore/librarian/general/build/oracle/metis/momus 等）直接复用本机 opencode 的同名 agent。
         </div>
       </div>
     </section>
@@ -669,7 +669,7 @@
         td.appendChild(input);
         return { td: td, input: input };
       }
-      var name = cellInput(row.name, '如 review');
+      var name = cellInput(row.name, '如 ultrabrain');
       var clientTd = document.createElement('td');
       var clientSel = document.createElement('select');
       ['opencode', 'codex'].forEach(function (c) {
@@ -679,7 +679,7 @@
         clientSel.appendChild(opt);
       });
       clientTd.appendChild(clientSel);
-      var agent = cellInput(row.agent, 'build / plan / profile');
+      var desc = cellInput(row.description, '给 AI 的用途说明');
       var model = cellInput(row.model, 'provider/model');
       var thinkTd = document.createElement('td');
       var thinkSel = document.createElement('select');
@@ -697,11 +697,11 @@
       del.className = 'del'; del.textContent = '✕';
       del.addEventListener('click', function () { subagentRows.splice(i, 1); renderSubagents(); });
       tdDel.appendChild(del);
-      [name.td, clientTd, agent.td, model.td, thinkTd, timeout.td, extra.td, tdDel].forEach(function (td) { tr.appendChild(td); });
+      [name.td, clientTd, desc.td, model.td, thinkTd, timeout.td, extra.td, tdDel].forEach(function (td) { tr.appendChild(td); });
       body.appendChild(tr);
       name.input.addEventListener('input', function () { subagentRows[i].name = name.input.value; });
       clientSel.addEventListener('change', function () { subagentRows[i].client = clientSel.value; });
-      agent.input.addEventListener('input', function () { subagentRows[i].agent = agent.input.value; });
+      desc.input.addEventListener('input', function () { subagentRows[i].description = desc.input.value; });
       model.input.addEventListener('input', function () { subagentRows[i].model = model.input.value; });
       thinkSel.addEventListener('change', function () { subagentRows[i].thinking = thinkSel.value; });
       timeout.input.addEventListener('input', function () { subagentRows[i].timeout = timeout.input.value; });
@@ -710,7 +710,7 @@
   }
 
   $('subagent-add').addEventListener('click', function () {
-    subagentRows.push({ name: '', client: 'opencode', agent: '', model: '', thinking: '', timeout: '', extra: '' });
+    subagentRows.push({ name: '', client: 'opencode', description: '', model: '', thinking: '', timeout: '', extra: '' });
     renderSubagents();
   });
 
@@ -797,7 +797,7 @@
     });
     renderCustom();
     subagentRows = (cfg.subagent_profiles || []).map(function (p) {
-      return { name: p.name || '', client: p.client || 'opencode', agent: p.agent || '', model: p.model || '', thinking: p.thinking || '', timeout: p.timeout_seconds ? String(p.timeout_seconds) : '', extra: (p.extra_args || []).join(' ') };
+      return { name: p.name || '', client: p.client || 'opencode', description: p.description || '', model: p.model || '', thinking: p.thinking || '', timeout: p.timeout_seconds ? String(p.timeout_seconds) : '', extra: (p.extra_args || []).join(' ') };
     });
     renderSubagents();
     permRows = (cfg.permissions || []).map(function (r) {
@@ -842,7 +842,7 @@
       }),
       subagent_profiles: subagentRows.filter(function (r) { return (r.name || '').trim(); }).map(function (r) {
         return {
-          name: r.name.trim(), client: r.client || 'opencode', agent: (r.agent || '').trim(),
+          name: r.name.trim(), client: r.client || 'opencode', description: (r.description || '').trim(),
           model: (r.model || '').trim(), thinking: r.thinking || '',
           timeout_seconds: parseInt(r.timeout, 10) > 0 ? parseInt(r.timeout, 10) : 0,
           extra_args: (r.extra || '').split(/\s+/).filter(Boolean)

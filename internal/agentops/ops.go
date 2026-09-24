@@ -79,6 +79,10 @@ func (s *Service) SetRulePersister(fn func(rules []PermissionRule)) {
 }
 
 func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, error) {
+	// Catalog lookups are device-wide and need no workspace.
+	if req.Tool == "agents_list" {
+		return map[string]any{"agents": AgentCatalog()}, nil
+	}
 	root, ok := s.Roots[req.Workspace]
 	if !ok {
 		return nil, fmt.Errorf("unknown workspace %q", req.Workspace)
