@@ -13,7 +13,7 @@ import (
 // definitions may only wrap names on this list.
 var builtinToolNames = []string{
 	"list_devices", "list_workspaces", "list", "read", "edit", "write", "bash",
-	"permission_grant",
+	"agent", "permission_grant",
 }
 
 // piCoreTools is the pi-style default surface (badlogic/pi-mono's essential
@@ -22,7 +22,7 @@ var builtinToolNames = []string{
 var piCoreTools = map[string]bool{
 	"list_devices": true, "list_workspaces": true, "list": true,
 	"read": true, "edit": true, "write": true, "bash": true,
-	"permission_grant": true,
+	"agent": true, "permission_grant": true,
 }
 
 func isBuiltinTool(name string) bool {

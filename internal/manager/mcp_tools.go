@@ -112,6 +112,17 @@ type BashInput struct {
 	Command   string `json:"command" jsonschema:"Shell command to run in the workspace root"`
 }
 
+type AgentInput struct {
+	DeviceID       string `json:"device_id" jsonschema:"ID of the connected device"`
+	Workspace      string `json:"workspace" jsonschema:"Workspace the subagent works in"`
+	Task           string `json:"task" jsonschema:"Self-contained task description for the subagent"`
+	Client         string `json:"client,omitempty" jsonschema:"Subagent harness: opencode (default) or codex"`
+	Agent          string `json:"agent,omitempty" jsonschema:"opencode agent name (e.g. build, plan) or codex profile"`
+	Model          string `json:"model,omitempty" jsonschema:"Model override, provider/model format"`
+	Thinking       string `json:"thinking,omitempty" jsonschema:"Reasoning effort: off, minimal, low, medium, high, xhigh, max"`
+	TimeoutSeconds int    `json:"timeout_seconds,omitempty" jsonschema:"Wall-clock budget; default 600, max 1800"`
+}
+
 type PermissionGrantInput struct {
 	DeviceID  string `json:"device_id" jsonschema:"ID of the connected device the request belongs to"`
 	Workspace string `json:"workspace" jsonschema:"Workspace the request belongs to"`
@@ -200,6 +211,19 @@ var toolTable = map[string]func(t *ToolService, server *mcp.Server){
 			account := t.accountFor(req)
 			return t.invoke(req, "bash", in.DeviceID, in.Workspace, func() (*mcp.CallToolResult, any, error) {
 				return t.forward(ctx, account, in.DeviceID, in.Workspace, "bash", map[string]any{"command": in.Command})
+			})
+		})
+	},
+
+	"agent": func(t *ToolService, server *mcp.Server) {
+		mcp.AddTool(server, t.writeTool("agent", "Delegate a self-contained task to a local coding-agent subagent (opencode or codex) that works autonomously inside one workspace and returns its final output — like spawning a subagent from your main agent. Needs a local permission rule allowing the client (allow agent opencode / allow agent codex); the first call returns a permission request id otherwise."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentInput) (*mcp.CallToolResult, any, error) {
+			account := t.accountFor(req)
+			return t.invoke(req, "agent", in.DeviceID, in.Workspace, func() (*mcp.CallToolResult, any, error) {
+				return t.forward(ctx, account, in.DeviceID, in.Workspace, "agent", map[string]any{
+					"task": in.Task, "client": in.Client, "agent": in.Agent,
+					"model": in.Model, "thinking": in.Thinking,
+					"timeout_seconds": in.TimeoutSeconds,
+				})
 			})
 		})
 	},

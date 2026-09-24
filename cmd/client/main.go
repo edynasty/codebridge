@@ -454,7 +454,16 @@ func runSession(ctx context.Context, rt *runtime, state *clientState, onCredenti
 				if err := json.Unmarshal(env.Payload, &req); err != nil {
 					resp.Error = err.Error()
 				} else {
-					callCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+					// Subagent runs are long; every other tool stays bounded.
+					budget := 30 * time.Second
+					if req.Tool == "agent" {
+						if secs := intArgAny(req.Args, "timeout_seconds", 0); secs > 0 {
+							budget = time.Duration(secs) * time.Second
+						} else {
+							budget = 10 * time.Minute
+						}
+					}
+					callCtx, cancel := context.WithTimeout(ctx, budget)
 					result, err := rt.service.Execute(callCtx, req)
 					cancel()
 					if err != nil {
@@ -491,6 +500,13 @@ func runSession(ctx context.Context, rt *runtime, state *clientState, onCredenti
 			}
 		}
 	}
+}
+
+func intArgAny(m map[string]any, key string, def int) int {
+	if v, ok := m[key].(float64); ok {
+		return int(v)
+	}
+	return def
 }
 
 func envBool(name string, def bool) bool {
@@ -660,6 +676,8 @@ func sanitizeCustomTools(tools []protocol.CustomTool) []protocol.CustomTool {
 		"find_files": true, "search_code": true, "git_status": true, "git_diff": true, "project_info": true,
 		"find_symbol": true, "find_references": true, "read_symbol": true, "dependency_graph": true,
 		"apply_patch": true, "rollback_patch": true,
+		"bash": true, "agent": true, "permission_grant": true,
+		"list": true, "read": true, "write": true, "edit": true,
 	}
 	out := make([]protocol.CustomTool, 0, len(tools))
 	for _, tool := range tools {

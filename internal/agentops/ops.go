@@ -107,6 +107,14 @@ func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, 
 		}}, boolArg(req.Args, "preview", false), boolArg(req.Args, "confirm", false))
 	case "permission_grant":
 		return s.permissionGrant(stringArg(req.Args, "request_id", ""), stringArg(req.Args, "decision", ""))
+	case "agent":
+		return s.runSubagent(ctx, root,
+			stringArg(req.Args, "task", ""),
+			stringArg(req.Args, "client", "opencode"),
+			stringArg(req.Args, "agent", ""),
+			stringArg(req.Args, "model", ""),
+			stringArg(req.Args, "thinking", ""),
+			intArg(req.Args, "timeout_seconds", 0))
 
 	// Legacy aliases: no longer advertised by the manager but still routed so
 	// existing custom tool wrappers and boundary tests keep working.

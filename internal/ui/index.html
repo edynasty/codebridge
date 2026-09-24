@@ -387,11 +387,12 @@
     ["read", "读文件（pi read）"], ["write", "写文件（pi write）"], ["edit", "精确替换（pi edit）"],
     ["bash", "Shell 命令（pi bash，需授权）"], ["list", "列目录（pi ls）"],
     ["list_devices", "设备发现"], ["list_workspaces", "工作区发现"],
+    ["agent", "本地子代理（opencode/codex，可配 agent/模型/思考强度，需授权）"],
     ["permission_grant", "权限批准接口"]
   ];
 
   var PERMISSION_PRESETS = {
-    pi: ["list_devices", "list_workspaces", "list", "read", "write", "edit", "bash", "permission_grant"],
+    pi: ["list_devices", "list_workspaces", "list", "read", "write", "edit", "bash", "agent", "permission_grant"],
     minimal: ["list_devices", "list_workspaces", "list", "read", "permission_grant"],
     all: ["*"]
   };

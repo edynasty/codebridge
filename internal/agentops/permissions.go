@@ -140,7 +140,10 @@ func PermissionRuleForRequest(req *PermissionRequest) PermissionRule {
 	first := strings.Fields(req.Command)
 	pattern := "*"
 	if len(first) > 0 {
-		pattern = first[0] + " *"
+		// Bare first word: matches the command and any arguments after it,
+		// without the trailing-space edge case of a "word *" pattern against
+		// the bare word itself.
+		pattern = first[0]
 	}
 	return PermissionRule{Effect: "allow", Tool: req.Tool, Pattern: pattern}
 }

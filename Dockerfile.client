@@ -5,13 +5,22 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/codebridge-client ./cmd/client
 
-# git, ripgrep and bash back the git_status/git_diff, ripgrep-accelerated
-# search_code and allowlisted bash tools; the distroless base used by the
-# manager cannot ship them.
+# git, ripgrep and bash back the bash/git tooling; opencode backs the
+# "agent" subagent tool. The download uses the standard https_proxy build-time environment
+# build-time proxy is needed.
 FROM alpine:3.20
-RUN apk add --no-cache git ripgrep bash ca-certificates tzdata && \
-    addgroup -S codebridge && adduser -S codebridge -G codebridge && \
-    mkdir -p /state && chown -R codebridge:codebridge /state
+ARG TARGETARCH
+ARG OPENCODE_VERSION=1.18.32
+ARG OPENCODE_DL=
+RUN apk add --no-cache git ripgrep bash curl ca-certificates tzdata libstdc++ libgcc \
+    && addgroup -S codebridge && adduser -S codebridge -G codebridge \
+    && mkdir -p /state /home/codebridge/.local/share/opencode /home/codebridge/.local/state \
+    && chown -R codebridge:codebridge /state /home/codebridge/.local \
+    && if [ "$TARGETARCH" = "arm64" ]; then OC_ARCH=arm64; else OC_ARCH=x64; fi \
+    && curl -fsSL --retry 3 "https://github.com/anomalyco/opencode/releases/download/v${OPENCODE_VERSION}/opencode-linux-${OC_ARCH}-musl.tar.gz" -o /tmp/opencode.tar.gz \
+    && tar -xzf /tmp/opencode.tar.gz -C /tmp \
+    && install -m 0755 /tmp/opencode /usr/local/bin/opencode \
+    && rm -rf /tmp/opencode*
 COPY --from=build /out/codebridge-client /usr/local/bin/codebridge-client
 USER codebridge
 WORKDIR /state

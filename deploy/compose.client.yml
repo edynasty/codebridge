@@ -83,6 +83,12 @@ services:
       # trees (see shouldSkipDir) and sensitive paths stay policy-blocked.
       - ${HOST_HOME_DIR:-/Users/tangxingpeng}:/host:ro
       - ${HOST_PROJECTS_DIR:-/Users/tangxingpeng/IdeaProjects}:/workspaces:ro
+      # opencode ships inside the image. Subagents run with an isolated
+      # config (no user plugins/extensions): only the provider auth file is
+      # mounted, so runs are deterministic and cannot hang on host-only
+      # plugin infrastructure. Models/agents are chosen per call via the
+      # agent tool's model/agent parameters.
+      - ${HOST_OPENCODE_AUTH:-/Users/tangxingpeng/.local/share/opencode/auth.json}:/home/codebridge/.local/share/opencode/auth.json:ro
 
 volumes:
   codebridge-data:
