@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -38,13 +37,12 @@ const maxAgentResponseBytes = 768 * 1024
 // runtime is one fully-resolved connection attempt: everything runSession
 // needs, rebuilt from scratch whenever the UI saves a new configuration.
 type runtime struct {
-	managerURL      string
-	grpcTarget      string // host:port for the gRPC agent transport
-	allowInsecureWS bool
-	reg             protocol.RegisterRequest
-	service         *agentops.Service
-	credKey         string
-	credentialFile  string
+	managerURL     string
+	grpcTarget     string // host:port for the gRPC agent transport
+	reg            protocol.RegisterRequest
+	service        *agentops.Service
+	credKey        string
+	credentialFile string
 }
 
 type clientState struct {
@@ -80,19 +78,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	managerURL := flag.String("manager", firstNonEmpty(os.Getenv("CODEBRIDGE_MANAGER_URL"), fileConfig.ManagerURL, "ws://127.0.0.1:8080/agent"), "manager websocket URL")
+	managerHost := flag.String("manager-host", firstNonEmpty(os.Getenv("CODEBRIDGE_MANAGER_HOST"), fileConfig.ManagerHost, "127.0.0.1:8081"), "manager gRPC host[:port]")
 	deviceID := flag.String("device-id", firstNonEmpty(os.Getenv("CODEBRIDGE_DEVICE_ID"), fileConfig.DeviceID, hostnameSlug()), "stable device ID")
 	deviceName := flag.String("device-name", firstNonEmpty(os.Getenv("CODEBRIDGE_DEVICE_NAME"), fileConfig.DeviceName, hostname()), "device display name")
 	workspacesRaw := flag.String("workspaces", os.Getenv("CODEBRIDGE_WORKSPACES"), "name=/path,name2=/path; overrides config workspaces")
 	enrollmentCode := flag.String("enrollment-code", os.Getenv("CODEBRIDGE_ENROLL_CODE"), "one-time manager enrollment code")
 	credentialFile := flag.String("credential-file", firstNonEmpty(os.Getenv("CODEBRIDGE_CREDENTIAL_FILE"), fileConfig.CredentialFile, clientcred.DefaultPath()), "device credential file")
 	credentialOverride := flag.String("device-credential", os.Getenv("CODEBRIDGE_DEVICE_CREDENTIAL"), "device credential override (normally loaded from credential file)")
-	allowInsecureWSDefault, allowInsecurePinned := envBoolPinned("CODEBRIDGE_ALLOW_INSECURE_WS", false)
 	allowSensitiveDefault, allowSensitivePinned := envBoolPinned("CODEBRIDGE_ALLOW_SENSITIVE_FILES", fileConfig.AllowSensitiveFiles)
 	enableLSPDefault, enableLSPPinned := envBoolPinned("CODEBRIDGE_ENABLE_LSP", fileConfig.EnableLSP)
 	uiAddr := flag.String("ui-addr", firstNonEmpty(os.Getenv("CODEBRIDGE_UI_ADDR"), "127.0.0.1:8190"), "local configuration UI listen address; empty disables the UI")
 	_ = flag.String("transport", "grpc", "agent transport (gRPC only; kept for flag compatibility)")
-	_ = flag.Bool("allow-insecure-ws", allowInsecureWSDefault, "allow plaintext ws:// to a non-loopback manager (local container networking only)")
 	_ = flag.Bool("allow-sensitive-files", allowSensitiveDefault, "allow MCP tools to read normally blocked sensitive files inside workspaces (equivalent to CODEBRIDGE_ALLOW_SENSITIVE_FILES)")
 	writableRaw := flag.String("writable-workspaces", firstNonEmpty(os.Getenv("CODEBRIDGE_WRITABLE_WORKSPACES"), strings.Join(fileConfig.WritableWorkspaces, ",")), "comma-separated workspaces with explicit local write opt-in (empty disables write mode)")
 	_ = flag.Bool("enable-lsp", enableLSPDefault, "use locally installed language servers (gopls, typescript-language-server, jdtls) for symbol tools (equivalent to CODEBRIDGE_ENABLE_LSP)")
@@ -118,29 +114,27 @@ func main() {
 	// flags override the JSON file, and those origins cannot be changed by
 	// the UI (only the JSON file is editable at runtime).
 	boot := bootOptions{
-		managerURLFromEnvOrFlag: *managerURL,
-		workspacesFromEnv:       strings.TrimSpace(*workspacesRaw),
-		deviceID:                *deviceID,
-		deviceName:              *deviceName,
-		allowInsecureWS:         allowInsecureWSDefault,
-		allowInsecurePinned:     allowInsecurePinned,
-		allowSensitive:          allowSensitiveDefault,
-		allowSensitivePinned:    allowSensitivePinned,
-		writableRaw:             *writableRaw,
-		writablePinned:          strings.TrimSpace(os.Getenv("CODEBRIDGE_WRITABLE_WORKSPACES")) != "",
-		enableLSP:               enableLSPDefault,
-		enableLSPPinned:         enableLSPPinned,
-		indexDir:                indexDir,
-		checkpointDir:           checkpointDir,
-		credentialFile:          *credentialFile,
+		managerHostFromEnvOrFlag: *managerHost,
+		workspacesFromEnv:        strings.TrimSpace(*workspacesRaw),
+		deviceID:                 *deviceID,
+		deviceName:               *deviceName,
+		allowSensitive:           allowSensitiveDefault,
+		allowSensitivePinned:     allowSensitivePinned,
+		writableRaw:              *writableRaw,
+		writablePinned:           strings.TrimSpace(os.Getenv("CODEBRIDGE_WRITABLE_WORKSPACES")) != "",
+		enableLSP:                enableLSPDefault,
+		enableLSPPinned:          enableLSPPinned,
+		indexDir:                 indexDir,
+		checkpointDir:            checkpointDir,
+		credentialFile:           *credentialFile,
 	}
 	if state.Credential() == "" {
-		cred, err := clientcred.Load(boot.credentialFile, clientcred.Key(boot.managerURLFromEnvOrFlag, boot.deviceID))
+		cred, err := clientcred.Load(boot.credentialFile, clientcred.Key(boot.managerHostFromEnvOrFlag, boot.deviceID))
 		if err != nil {
 			log.Fatalf("load device credential: %v", err)
 		}
 		state.credential.Store(cred)
-	} else if err := clientcred.Save(boot.credentialFile, clientcred.Key(boot.managerURLFromEnvOrFlag, boot.deviceID), state.Credential()); err != nil {
+	} else if err := clientcred.Save(boot.credentialFile, clientcred.Key(boot.managerHostFromEnvOrFlag, boot.deviceID), state.Credential()); err != nil {
 		log.Fatalf("save device credential override: %v", err)
 	}
 
@@ -243,21 +237,19 @@ func persistCredential(rt *runtime, issued string, state *clientState) error {
 // bootOptions captures the flag/env origin of each setting so reloads can
 // tell "user edited the JSON file" apart from "operator pinned this via env".
 type bootOptions struct {
-	managerURLFromEnvOrFlag string
-	workspacesFromEnv       string
-	deviceID                string
-	deviceName              string
-	allowInsecureWS         bool
-	allowInsecurePinned     bool
-	allowSensitive          bool
-	allowSensitivePinned    bool
-	writableRaw             string
-	writablePinned          bool
-	enableLSP               bool
-	enableLSPPinned         bool
-	indexDir                string
-	checkpointDir           string
-	credentialFile          string
+	managerHostFromEnvOrFlag string
+	workspacesFromEnv        string
+	deviceID                 string
+	deviceName               string
+	allowSensitive           bool
+	allowSensitivePinned     bool
+	writableRaw              string
+	writablePinned           bool
+	enableLSP                bool
+	enableLSPPinned          bool
+	indexDir                 string
+	checkpointDir            string
+	credentialFile           string
 }
 
 func loadConfigFile(path string) clientconfig.Config {
@@ -274,15 +266,11 @@ func loadConfigFile(path string) clientconfig.Config {
 func buildRuntime(boot bootOptions, file clientconfig.Config, state *clientState) (*runtime, error) {
 	cfg := file
 
-	managerURL := firstNonEmpty(boot.managerURLFromEnvOrFlag, cfg.ManagerURL, "ws://127.0.0.1:8080/agent")
+	managerHost := firstNonEmpty(boot.managerHostFromEnvOrFlag, cfg.ManagerHost, "127.0.0.1:8081")
 	deviceID := firstNonEmpty(boot.deviceID, cfg.DeviceID, hostnameSlug())
 	deviceName := firstNonEmpty(boot.deviceName, cfg.DeviceName, hostname())
 	if strings.TrimSpace(deviceID) == "" {
 		return nil, fmt.Errorf("device id is required")
-	}
-	allowInsecureWS := boot.allowInsecureWS
-	if !boot.allowInsecurePinned {
-		allowInsecureWS = cfg.AllowInsecureWS
 	}
 	allowSensitive := boot.allowSensitive
 	if !boot.allowSensitivePinned {
@@ -319,11 +307,11 @@ func buildRuntime(boot bootOptions, file clientconfig.Config, state *clientState
 			return nil, err
 		}
 	}
-	return assemble(boot, managerURL, deviceID, deviceName, roots, advertised, writable, allowSensitive, enableLSP, allowInsecureWS, state, cfg)
+	return assemble(boot, managerHost, deviceID, deviceName, roots, advertised, writable, allowSensitive, enableLSP, state, cfg)
 }
 
-func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots map[string]string, advertised []protocol.Workspace, writable map[string]bool, allowSensitive, enableLSP, allowInsecureWS bool, state *clientState, cfg clientconfig.Config) (*runtime, error) {
-	if _, err := validateManagerURL(managerURL, allowInsecureWS); err != nil {
+func assemble(boot bootOptions, managerHost, deviceID, deviceName string, roots map[string]string, advertised []protocol.Workspace, writable map[string]bool, allowSensitive, enableLSP bool, state *clientState, cfg clientconfig.Config) (*runtime, error) {
+	if err := validateManagerHost(managerHost); err != nil {
 		return nil, err
 	}
 	rules := cfg.Permissions
@@ -378,24 +366,18 @@ func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots m
 	} else {
 		log.Printf("tool policy: %d enabled, %d disabled, %d custom", len(policy.EnabledTools), len(policy.DisabledTools), len(policy.CustomTools))
 	}
-	// gRPC target resolution: explicit env wins; otherwise the manager URL
-	// host with the default gRPC port (8081).
+	// gRPC target: the configured manager host[:port]; default port added
+	// when none is given.
 	grpcTarget := strings.TrimSpace(os.Getenv("CODEBRIDGE_GRPC_TARGET"))
 	if grpcTarget == "" {
-		if u, err := url.Parse(managerURL); err == nil && u.Host != "" {
-			host := u.Hostname()
-			if port := u.Port(); port != "" && port != "8080" {
-				grpcTarget = net.JoinHostPort(host, port)
-			} else {
-				grpcTarget = net.JoinHostPort(host, "8081")
-			}
+		grpcTarget = managerHost
+		if !strings.Contains(grpcTarget, ":") {
+			grpcTarget = net.JoinHostPort(grpcTarget, "8081")
 		}
 	}
 	return &runtime{
-		credentialFile:  boot.credentialFile,
-		managerURL:      managerURL,
-		grpcTarget:      grpcTarget,
-		allowInsecureWS: allowInsecureWS,
+		credentialFile: boot.credentialFile,
+		grpcTarget:     grpcTarget,
 		reg: protocol.RegisterRequest{
 			EnrollmentCode:   state.EnrollmentCode(),
 			DeviceCredential: state.Credential(),
@@ -406,7 +388,7 @@ func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots m
 			ToolPolicy:       policy,
 		},
 		service: service,
-		credKey: clientcred.Key(managerURL, deviceID),
+		credKey: clientcred.Key(managerHost, deviceID),
 	}, nil
 }
 
@@ -556,6 +538,25 @@ func intArgAny(m map[string]any, key string, def int) int {
 	return def
 }
 
+// validateManagerHost accepts host[:port] (or a legacy ws(s):// URL,
+// stripped to its host part) for the gRPC manager endpoint.
+func validateManagerHost(raw string) error {
+	host := strings.TrimSpace(raw)
+	if host == "" {
+		return fmt.Errorf("manager host is required")
+	}
+	if i := strings.Index(raw, "://"); i >= 0 {
+		host = strings.TrimSpace(raw[i+3:])
+	}
+	if i := strings.Index(host, "/"); i >= 0 {
+		host = host[:i]
+	}
+	if host == "" {
+		return fmt.Errorf("manager host is required")
+	}
+	return nil
+}
+
 func envBool(name string, def bool) bool {
 	v, _ := envBoolPinned(name, def)
 	return v
@@ -579,8 +580,7 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 	server.LoadConfig = func() ui.Config {
 		cfg := loadConfigFile(state.configFile)
 		return ui.Config{
-			ManagerURL:          effectiveManagerURL(boot, cfg),
-			AllowInsecureWS:     cfg.AllowInsecureWS || boot.allowInsecurePinned,
+			ManagerHost:         effectiveManagerHost(boot, cfg),
 			DeviceID:            effectiveDeviceID(boot, cfg),
 			DeviceName:          effectiveDeviceName(boot, cfg),
 			AccessMode:          effectiveAccessMode(cfg),
@@ -598,7 +598,7 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 		}
 	}
 	server.SaveConfig = func(in ui.Config) (bool, error) {
-		if in.ManagerURL == "\x00enroll-only" {
+		if in.ManagerHost == "\x00enroll-only" {
 			state.enrollCode.Store(in.EnrollmentCode)
 			state.connected.Store(false)
 			select {
@@ -607,17 +607,16 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 			}
 			return true, nil
 		}
-		if _, err := validateManagerURL(in.ManagerURL, in.AllowInsecureWS || boot.allowInsecurePinned); err != nil {
+		if err := validateManagerHost(in.ManagerHost); err != nil {
 			return false, err
 		}
 		cfg := loadConfigFile(state.configFile)
-		cfg.ManagerURL = in.ManagerURL
+		cfg.ManagerHost = in.ManagerHost
 		cfg.DeviceID = in.DeviceID
 		cfg.DeviceName = in.DeviceName
 		cfg.Workspaces = in.Workspaces
 		cfg.WritableWorkspaces = in.WritableWorkspaces
 		cfg.AllowSensitiveFiles = in.AllowSensitiveFiles
-		cfg.AllowInsecureWS = in.AllowInsecureWS
 		cfg.EnableLSP = in.EnableLSP
 		cfg.AccessMode = "workspaces"
 		if in.AccessMode == "full" {
@@ -661,15 +660,15 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 				Sensitive: cfg.AllowSensitiveFiles,
 			})
 		}
-		var currentURL, deviceID, deviceName string
+		var currentHost, deviceID, deviceName string
 		if rt != nil {
-			currentURL = rt.managerURL
+			currentHost = rt.grpcTarget
 			deviceID = rt.reg.DeviceID
 			deviceName = rt.reg.DeviceName
 		}
 		return ui.State{
 			Connected:      state.connected.Load(),
-			ManagerURL:     currentURL,
+			ManagerHost:    currentHost,
 			DeviceID:       deviceID,
 			DeviceName:     deviceName,
 			Enrolled:       state.Credential() != "",
@@ -797,8 +796,8 @@ func effectiveAccessMode(cfg clientconfig.Config) string {
 	return "workspaces"
 }
 
-func effectiveManagerURL(boot bootOptions, cfg clientconfig.Config) string {
-	return firstNonEmpty(boot.managerURLFromEnvOrFlag, cfg.ManagerURL, "ws://127.0.0.1:8080/agent")
+func effectiveManagerHost(boot bootOptions, cfg clientconfig.Config) string {
+	return firstNonEmpty(boot.managerHostFromEnvOrFlag, cfg.ManagerHost, "127.0.0.1:8081")
 }
 
 func effectiveDeviceID(boot bootOptions, cfg clientconfig.Config) string {
@@ -807,33 +806,6 @@ func effectiveDeviceID(boot bootOptions, cfg clientconfig.Config) string {
 
 func effectiveDeviceName(boot bootOptions, cfg clientconfig.Config) string {
 	return firstNonEmpty(boot.deviceName, cfg.DeviceName, hostname())
-}
-
-func validateManagerURL(raw string, allowInsecureWS bool) (*url.URL, error) {
-	u, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || u.Hostname() == "" {
-		return nil, fmt.Errorf("invalid manager URL")
-	}
-	if u.User != nil || u.RawQuery != "" || u.Fragment != "" {
-		return nil, fmt.Errorf("manager URL must not contain user info, query, or fragment")
-	}
-	if u.Scheme == "wss" {
-		return u, nil
-	}
-	if u.Scheme == "ws" {
-		host := u.Hostname()
-		ip := net.ParseIP(host)
-		isLoopback := host == "localhost" || host == "host.docker.internal" ||
-			(ip != nil && (ip.IsLoopback() || ip.IsLinkLocalUnicast()))
-		if isLoopback || allowInsecureWS {
-			if !isLoopback {
-				log.Printf("WARNING: insecure ws:// manager connection allowed by CODEBRIDGE_ALLOW_INSECURE_WS; use only on a trusted local network")
-			}
-			return u, nil
-		}
-		return nil, fmt.Errorf("remote manager URL must use wss://; ws:// is allowed only for loopback development (or with CODEBRIDGE_ALLOW_INSECURE_WS for local container networking)")
-	}
-	return nil, fmt.Errorf("manager URL must use wss:// (or ws:// for loopback development)")
 }
 
 func firstNonEmpty(values ...string) string {

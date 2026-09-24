@@ -59,10 +59,8 @@ services:
     environment:
       TZ: Asia/Shanghai
       <<: *host-info
-      CODEBRIDGE_MANAGER_URL: ${CODEBRIDGE_MANAGER_URL:-ws://manager:8080/agent}
-      # Preferred agent transport: gRPC bidi stream over HTTP/2 keepalive.
-      CODEBRIDGE_AGENT_TRANSPORT: ${CODEBRIDGE_AGENT_TRANSPORT:-grpc}
-      CODEBRIDGE_GRPC_TARGET: ${CODEBRIDGE_GRPC_TARGET:-manager:8081}
+      # Agent transport: gRPC bidi stream (host[:port], default port 8081).
+      CODEBRIDGE_MANAGER_HOST: ${CODEBRIDGE_MANAGER_HOST:-manager:8081}
       # plaintext ws inside the compose network only; never enable against a
       # public manager
       CODEBRIDGE_ALLOW_INSECURE_WS: ${CODEBRIDGE_ALLOW_INSECURE_WS:-true}

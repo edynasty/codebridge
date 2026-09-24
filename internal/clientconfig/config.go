@@ -28,7 +28,7 @@ type SubagentProfile struct {
 }
 
 type Config struct {
-	ManagerURL          string                    `json:"manager_url,omitempty"`
+	ManagerHost         string                    `json:"manager_host,omitempty"` // host[:port] of the manager gRPC endpoint
 	DeviceID            string                    `json:"device_id,omitempty"`
 	DeviceName          string                    `json:"device_name,omitempty"`
 	AccessMode          string                    `json:"access_mode,omitempty"` // "full" or "workspaces"
@@ -40,7 +40,6 @@ type Config struct {
 	SubagentProfiles    []SubagentProfile         `json:"subagent_profiles,omitempty"`
 	CredentialFile      string                    `json:"credential_file,omitempty"`
 	AllowSensitiveFiles bool                      `json:"allow_sensitive_files,omitempty"`
-	AllowInsecureWS     bool                      `json:"allow_insecure_ws,omitempty"`
 	EnableLSP           bool                      `json:"enable_lsp,omitempty"`
 	BashAllowlist       []string                  `json:"bash_allowlist,omitempty"`
 	Permissions         []agentops.PermissionRule `json:"permissions,omitempty"`
@@ -98,7 +97,16 @@ func Load(path string, required bool) (Config, error) {
 	if err := json.Unmarshal(b, &cfg); err != nil {
 		return cfg, fmt.Errorf("decode client config: %w", err)
 	}
-	cfg.ManagerURL = strings.TrimSpace(cfg.ManagerURL)
+	// Legacy WebSocket-era configs wrote manager_url; migrate it once.
+	if cfg.ManagerHost == "" {
+		var legacy struct {
+			ManagerURL string `json:"manager_url"`
+		}
+		if json.Unmarshal(b, &legacy) == nil && strings.TrimSpace(legacy.ManagerURL) != "" {
+			cfg.ManagerHost = legacy.ManagerURL
+		}
+	}
+	cfg.ManagerHost = normalizeManagerHost(cfg.ManagerHost)
 	cfg.DeviceID = strings.TrimSpace(cfg.DeviceID)
 	cfg.DeviceName = strings.TrimSpace(cfg.DeviceName)
 	cfg.CredentialFile = expandHome(strings.TrimSpace(cfg.CredentialFile))
@@ -140,6 +148,23 @@ func Save(path string, cfg Config) error {
 		return err
 	}
 	return os.Rename(tmp, path)
+}
+
+// normalizeManagerHost accepts "host", "host:port", or legacy
+// "ws(s)://host[:port]/path" values and returns "host" or "host:port".
+// The bare host keeps the default gRPC port applied at dial time.
+func normalizeManagerHost(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return ""
+	}
+	if i := strings.Index(v, "://"); i >= 0 {
+		v = v[i+3:]
+	}
+	if i := strings.IndexAny(v, "/"); i >= 0 {
+		v = v[:i]
+	}
+	return v
 }
 
 func expandHome(path string) string {

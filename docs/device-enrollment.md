@@ -29,7 +29,7 @@ The admin API is deployment-wide by design (loopback-bound, bearer-token protect
 
 ```bash
 CODEBRIDGE_ENROLL_CODE='enr_...' \
-CODEBRIDGE_MANAGER_URL='wss://codebridge.example.com/agent' \
+CODEBRIDGE_MANAGER_HOST='codebridge.example.com:8081' \
 CODEBRIDGE_DEVICE_ID='mbp-m1' \
 CODEBRIDGE_DEVICE_NAME='MacBook Pro M1' \
 CODEBRIDGE_WORKSPACES='pms=/Users/me/code/pms' \

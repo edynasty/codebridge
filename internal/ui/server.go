@@ -27,8 +27,8 @@ const enrollOnlySentinel = "\x00enroll-only"
 
 // Config is the editable client configuration as shown and written by the UI.
 type Config struct {
-	ManagerURL          string                           `json:"manager_url"`
-	AllowInsecureWS     bool                             `json:"allow_insecure_ws"`
+	ManagerHost string `json:"manager_host"`
+
 	DeviceID            string                           `json:"device_id"`
 	DeviceName          string                           `json:"device_name"`
 	AccessMode          string                           `json:"access_mode"`
@@ -48,7 +48,7 @@ type Config struct {
 // State is the read-only runtime snapshot for the status panel.
 type State struct {
 	Connected      bool        `json:"connected"`
-	ManagerURL     string      `json:"manager_url"`
+	ManagerHost    string      `json:"manager_host"`
 	DeviceID       string      `json:"device_id"`
 	DeviceName     string      `json:"device_name"`
 	Enrolled       bool        `json:"enrolled"`
@@ -246,9 +246,9 @@ func (s *Server) handleEnroll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "enrollment_code is required", http.StatusBadRequest)
 		return
 	}
-	// ManagerURL carries a sentinel so SaveConfig can tell "set the enroll
+	// ManagerHost carries a sentinel so SaveConfig can tell "set the enroll
 	// code only" apart from a full configuration update.
-	if _, err := s.SaveConfig(Config{EnrollmentCode: strings.TrimSpace(in.EnrollmentCode), ManagerURL: enrollOnlySentinel}); err != nil {
+	if _, err := s.SaveConfig(Config{EnrollmentCode: strings.TrimSpace(in.EnrollmentCode), ManagerHost: enrollOnlySentinel}); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

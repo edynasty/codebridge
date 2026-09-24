@@ -61,7 +61,7 @@ func TestLoadConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.ManagerURL != "wss://codebridge.example.com/agent" || cfg.DeviceID != "mac-1" || cfg.DeviceName != "Mac" {
+	if cfg.ManagerHost != "codebridge.example.com" || cfg.DeviceID != "mac-1" || cfg.DeviceName != "Mac" {
 		t.Fatalf("unexpected config: %#v", cfg)
 	}
 	if cfg.Workspaces["pms"] != "/tmp/pms" {

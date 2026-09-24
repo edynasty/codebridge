@@ -216,7 +216,7 @@ The Client optionally reads `~/.config/codebridge/client.json`, so Manager URL, 
 
 ```json
 {
-  "manager_url": "wss://codebridge.example.com/agent",
+  "manager_host": "codebridge.example.com:8081",
   "device_id": "mbp-m1",
   "device_name": "MacBook Pro",
   "allow_sensitive_files": false,
@@ -270,7 +270,7 @@ The enrollment code is single-use and expires automatically. The enrolled device
 ### 3. Start a Local Agent once with the enrollment code
 
 ```bash
-export CODEBRIDGE_MANAGER_URL='ws://127.0.0.1:8080/agent'
+export CODEBRIDGE_MANAGER_HOST='127.0.0.1:8081'
 export CODEBRIDGE_DEVICE_ID='mbp-m1'
 export CODEBRIDGE_DEVICE_NAME='MacBook Pro M1'
 export CODEBRIDGE_WORKSPACES='pms=/Users/me/code/pms,portal=/Users/me/code/portal'

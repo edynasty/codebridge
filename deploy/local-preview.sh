@@ -27,7 +27,7 @@ seed_client_config() {
   if [ ! -f "${STATE_DIR}/client.json" ]; then
     mkdir -p "${STATE_DIR}"
     {
-      printf '{\n  "manager_url": "ws://manager:8080/agent",\n  "allow_insecure_ws": true,\n  "workspaces": {\n'
+      printf '{\n  "manager_host": "manager:8081",\n  \n  "workspaces": {\n'
       first=1
       add_ws() {
         if [ $first -eq 1 ]; then first=0; else printf ',\n'; fi

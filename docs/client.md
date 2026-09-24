@@ -14,7 +14,7 @@ Example:
 
 ```json
 {
-  "manager_url": "wss://codebridge.example.com/agent",
+  "manager_host": "codebridge.example.com:8081",
   "device_id": "mbp-m1",
   "device_name": "MacBook Pro",
   "allow_sensitive_files": false,

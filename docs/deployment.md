@@ -105,7 +105,7 @@ Devices are grouped into accounts for MCP visibility (see [oauth.md](oauth.md#ac
 Local clients connect outbound through the same public domain:
 
 ```env
-CODEBRIDGE_MANAGER_URL=wss://codebridge.example.com/agent
+CODEBRIDGE_MANAGER_HOST=codebridge.example.com:8081
 ```
 
 No inbound port is required on the developer laptop. Caddy forwards the WebSocket upgrade to the Manager automatically.

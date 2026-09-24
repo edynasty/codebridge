@@ -2,34 +2,22 @@ package main
 
 import "testing"
 
-func TestValidateManagerURL(t *testing.T) {
+func TestValidateManagerHost(t *testing.T) {
 	good := []string{
-		"wss://codebridge.example.com/agent",
-		"ws://localhost:8080/agent",
-		"ws://127.0.0.1:8080/agent",
-		"ws://[::1]:8080/agent",
+		"127.0.0.1:8081",
+		"manager:8081",
+		"codebridge.example.com",
+		"codebridge.example.com:443",
+		"ws://manager:8080/agent", // legacy form, stripped to host
 	}
 	for _, raw := range good {
-		if _, err := validateManagerURL(raw, false); err != nil {
-			t.Errorf("%s rejected: %v", raw, err)
+		if err := validateManagerHost(raw); err != nil {
+			t.Errorf("validateManagerHost(%q) = %v, want nil", raw, err)
 		}
 	}
-
-	if _, err := validateManagerURL("ws://manager:8080/agent", true); err != nil {
-		t.Errorf("insecure-allowed ws URL rejected: %v", err)
-	}
-
-	bad := []string{
-		"ws://codebridge.example.com/agent",
-		"http://127.0.0.1:8080/agent",
-		"wss:///agent",
-		"wss://user:pass@codebridge.example.com/agent",
-		"wss://codebridge.example.com/agent?token=secret",
-		"wss://codebridge.example.com/agent#fragment",
-	}
-	for _, raw := range bad {
-		if _, err := validateManagerURL(raw, false); err == nil {
-			t.Errorf("%s was accepted", raw)
+	for _, raw := range []string{"", "   ", "://", "https://"} {
+		if err := validateManagerHost(raw); err == nil {
+			t.Errorf("validateManagerHost(%q) accepted", raw)
 		}
 	}
 }

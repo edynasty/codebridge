@@ -337,14 +337,10 @@
       <div class="card-h"><b>连接</b></div>
       <div class="card-b">
         <div class="field">
-          <label for="f-manager">Manager 地址</label>
-          <input type="text" id="f-manager" placeholder="wss://你的服务器域名/agent">
-          <div class="hint">公网部署必须使用 wss://。本地容器网络需要打开下方豁免。</div>
+          <label for="f-manager">Manager 主机</label>
+          <input type="text" id="f-manager" placeholder="codebridge.example.com:8081">
+          <div class="hint">gRPC 地址 host[:port]，默认端口 8081。</div>
         </div>
-        <label class="check">
-          <input type="checkbox" id="f-insecure">
-          <span><b>允许明文 ws 连接</b><span class="desc">仅用于本地 Docker/compose 网络，对公网 Manager 必须关闭</span></span>
-        </label>
         <div class="grid2">
           <div class="field">
             <label for="f-devid">设备 ID</label>
@@ -486,7 +482,7 @@
     var on = st.connected;
     $('dot').className = 'status-dot' + (on ? ' on' : '');
     $('conn-state').className = 'status-pill' + (on ? ' on' : ''); $('conn-text').textContent = on ? '已连接 Manager' : '未连接';
-    $('s-manager').textContent = st.manager_url || '—';
+    $('s-manager').textContent = st.manager_host || '—';
     $('s-device').textContent = st.device_id || '—';
     $('s-enrolled').textContent = st.enrolled ? '已注册' : '未注册（需要注册码）';
     $('s-uptime').textContent = fmtUptime(st.started_at);
@@ -775,13 +771,12 @@
   });
 
   function fillForm(cfg) {
-    $('f-manager').value = cfg.manager_url || '';
-    $('f-insecure').checked = !!cfg.allow_insecure_ws;
+    $('f-manager').value = cfg.manager_host || '';
     $('f-devid').value = cfg.device_id || '';
     $('f-devname').value = cfg.device_name || '';
     $('f-devid').title = cfg.device_id || '';
     $('f-devname').title = cfg.device_name || '';
-    $('f-manager').title = cfg.manager_url || '';
+    $('f-manager').title = cfg.manager_host || '';
     $('f-sensitive').checked = !!cfg.allow_sensitive_files;
     $('f-lsp').checked = !!cfg.enable_lsp;
     enabledTools = {};
@@ -849,8 +844,8 @@
         };
       }),
       custom_tools: custom,
-      manager_url: $('f-manager').value.trim(),
-      allow_insecure_ws: $('f-insecure').checked,
+      manager_host: $('f-manager').value.trim(),
+      
       device_id: $('f-devid').value.trim(),
       device_name: $('f-devname').value.trim(),
       workspaces: workspaces,
