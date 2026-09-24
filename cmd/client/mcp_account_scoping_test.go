@@ -98,13 +98,13 @@ func TestOAuthAccountScopingCrossTenant(t *testing.T) {
 	defer agentCancel()
 	agentDone := make(chan error, 1)
 	go func() {
-		agentDone <- runSession(agentCtx, "ws"+strings.TrimPrefix(server.URL, "http")+"/agent", false, protocol.RegisterRequest{
+		agentDone <- runSession(agentCtx, &runtime{managerURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/agent", reg: protocol.RegisterRequest{
 			EnrollmentCode: enrollmentCode,
 			DeviceID:       "scoped-device",
 			DeviceName:     "Scoping Test Device",
 			Version:        "test",
 			Workspaces:     []protocol.Workspace{{Name: "demo"}},
-		}, &agentops.Service{Roots: map[string]string{"demo": workspace}}, func(string) error { return nil })
+		}, service: &agentops.Service{Roots: map[string]string{"demo": workspace}}}, &clientState{}, func(string) error { return nil })
 	}()
 	waitForDeviceState(t, registry, "scoped-device", true)
 

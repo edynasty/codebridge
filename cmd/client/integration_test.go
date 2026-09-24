@@ -54,7 +54,7 @@ func TestManagerClientEnrollmentToolCallAndCredentialReconnect(t *testing.T) {
 	firstDone := make(chan error, 1)
 	issued := make(chan string, 1)
 	go func() {
-		firstDone <- runSession(firstCtx, managerURL, false, firstReg, service, func(credential string) error {
+		firstDone <- runSession(firstCtx, &runtime{managerURL: managerURL, reg: firstReg, service: service}, &clientState{}, func(credential string) error {
 			issued <- credential
 			return nil
 		})
@@ -111,7 +111,7 @@ func TestManagerClientEnrollmentToolCallAndCredentialReconnect(t *testing.T) {
 		Workspaces:       []protocol.Workspace{{Name: "demo"}},
 	}
 	go func() {
-		secondDone <- runSession(secondCtx, managerURL, false, secondReg, service, func(newCredential string) error {
+		secondDone <- runSession(secondCtx, &runtime{managerURL: managerURL, reg: secondReg, service: service}, &clientState{}, func(newCredential string) error {
 			reissued <- newCredential
 			return nil
 		})

@@ -11,3 +11,7 @@ deploy/client-state/
 # Local docker preview state (client credential, checkpoints, index)
 deploy/client-state/
 deploy/.env
+
+# stray local binary from a smoke run
+client
+bin/client

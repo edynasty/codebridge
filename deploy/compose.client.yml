@@ -15,6 +15,12 @@
 
 name: codebridge-local
 
+x-host-info: &host-info
+  # Real host identity injected at container start so the device registers as
+  # this machine, not as the container.
+  CODEBRIDGE_DEVICE_ID: ${CODEBRIDGE_DEVICE_ID:-${HOSTNAME_SLUG:-codebridge-local}}
+  CODEBRIDGE_DEVICE_NAME: ${CODEBRIDGE_DEVICE_NAME:-${HOST_USER:-local}@${HOSTNAME_SHORT:-codebridge}}
+
 services:
   manager:
     build:
@@ -48,15 +54,16 @@ services:
       - manager
     environment:
       TZ: Asia/Shanghai
+      <<: *host-info
       CODEBRIDGE_MANAGER_URL: ${CODEBRIDGE_MANAGER_URL:-ws://manager:8080/agent}
       # plaintext ws inside the compose network only; never enable against a
       # public manager
       CODEBRIDGE_ALLOW_INSECURE_WS: ${CODEBRIDGE_ALLOW_INSECURE_WS:-true}
-      CODEBRIDGE_DEVICE_ID: ${CODEBRIDGE_DEVICE_ID:-codebridge-local}
-      CODEBRIDGE_DEVICE_NAME: ${CODEBRIDGE_DEVICE_NAME:-CodeBridge Docker Local}
-      # Add workspaces as CODEBRIDGE_WORKSPACES=name1=/workspaces/name1,name2=/workspaces/name2
-      # plus matching read-only volume mounts below.
-      CODEBRIDGE_WORKSPACES: ${CODEBRIDGE_WORKSPACES:-codebridge=/workspaces/codebridge}
+      # Workspaces live in the persistent client.json (first boot seeds the
+      # directories from /Users/tangxingpeng/IdeaProjects below) so the
+      # configuration UI can edit them with hot reload.
+      CODEBRIDGE_WORKSPACES: ${CODEBRIDGE_WORKSPACES:-}
+      CODEBRIDGE_CONFIG: /state/client.json
       CODEBRIDGE_CREDENTIAL_FILE: /state/credentials.json
       CODEBRIDGE_STATE_DIR: /state
       CODEBRIDGE_ENROLL_CODE: ${CODEBRIDGE_ENROLL_CODE:-}
@@ -64,10 +71,14 @@ services:
       # AND mount the workspace read-write.
       CODEBRIDGE_WRITABLE_WORKSPACES: ${CODEBRIDGE_WRITABLE_WORKSPACES:-}
       CODEBRIDGE_ENABLE_LSP: ${CODEBRIDGE_ENABLE_LSP:-false}
+      # UI must bind 0.0.0.0 inside the container for the host port mapping to
+      # reach it; the published port stays loopback-only on the host.
+      CODEBRIDGE_UI_ADDR: ${CODEBRIDGE_UI_ADDR:-0.0.0.0:8190}
+    ports:
+      - "127.0.0.1:${CODEBRIDGE_UI_PORT:-8190}:8190"
     volumes:
       - ./client-state:/state
-      # Preview workspace: the codebridge repo itself, read-only.
-      - ..:/workspaces/codebridge:ro
+      - ${HOST_PROJECTS_DIR:-/Users/tangxingpeng/IdeaProjects}:/workspaces:ro
 
 volumes:
   codebridge-data:

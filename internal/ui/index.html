@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="cb-token" content="__TOKEN__">
+<title>CodeBridge Client</title>
+<style>
+  :root {
+    --ink: #0d1116;
+    --ink-2: #131a21;
+    --line: #223041;
+    --line-soft: #1a242f;
+    --paper: #e8e3d8;
+    --paper-dim: #8d9aa8;
+    --paper-faint: #5b6875;
+    --celadon: #5fb8a6;
+    --celadon-deep: #2e6b5e;
+    --amber: #e0a458;
+    --red: #d96a6a;
+    --mono: "JetBrains Mono", "Sarasa Term SC", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.65;
+    min-height: 100vh;
+  }
+  a { color: var(--celadon); }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .02em;
+  }
+  header .sub { color: var(--paper-faint); font-size: 12px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: calc(100vh - 62px);
+  }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } aside { border-right: none; border-bottom: 1px solid var(--line); } }
+
+  @media (max-width: 640px) {
+    .grid2 { grid-template-columns: 1fr; }
+    table.ws, table.ws tbody, table.ws tr, table.ws td { display: block; width: 100%; }
+    table.ws thead { display: none; }
+    table.ws tr { border: 1px solid var(--line-soft); border-radius: 3px; padding: 8px; margin-bottom: 10px; }
+    table.ws td { border: none; padding: 4px 0; }
+    table.ws td:last-child { text-align: right; }
+  }
+
+  aside {
+    border-right: 1px solid var(--line);
+    padding: 24px 28px;
+    background: var(--ink-2);
+  }
+  main { padding: 24px 32px 64px; max-width: 860px; }
+
+  .status-dot {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: 1px;
+    background: var(--paper-faint);
+  }
+  .status-dot.on { background: var(--celadon); animation: pulse 2.4s ease-in-out infinite; }
+  .status-dot.warn { background: var(--amber); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(95,184,166,.35); }
+    50% { box-shadow: 0 0 0 6px rgba(95,184,166,0); }
+  }
+
+  .conn { font-size: 15px; margin-bottom: 20px; }
+  .conn .state { font-weight: 600; }
+  .conn .state.on { color: var(--celadon); }
+  .conn .state.off { color: var(--paper-dim); }
+
+  dl { margin: 0; }
+  dl div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); }
+  dt { color: var(--paper-faint); white-space: nowrap; }
+  dd { margin: 0; text-align: right; word-break: break-all; }
+
+  section { margin-bottom: 40px; }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--paper-dim);
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; color: var(--paper-dim); font-size: 12px; margin-bottom: 5px; }
+  .field input[type=text] {
+    width: 100%;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 7px 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .field input:focus { outline: 1px solid var(--celadon); border-color: var(--celadon); }
+  .field .hint { color: var(--paper-faint); font-size: 11.5px; margin-top: 4px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+
+  table.ws { width: 100%; border-collapse: collapse; }
+  table.ws th {
+    text-align: left; font-weight: 400; font-size: 11.5px;
+    color: var(--paper-faint); padding: 4px 8px 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  table.ws td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  table.ws input[type=text] { width: 100%; background: var(--ink); color: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 5px 8px; font-family: var(--mono); font-size: 12.5px; }
+  table.ws .del { background: none; border: none; color: var(--paper-faint); cursor: pointer; font-family: var(--mono); font-size: 14px; padding: 2px 6px; }
+  table.ws .del:hover { color: var(--red); }
+  .tag { font-size: 10.5px; border: 1px solid var(--line); color: var(--paper-dim); border-radius: 2px; padding: 1px 6px; margin-left: 8px; }
+  .tag.write { color: var(--amber); border-color: #4a3b25; }
+  .tag.sensitive { color: var(--red); border-color: #4a2525; }
+
+  .check { display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px; border: 1px solid var(--line-soft); border-radius: 3px; margin-bottom: 10px; cursor: pointer; }
+  .check:hover { border-color: var(--line); }
+  .check input { margin-top: 4px; accent-color: var(--celadon); }
+  .check b { font-weight: 600; }
+  .check .desc { color: var(--paper-faint); font-size: 11.5px; display: block; }
+  .check.danger b { color: var(--amber); }
+
+  .bar { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
+  button.primary {
+    background: var(--celadon-deep);
+    color: var(--paper);
+    border: 1px solid var(--celadon);
+    border-radius: 3px;
+    padding: 9px 22px;
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  button.primary:hover { background: #37796a; }
+  button.ghost {
+    background: none; color: var(--paper-dim);
+    border: 1px solid var(--line); border-radius: 3px;
+    padding: 9px 16px; font-family: var(--mono); font-size: 12.5px; cursor: pointer;
+  }
+  button.ghost:hover { color: var(--paper); border-color: var(--paper-faint); }
+  .msg { font-size: 12.5px; }
+  .msg.ok { color: var(--celadon); }
+  .msg.err { color: var(--red); }
+
+  details { border: 1px solid var(--line-soft); border-radius: 3px; }
+  details summary { cursor: pointer; padding: 10px 14px; color: var(--paper-dim); font-size: 12.5px; }
+  #logs { margin: 0; padding: 12px 14px 14px; max-height: 280px; overflow: auto; color: var(--paper-dim); font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
+  #logs .errline { color: var(--amber); }
+
+  @media (prefers-reduced-motion: reduce) { .status-dot.on { animation: none; } }
+  :focus-visible { outline: 1px solid var(--celadon); }
+</style>
+</head>
+<body>
+<header>
+  <h1>CodeBridge Client</h1>
+  <span class="sub" id="head-device"></span>
+  <span class="sub" style="margin-left:auto" id="head-version"></span>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="conn">
+      <span class="status-dot" id="dot"></span>
+      <span class="state" id="conn-state">连接中…</span>
+    </div>
+    <dl>
+      <div><dt>Manager</dt><dd id="s-manager"></dd></div>
+      <div><dt>设备 ID</dt><dd id="s-device"></dd></div>
+      <div><dt>注册状态</dt><dd id="s-enrolled"></dd></div>
+      <div><dt>运行时长</dt><dd id="s-uptime"></dd></div>
+      <div><dt>重连次数</dt><dd id="s-reconnects"></dd></div>
+      <div><dt>凭证文件</dt><dd id="s-cred"></dd></div>
+      <div><dt>配置文件</dt><dd id="s-config"></dd></div>
+    </dl>
+  </aside>
+
+  <main>
+    <section>
+      <h2>工作区</h2>
+      <table class="ws">
+        <thead><tr><th style="width:28%">名称</th><th>本地路径（宿主机绝对路径）</th><th style="width:90px">可写</th><th style="width:40px"></th></tr></thead>
+        <tbody id="ws-body"></tbody>
+      </table>
+      <div class="bar" style="margin-top:10px">
+        <button class="ghost" id="ws-add">添加工作区</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>连接</h2>
+      <div class="field">
+        <label for="f-manager">Manager 地址</label>
+        <input type="text" id="f-manager" placeholder="wss://codebridge.example.com/agent">
+        <div class="hint">公网部署必须使用 wss://。本地容器网络（compose 内 ws://manager:8080）需要打开下方豁免。</div>
+      </div>
+      <label class="check">
+        <input type="checkbox" id="f-insecure">
+        <span><b>允许明文 ws 连接</b><span class="desc">仅用于本地 Docker/内网 compose 网络，对公网 Manager 必须关闭</span></span>
+      </label>
+      <div class="grid2">
+        <div class="field">
+          <label for="f-devid">设备 ID</label>
+          <input type="text" id="f-devid">
+        </div>
+        <div class="field">
+          <label for="f-devname">设备名称</label>
+          <input type="text" id="f-devname">
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-enroll">注册码（未注册时填写，一次性）</label>
+        <input type="text" id="f-enroll" placeholder="enr_…">
+        <div class="hint">向 Manager 管理员索要。注册成功后凭证会自动保存，无需再填。</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>本地策略</h2>
+      <label class="check danger">
+        <input type="checkbox" id="f-sensitive">
+        <span><b>允许读取敏感文件</b><span class="desc">放开 .env、私钥、云凭证等敏感路径的读取限制。写操作对敏感路径始终禁止。</span></span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="f-lsp">
+        <span><b>启用语言服务器（LSP）</b><span class="desc">在本机运行 gopls / typescript-language-server / jdtls 提升符号工具精度，不可用时自动回退内置解析器</span></span>
+      </label>
+    </section>
+
+    <div class="bar">
+      <button class="primary" id="save">保存并重连</button>
+      <button class="ghost" id="reconnect">仅重连</button>
+      <span class="msg" id="save-msg"></span>
+    </div>
+
+    <section style="margin-top:48px">
+      <h2>日志</h2>
+      <details open>
+        <summary>最近日志</summary>
+        <pre id="logs">加载中…</pre>
+      </details>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  var token = document.querySelector('meta[name="cb-token"]').content;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function api(method, path, body) {
+    return fetch(path, {
+      method: method,
+      headers: { 'X-Codebridge-Token': token, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error(t || r.status); });
+      return r.json();
+    });
+  }
+
+  function fmtUptime(startISO) {
+    var ms = Date.now() - new Date(startISO).getTime();
+    if (ms < 0 || isNaN(ms)) return '—';
+    var s = Math.floor(ms / 1000);
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    if (h > 0) return h + ' 小时 ' + m + ' 分';
+    if (m > 0) return m + ' 分 ' + (s % 60) + ' 秒';
+    return s + ' 秒';
+  }
+
+  function renderState(st) {
+    var on = st.connected;
+    $('dot').className = 'status-dot' + (on ? ' on' : '');
+    $('conn-state').textContent = on ? '已连接 Manager' : '未连接';
+    $('conn-state').className = 'state ' + (on ? 'on' : 'off');
+    $('s-manager').textContent = st.manager_url || '—';
+    $('s-device').textContent = st.device_id || '—';
+    $('s-enrolled').textContent = st.enrolled ? '已注册' : '未注册（需要注册码）';
+    $('s-uptime').textContent = fmtUptime(st.started_at);
+    $('s-reconnects').textContent = String(st.reconnects);
+    $('s-cred').textContent = st.credential_file || '—';
+    $('s-config').textContent = st.config_file || '—';
+    $('head-device').textContent = st.device_id ? st.device_id : '';
+    $('head-version').textContent = 'v' + (st.version || 'dev');
+  }
+
+  var wsRows = [];
+
+  function renderWorkspaces(rows) {
+    var body = $('ws-body');
+    body.innerHTML = '';
+    rows.forEach(function (row, i) {
+      var tr = document.createElement('tr');
+      var tdName = document.createElement('td');
+      var name = document.createElement('input');
+      name.type = 'text'; name.value = row.name; name.placeholder = '名称';
+      name.addEventListener('input', function () { wsRows[i].name = name.value; });
+      tdName.appendChild(name);
+      var tdPath = document.createElement('td');
+      var path = document.createElement('input');
+      path.type = 'text'; path.value = row.path; path.placeholder = '/绝对路径';
+      path.addEventListener('input', function () { wsRows[i].path = path.value; });
+      tdPath.appendChild(path);
+      var tdW = document.createElement('td');
+      var w = document.createElement('input');
+      w.type = 'checkbox';
+      w.checked = row.writable;
+      w.title = '写模式需要本地显式开启，且路径必须真实以读写方式挂载';
+      w.addEventListener('change', function () { wsRows[i].writable = w.checked; });
+      tdW.appendChild(w);
+      var tdDel = document.createElement('td');
+      var del = document.createElement('button');
+      del.className = 'del'; del.textContent = '✕'; del.title = '移除';
+      del.addEventListener('click', function () { wsRows.splice(i, 1); renderWorkspaces(wsRows); });
+      tdDel.appendChild(del);
+      tr.appendChild(tdName); tr.appendChild(tdPath); tr.appendChild(tdW); tr.appendChild(tdDel);
+      body.appendChild(tr);
+    });
+  }
+
+  $('ws-add').addEventListener('click', function () {
+    wsRows.push({ name: '', path: '', writable: false });
+    renderWorkspaces(wsRows);
+  });
+
+  function fillForm(cfg) {
+    $('f-manager').value = cfg.manager_url || '';
+    $('f-insecure').checked = !!cfg.allow_insecure_ws;
+    $('f-devid').value = cfg.device_id || '';
+    $('f-devname').value = cfg.device_name || '';
+    $('f-sensitive').checked = !!cfg.allow_sensitive_files;
+    $('f-lsp').checked = !!cfg.enable_lsp;
+    wsRows = [];
+    for (var name in (cfg.workspaces || {})) {
+      wsRows.push({ name: name, path: cfg.workspaces[name], writable: (cfg.writable_workspaces || []).indexOf(name) >= 0 });
+    }
+    wsRows.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+    renderWorkspaces(wsRows);
+  }
+
+  function collect() {
+    var seen = {};
+    var workspaces = {};
+    var writable = [];
+    wsRows.forEach(function (r) {
+      var name = (r.name || '').trim();
+      var path = (r.path || '').trim();
+      if (!name || !path || seen[name]) return;
+      seen[name] = true;
+      workspaces[name] = path;
+      if (r.writable) writable.push(name);
+    });
+    return {
+      manager_url: $('f-manager').value.trim(),
+      allow_insecure_ws: $('f-insecure').checked,
+      device_id: $('f-devid').value.trim(),
+      device_name: $('f-devname').value.trim(),
+      workspaces: workspaces,
+      writable_workspaces: writable,
+      allow_sensitive_files: $('f-sensitive').checked,
+      enable_lsp: $('f-lsp').checked,
+      enrollment_code: $('f-enroll').value.trim()
+    };
+  }
+
+  var msgTimer = null;
+  function setMsg(cls, text) {
+    var el = $('save-msg');
+    el.className = 'msg ' + cls;
+    el.textContent = text;
+    clearTimeout(msgTimer);
+    msgTimer = setTimeout(function () { el.textContent = ''; }, 6000);
+  }
+
+  $('save').addEventListener('click', function () {
+    setMsg('', '保存中…');
+    api('POST', '/api/config', collect()).then(function (r) {
+      $('f-enroll').value = '';
+      setMsg('ok', r.reconnecting ? '已保存，正在用新配置重连…' : '已保存');
+    }).catch(function (e) { setMsg('err', '保存失败：' + e.message); });
+  });
+
+  $('reconnect').addEventListener('click', function () {
+    api('POST', '/api/disconnect').then(function () {
+      setMsg('ok', '已断开，正在重连…');
+    }).catch(function (e) { setMsg('err', e.message); });
+  });
+
+  function refreshLogs() {
+    fetch('/api/logs').then(function (r) { return r.json(); }).then(function (d) {
+      var el = $('logs');
+      el.innerHTML = '';
+      (d.lines || []).forEach(function (line) {
+        var div = document.createElement('div');
+        if (/WARNING|rejected|failed|error/i.test(line)) div.className = 'errline';
+        div.textContent = line;
+        el.appendChild(div);
+      });
+      el.scrollTop = el.scrollHeight;
+    });
+  }
+
+  var loadedOnce = false;
+  function refresh() {
+    fetch('/api/state').then(function (r) { return r.json(); }).then(function (st) {
+      renderState(st);
+      if (!loadedOnce) {
+        loadedOnce = true;
+        api('GET', '/api/config').then(fillForm).catch(function () {});
+      }
+    }).catch(function () {});
+  }
+
+  refresh();
+  refreshLogs();
+  setInterval(refresh, 3000);
+  setInterval(refreshLogs, 5000);
+})();
+</script>
+</body>
+</html>

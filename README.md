@@ -45,25 +45,138 @@ ChatGPT Web / MCP client
 
 ## MCP tools
 
-| Tool | Purpose |
-| --- | --- |
-| `list_devices` | List connected agents |
-| `list_workspaces` | List logical workspaces on a device (writable ones are flagged) |
-| `list_directory` | List a workspace-relative directory |
-| `read_file` | Read a bounded source/text file |
-| `find_files` | Find files by glob/path substring |
-| `search_code` | Literal code search, preferably via ripgrep |
-| `git_status` | Read git status |
-| `git_diff` | Read unstaged git diff |
-| `project_info` | Detect build/project markers |
-| `find_symbol` | Find symbol declarations in Go/Java/TypeScript/JavaScript by name substring and kind |
-| `find_references` | Find references to a symbol (language server when enabled, bounded textual fallback) |
-| `read_symbol` | Read the smallest useful declaration range of one symbol |
-| `dependency_graph` | Module/dependency graph from pom.xml, package.json or go.mod |
-| `apply_patch` | Structured all-or-nothing text edits; write-opt-in workspaces only; preview + confirm + git checkpoint |
-| `rollback_patch` | Undo an `apply_patch` using its checkpoint ID |
-
 All tools are declared `readOnlyHint=true` and `openWorldHint=false`, except `apply_patch`/`rollback_patch`, which are declared mutating. When OAuth is enabled, each tool also advertises the `codebridge.read` OAuth scope (or your configured scope).
+
+Every tool call targets one device and workspace: pass `device_id` (from `list_devices`) and `workspace` (the logical name from `list_workspaces`). Paths are always **workspace-relative**; absolute paths and `..` traversal are rejected, and symlink escapes are contained inside the workspace root.
+
+### Discovery
+
+#### `list_devices`
+
+Lists currently connected devices with `id`, `name`, `account_id`, `online`, and their advertised workspaces.
+
+#### `list_workspaces`
+
+```json
+{ "device_id": "mbp-m1" }
+```
+
+Lists the logical workspaces of one device. Entries with `"writable": true` accept `apply_patch` (local opt-in on the client).
+
+#### `list_directory`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "path": "src/main/java" }
+```
+
+Directory entries (`name`, `path`, `type`, `size`). Defaults to the workspace root.
+
+### Reading
+
+#### `read_file`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "path": "README.md", "max_bytes": 262144 }
+```
+
+Returns `path`, `content`, `truncated`, `bytes_read`. Capped at 256 KiB per call; use `max_bytes` to narrow.
+
+#### `find_files`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "pattern": "*Service*" }
+```
+
+Filename glob or path substring, bounded to 500 results. Skips `node_modules`, `target`, `dist`, `.git`, etc.
+
+#### `search_code`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "query": "processRefund", "path": "src" }
+```
+
+Literal (non-regex) text search, via ripgrep when installed, otherwise a bounded built-in scanner. Up to 200 matching lines with `path`, `line`, `text`.
+
+#### `git_status` / `git_diff`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms" }
+{ "device_id": "mbp-m1", "workspace": "pms", "path": "src/main/java" }
+```
+
+Read-only `git status --short --branch` and unstaged diff, optionally scoped to one path. Sensitive files are filtered out by default.
+
+#### `project_info`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms" }
+```
+
+Detected build markers (`pom.xml`, `go.mod`, `package.json`, `Dockerfile`, …) and whether the workspace is a git repository.
+
+### Coding intelligence
+
+#### `find_symbol`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "pattern": "RefundService", "kind": "class" }
+```
+
+Symbol declarations by name substring. Optional `kind` filter: `function`, `method`, `class`, `interface`, `struct`, `type`, `enum`, `const`, `var`. Returns `name`, `kind`, `path`, `line`, `end_line`, `signature`, `container` (enclosing type for methods), `language` — supports Go, Java, TypeScript/JavaScript. Bounded to 200 results.
+
+#### `read_symbol`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "path": "src/main/java/.../RefundService.java", "symbol": "processRefund", "max_lines": 512 }
+```
+
+Returns the smallest useful declaration range of one symbol (`symbol` metadata + `content` + `truncated`). Use `find_symbol` first when you only know the name.
+
+#### `find_references`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "symbol": "processRefund", "path": "src/main/java/.../RefundService.java" }
+```
+
+References to a symbol as `{path, line}` hits. `path` (the declaring file) enables language-server precision when the client has `CODEBRIDGE_ENABLE_LSP=true`; otherwise bounded word-boundary matching is used. The response reports which `engine` answered (`lsp` or `textual`).
+
+#### `dependency_graph`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms" }
+```
+
+Module/dependency graph parsed from `pom.xml` (multi-module Maven), `package.json` (npm) or `go.mod` (Go). Nodes are `{id, path, type, version}`, edges `{from, to, scope, version}`; graph size is bounded. When several manifests exist, Maven wins, then npm, then Go.
+
+### Write mode (opt-in)
+
+Write tools only work on workspaces the **local client** explicitly advertised as writable (`CODEBRIDGE_WRITABLE_WORKSPACES` / `writable_workspaces` JSON). A remote MCP caller can never enable this. The workspace must be a git repository; sensitive paths (`.env`, private keys, …) are never writable; binary content is rejected.
+
+#### `apply_patch`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms",
+  "edits": [
+    { "path": "src/main/java/.../RefundService.java", "old_text": "    BigDecimal amount = total;", "new_text": "    BigDecimal amount = applyThreshold(total);" },
+    { "path": "docs/notes/new.md", "new_text": "# notes\n" }
+  ],
+  "preview": true }
+```
+
+All-or-nothing edits. Each edit is one of:
+- **replace** (`old_text` + `new_text`): `old_text` must match exactly once;
+- **create** (`new_text` only): the file must not exist;
+- **delete** (`old_text` only): `old_text` must equal the full file content.
+
+Always call with `preview: true` first — the response contains a unified diff, the per-file plan, and nothing is written. Then send the same patch with `confirm: true` to apply. Every apply snapshots the affected files as git blobs first and returns a `checkpoint_id`. Bounds: 20 files, 512 KiB per file, 2 MiB total.
+
+#### `rollback_patch`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "checkpoint_id": "cbk_1a2b3c4d5e6f7a8b" }
+```
+
+Restores exactly the files touched by that `apply_patch` to their pre-patch content (restored files and removed created-files are reported). Checkpoints are kept locally, bounded to the most recent 20.
 
 ## Requirements
 

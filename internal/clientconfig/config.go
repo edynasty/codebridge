@@ -17,6 +17,7 @@ type Config struct {
 	WritableWorkspaces  []string          `json:"writable_workspaces,omitempty"`
 	CredentialFile      string            `json:"credential_file,omitempty"`
 	AllowSensitiveFiles bool              `json:"allow_sensitive_files,omitempty"`
+	AllowInsecureWS     bool              `json:"allow_insecure_ws,omitempty"`
 	EnableLSP           bool              `json:"enable_lsp,omitempty"`
 	CheckpointDir       string            `json:"checkpoint_dir,omitempty"`
 }
@@ -90,6 +91,30 @@ func Load(path string, required bool) (Config, error) {
 		}
 	}
 	return cfg, nil
+}
+
+// Save writes the configuration file atomically with 0600 permissions. The
+// client UI uses it for edits made at runtime.
+func Save(path string, cfg Config) error {
+	path = expandHome(strings.TrimSpace(path))
+	if path == "" {
+		return errors.New("config path is empty")
+	}
+	if cfg.Workspaces == nil {
+		cfg.Workspaces = map[string]string{}
+	}
+	b, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return fmt.Errorf("create config directory: %w", err)
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, b, 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 func expandHome(path string) string {

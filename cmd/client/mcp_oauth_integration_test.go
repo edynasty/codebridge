@@ -111,13 +111,13 @@ func TestOAuthMCPToRealClientReadFileEndToEnd(t *testing.T) {
 	agentDone := make(chan error, 1)
 	issued := make(chan string, 1)
 	go func() {
-		agentDone <- runSession(agentCtx, "ws"+strings.TrimPrefix(server.URL, "http")+"/agent", false, protocol.RegisterRequest{
+		agentDone <- runSession(agentCtx, &runtime{managerURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/agent", reg: protocol.RegisterRequest{
 			EnrollmentCode: enrollmentCode,
 			DeviceID:       "oauth-device",
 			DeviceName:     "OAuth Integration Device",
 			Version:        "test",
 			Workspaces:     []protocol.Workspace{{Name: "demo"}},
-		}, &agentops.Service{Roots: map[string]string{"demo": workspace}}, func(credential string) error {
+		}, service: &agentops.Service{Roots: map[string]string{"demo": workspace}}}, &clientState{}, func(credential string) error {
 			issued <- credential
 			return nil
 		})

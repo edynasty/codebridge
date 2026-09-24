@@ -9,9 +9,54 @@ cd "$(dirname "$0")"
 
 ENV_FILE=".env"
 MANAGER_PORT="${CODEBRIDGE_MANAGER_PORT:-8180}"
+UI_PORT="${CODEBRIDGE_UI_PORT:-8190}"
 STATE_DIR="client-state"
+PROJECTS_DIR="${HOST_PROJECTS_DIR:-$HOME/IdeaProjects}"
+
+# Real host identity so the device registers as this machine.
+export HOSTNAME_SHORT
+export HOSTNAME_SLUG
+export HOST_USER
+HOSTNAME_SHORT=$(hostname -s)
+HOSTNAME_SLUG=$(printf '%s' "$HOSTNAME_SHORT" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9-_' '-' | sed 's/^-\+\|-\+$//g')
+HOST_USER=$(id -un)
 
 random_token() { openssl rand -hex 24; }
+
+seed_client_config() {
+  if [ ! -f "${STATE_DIR}/client.json" ]; then
+    mkdir -p "${STATE_DIR}"
+    {
+      printf '{\n  "manager_url": "ws://manager:8080/agent",\n  "allow_insecure_ws": true,\n  "workspaces": {\n'
+      first=1
+      for dir in "$PROJECTS_DIR"/*/; do
+        [ -d "$dir" ] || continue
+        name=$(basename "$dir")
+        # container workspaces are mounted under /workspaces/<name>
+        if [ $first -eq 1 ]; then first=0; else printf ',\n'; fi
+        printf '    "%s": "/workspaces/%s"' "$name" "$name"
+      done
+      printf '\n  }\n}\n'
+    } > "${STATE_DIR}/client.json"
+    echo "seeded ${STATE_DIR}/client.json with projects from ${PROJECTS_DIR} (editable at runtime via the UI)"
+  fi
+}
+
+sync_host_env() {
+  # Persist host identity into .env so every later `docker compose` call
+  # (not just this script) sees the same device identity.
+  set_kv() {
+    if grep -q "^$1=" "$ENV_FILE"; then
+      sed -i '' "s|^$1=.*|$1=$2|" "$ENV_FILE"
+    else
+      echo "$1=$2" >> "$ENV_FILE"
+    fi
+  }
+  set_kv HOSTNAME_SHORT "$HOSTNAME_SHORT"
+  set_kv HOSTNAME_SLUG "$HOSTNAME_SLUG"
+  set_kv HOST_USER "$HOST_USER"
+  set_kv HOST_PROJECTS_DIR "$PROJECTS_DIR"
+}
 
 ensure_env() {
   if [ ! -f "$ENV_FILE" ]; then
@@ -82,6 +127,8 @@ case "${1:-up}" in
 esac
 
 ensure_env
+sync_host_env
+seed_client_config
 
 # 1. Manager first; the client retries, but enroll codes must exist before it
 #    can register, so the manager must be up and seeded first.
@@ -119,6 +166,7 @@ for _ in $(seq 1 20); do
     echo
     echo "manager : http://127.0.0.1:${MANAGER_PORT} (admin token in deploy/.env)"
     echo "MCP     : http://127.0.0.1:${MANAGER_PORT}/mcp (bearer: CODEBRIDGE_MCP_TOKEN in deploy/.env)"
+    echo "client UI: http://127.0.0.1:${CODEBRIDGE_UI_PORT:-8190} (edit workspaces, connection and local policy; saves hot-reload)"
     echo "control : bash deploy/local-preview.sh [status|logs|down]"
     exit 0
   fi
