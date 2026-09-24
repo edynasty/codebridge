@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeBridge Manager</title>
+<style>
+  :root {
+    --ink: #0d1116;
+    --ink-2: #131a21;
+    --line: #223041;
+    --line-soft: #1a242f;
+    --paper: #e8e3d8;
+    --paper-dim: #8d9aa8;
+    --paper-faint: #5b6875;
+    --celadon: #5fb8a6;
+    --celadon-deep: #2e6b5e;
+    --amber: #e0a458;
+    --red: #d96a6a;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ink); color: var(--paper); font-family: var(--mono); font-size: 13.5px; line-height: 1.65; }
+  header { display: flex; align-items: baseline; gap: 14px; padding: 22px 28px 18px; border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  header .sub { color: var(--paper-faint); font-size: 12px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 28px 80px; }
+  section { margin-bottom: 42px; }
+  h2 { font-size: 13px; font-weight: 600; color: var(--paper-dim); margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 400; font-size: 11.5px; color: var(--paper-faint); padding: 4px 8px 8px 0; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  .on { color: var(--celadon); }
+  .off { color: var(--paper-faint); }
+  .tag { font-size: 10.5px; border: 1px solid var(--line); color: var(--paper-dim); border-radius: 2px; padding: 1px 6px; margin-left: 6px; }
+  .tag.warn { color: var(--amber); border-color: #4a3b25; }
+  button { font-family: var(--mono); font-size: 12.5px; cursor: pointer; border-radius: 3px; padding: 6px 14px; }
+  button.primary { background: var(--celadon-deep); color: var(--paper); border: 1px solid var(--celadon); }
+  button.primary:hover { background: #37796a; }
+  button.ghost { background: none; color: var(--paper-dim); border: 1px solid var(--line); }
+  button.ghost:hover { color: var(--paper); }
+  button.danger { background: none; color: var(--red); border: 1px solid #4a2525; }
+  button.danger:hover { background: #2a1717; }
+  input[type=text], input[type=password], select {
+    background: var(--ink); color: var(--paper); border: 1px solid var(--line); border-radius: 3px;
+    padding: 7px 10px; font-family: var(--mono); font-size: 13px; width: 100%;
+  }
+  input:focus { outline: 1px solid var(--celadon); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field label { display: block; color: var(--paper-dim); font-size: 12px; margin-bottom: 5px; }
+  .msg { font-size: 12.5px; margin-left: 12px; }
+  .msg.ok { color: var(--celadon); }
+  .msg.err { color: var(--red); }
+  pre#audit { border: 1px solid var(--line-soft); border-radius: 3px; margin: 0; padding: 12px 14px; max-height: 340px; overflow: auto; color: var(--paper-dim); font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
+  #gate { max-width: 420px; margin: 12vh auto; padding: 28px; border: 1px solid var(--line); border-radius: 4px; background: var(--ink-2); }
+  #gate h1 { font-size: 15px; margin: 0 0 6px; }
+  #gate p { color: var(--paper-faint); font-size: 12.5px; margin: 0 0 18px; }
+  .credbox { background: var(--ink); border: 1px solid var(--amber); border-radius: 3px; padding: 10px 12px; margin: 10px 0; font-size: 12.5px; word-break: break-all; color: var(--amber); }
+  dialog { background: var(--ink-2); color: var(--paper); border: 1px solid var(--line); border-radius: 4px; font-family: var(--mono); font-size: 13px; padding: 22px; max-width: 460px; }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  :focus-visible { outline: 1px solid var(--celadon); }
+</style>
+</head>
+<body>
+
+<div id="gate" hidden>
+  <h1>CodeBridge Manager 维护台</h1>
+  <p>输入管理令牌（CODEBRIDGE_ADMIN_TOKEN）。令牌仅存于本页 sessionStorage，不会写入 URL 或 Cookie。</p>
+  <input type="password" id="gate-token" placeholder="admin token" autocomplete="off">
+  <div style="margin-top:14px; display:flex; gap:10px">
+    <button class="primary" id="gate-go">进入</button>
+    <span class="msg" id="gate-msg"></span>
+  </div>
+</div>
+
+<div id="app" hidden>
+<header>
+  <h1>CodeBridge Manager</h1>
+  <span class="sub">维护台</span>
+  <span class="sub" style="margin-left:auto" id="clock"></span>
+  <button class="ghost" id="logout">锁定</button>
+</header>
+<main>
+
+  <section>
+    <h2>设备</h2>
+    <table>
+      <thead><tr><th>设备 ID</th><th>名称</th><th>账户</th><th>状态</th><th>工作区</th><th>更新时间</th><th style="width:190px">操作</th></tr></thead>
+      <tbody id="devices"></tbody>
+    </table>
+    <div style="margin-top:10px"><span class="msg" id="dev-msg"></span></div>
+  </section>
+
+  <section>
+    <h2>注册码</h2>
+    <div class="grid2">
+      <div class="field">
+        <label for="enr-account">目标账户（account_id，默认 default）</label>
+        <input type="text" id="enr-account" placeholder="default">
+      </div>
+      <div class="field">
+        <label for="enr-ttl">有效期（秒，默认 600）</label>
+        <input type="text" id="enr-ttl" placeholder="600">
+      </div>
+    </div>
+    <div style="margin-top:10px; display:flex; gap:10px; align-items:center">
+      <button class="primary" id="enr-create">生成一次性注册码</button>
+      <span class="msg" id="enr-msg"></span>
+    </div>
+    <div id="enr-result" class="credbox" hidden></div>
+  </section>
+
+  <section>
+    <h2>审计日志（最近 200 条）</h2>
+    <pre id="audit">加载中…</pre>
+  </section>
+
+</main>
+</div>
+
+<dialog id="confirm">
+  <p id="confirm-text"></p>
+  <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:18px">
+    <button class="ghost" id="confirm-no">取消</button>
+    <button class="danger" id="confirm-yes">确认执行</button>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var token = sessionStorage.getItem('cb-admin-token') || '';
+
+  function api(method, path, body) {
+    return fetch(path, {
+      method: method,
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      if (r.status === 401) { showGate(); throw new Error('unauthorized'); }
+      if (!r.ok) return r.text().then(function (t) { throw new Error(t || r.status); });
+      return r.json();
+    });
+  }
+
+  function showGate() {
+    $('app').hidden = true;
+    $('gate').hidden = false;
+    sessionStorage.removeItem('cb-admin-token');
+    token = '';
+    $('gate-token').focus();
+  }
+
+  $('gate-go').addEventListener('click', function () {
+    token = $('gate-token').value.trim();
+    if (!token) return;
+    api('GET', '/admin/devices').then(function () {
+      sessionStorage.setItem('cb-admin-token', token);
+      $('gate').hidden = true;
+      $('app').hidden = false;
+      refresh();
+    }).catch(function () {
+      $('gate-msg').textContent = '令牌无效';
+      $('gate-msg').className = 'msg err';
+    });
+  });
+  $('gate-token').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('gate-go').click(); });
+  $('logout').addEventListener('click', showGate);
+
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('zh-CN', { hour12: false }); } catch (e) { return iso; }
+  }
+
+  function confirmDialog(text) {
+    return new Promise(function (resolve) {
+      $('confirm-text').textContent = text;
+      var d = $('confirm');
+      d.showModal();
+      $('confirm-yes').onclick = function () { d.close(); resolve(true); };
+      $('confirm-no').onclick = function () { d.close(); resolve(false); };
+    });
+  }
+
+  function renderDevices(devices) {
+    var body = $('devices');
+    body.innerHTML = '';
+    (devices || []).forEach(function (d) {
+      var tr = document.createElement('tr');
+      function td(text, cls) {
+        var el = document.createElement('td');
+        el.textContent = text == null ? '—' : text;
+        if (cls) el.className = cls;
+        return el;
+      }
+      tr.appendChild(td(d.id));
+      tr.appendChild(td(d.name));
+      tr.appendChild(td(d.account_id || 'default'));
+      tr.appendChild(td(d.online ? '在线' : '离线', d.online ? 'on' : 'off'));
+      var ws = td(String((d.workspaces || 0)), '');
+      tr.appendChild(ws);
+      tr.appendChild(td(fmtTime(d.updated_at)));
+      var act = document.createElement('td');
+      var rotate = document.createElement('button');
+      rotate.className = 'ghost'; rotate.textContent = '轮换凭证';
+      rotate.addEventListener('click', function () {
+        confirmDialog('轮换 ' + d.id + ' 的设备凭证？旧凭证立即失效，新凭证只显示一次。')
+          .then(function (ok) {
+            if (!ok) return;
+            api('POST', '/admin/devices/' + encodeURIComponent(d.id) + '/rotate')
+              .then(function (r) {
+                $('dev-msg').className = 'msg ok';
+                $('dev-msg').textContent = '已轮换 ' + d.id;
+                alert('新凭证（只显示一次）：\n' + r.device_credential);
+                refresh();
+              })
+              .catch(function (e) { err('dev-msg', e.message); });
+          });
+      });
+      var revoke = document.createElement('button');
+      revoke.className = 'danger'; revoke.textContent = '吊销设备';
+      revoke.style.marginLeft = '8px';
+      revoke.addEventListener('click', function () {
+        confirmDialog('吊销设备 ' + d.id + '？设备将被断开且无法再注册，除非用新注册码重新注册。')
+          .then(function (ok) {
+            if (!ok) return;
+            api('DELETE', '/admin/devices/' + encodeURIComponent(d.id))
+              .then(function () { okMsg('dev-msg', '已吊销 ' + d.id); refresh(); })
+              .catch(function (e) { err('dev-msg', e.message); });
+          });
+      });
+      act.appendChild(rotate); act.appendChild(revoke);
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+    if (!devices || !devices.length) {
+      var tr = document.createElement('tr');
+      var td = document.createElement('td');
+      td.colSpan = 7; td.className = 'off'; td.textContent = '暂无设备';
+      tr.appendChild(td); body.appendChild(tr);
+    }
+  }
+
+  function okMsg(id, t) { var e = $(id); e.className = 'msg ok'; e.textContent = t; }
+  function err(id, t) { var e = $(id); e.className = 'msg err'; e.textContent = t; }
+
+  $('enr-create').addEventListener('click', function () {
+    var body = {};
+    var account = $('enr-account').value.trim();
+    var ttl = parseInt($('enr-ttl').value.trim(), 10);
+    if (account) body.account_id = account;
+    if (ttl > 0) body.ttl_seconds = ttl;
+    api('POST', '/admin/enrollments', body).then(function (r) {
+      okMsg('enr-msg', '已生成，' + (r.expires_in || '?') + ' 秒内有效，一次性使用');
+      var box = $('enr-result');
+      box.hidden = false;
+      box.textContent = r.enrollment_code;
+    }).catch(function (e) { err('enr-msg', e.message); });
+  });
+
+  function refresh() {
+    api('GET', '/admin/devices').then(renderDevices).catch(function () {});
+    api('GET', '/admin/audit').then(function (r) {
+      var el = $('audit');
+      el.innerHTML = '';
+      if (!r.available) { el.textContent = '审计日志写入 stdout（未配置 CODEBRIDGE_AUDIT_LOG 文件），无历史可看。'; return; }
+      (r.events || []).forEach(function (line) {
+        var div = document.createElement('div');
+        if (/"success":false/.test(line)) div.style.color = 'var(--amber)';
+        div.textContent = line;
+        el.appendChild(div);
+      });
+      if (!r.events || !r.events.length) el.textContent = '暂无事件';
+      el.scrollTop = el.scrollHeight;
+    }).catch(function () {});
+  }
+
+  setInterval(function () { $('clock').textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false }); }, 1000);
+
+  if (token) {
+    api('GET', '/admin/devices').then(function () {
+      $('gate').hidden = true; $('app').hidden = false; refresh();
+    }).catch(function () {});
+  } else {
+    showGate();
+  }
+  setInterval(function () { if (token && !$('app').hidden) refresh(); }, 5000);
+})();
+</script>
+</body>
+</html>

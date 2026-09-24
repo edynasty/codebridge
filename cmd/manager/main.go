@@ -44,7 +44,8 @@ func main() {
 		return
 	}
 
-	audit, err := auditlog.New(strings.TrimSpace(os.Getenv("CODEBRIDGE_AUDIT_LOG")))
+	auditLogPath := strings.TrimSpace(os.Getenv("CODEBRIDGE_AUDIT_LOG"))
+	audit, err := auditlog.New(auditLogPath)
 	if err != nil {
 		log.Fatalf("open audit log: %v", err)
 	}
@@ -111,6 +112,15 @@ func main() {
 	})
 
 	mux := http.NewServeMux()
+	publicURL := strings.TrimSpace(os.Getenv("CODEBRIDGE_PUBLIC_URL"))
+	contactEmail := envOrDefault("CODEBRIDGE_CONTACT_EMAIL", "admin@"+strings.TrimSuffix(strings.TrimPrefix(publicURL, "https://"), "/"))
+	adminHandler := &mgr.AdminHandler{Auth: deviceAuth, Registry: registry, AdminToken: os.Getenv("CODEBRIDGE_ADMIN_TOKEN"), Audit: audit, AuditTail: mgr.NewAuditTailer(auditLogPath)}
+	// GPT plugins spec: /.well-known/ai-plugin.json must be served over the
+	// public HTTPS origin; refused (404) when CODEBRIDGE_PUBLIC_URL is unset
+	// or not HTTPS so local deployments never advertise themselves.
+	manifestHandler := adminHandler.ServePluginManifest(publicURL, publicURL, contactEmail)
+	mux.Handle("/.well-known/ai-plugin.json", manifestHandler)
+	mux.Handle("/.well-known/codebridge/ai-plugin.json", manifestHandler)
 	var protectedMCP http.Handler = mcpHandler
 	if oauthCfg != nil {
 		verifier, err := oauthresource.New(oauthresource.Config{
@@ -152,7 +162,7 @@ func main() {
 
 	mux.Handle("/mcp", withRequestID(limitMCP(maxMCPInflight, int64(maxMCPRequestBytes), protectedMCP)))
 	mux.Handle("/agent", withRequestID(limitAgentConnections(maxAgentConnections, &mgr.AgentHandler{Registry: registry, Auth: deviceAuth, Audit: audit})))
-	mux.Handle("/admin/", withRequestID(&mgr.AdminHandler{Auth: deviceAuth, Registry: registry, AdminToken: os.Getenv("CODEBRIDGE_ADMIN_TOKEN"), Audit: audit}))
+	mux.Handle("/admin/", withRequestID(adminHandler))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
@@ -396,6 +406,13 @@ func logRequests(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 		log.Printf("request_id=%s method=%s path=%s duration=%s", r.Header.Get("X-CodeBridge-Request-ID"), r.Method, r.URL.Path, time.Since(start).Round(time.Millisecond))
 	})
+}
+
+func envOrDefault(name, def string) string {
+	if v := strings.TrimSpace(os.Getenv(name)); v != "" {
+		return v
+	}
+	return def
 }
 
 func envInt(k string, def, min, max int) int {

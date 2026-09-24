@@ -17,6 +17,9 @@ type AdminHandler struct {
 	Registry   *Registry
 	AdminToken string
 	Audit      *auditlog.Logger
+	// AuditTail backs the admin UI's audit viewer; nil when the audit log
+	// is stdout-only.
+	AuditTail *AuditTailer
 }
 
 const maxAdminAccountIDBytes = 128
@@ -31,13 +34,20 @@ func (h *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	// The UI page itself is static and secret-free (the operator types the
+	// token in the browser; it lives in sessionStorage only). Every data
+	// route below still requires the bearer token.
+	path := strings.TrimPrefix(r.URL.Path, "/admin")
+	if path == "/ui" && r.Method == http.MethodGet {
+		h.ServeAdminUI(w, r)
+		return
+	}
 	if !bearerMatches(r.Header.Get("Authorization"), h.AdminToken) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 
-	path := strings.TrimPrefix(r.URL.Path, "/admin")
 	switch {
 	case path == "/enrollments" && r.Method == http.MethodPost:
 		h.createEnrollment(w, r)
@@ -45,6 +55,8 @@ func (h *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.listDevices(w)
 	case strings.HasPrefix(path, "/devices/"):
 		h.deviceAction(w, r, strings.TrimPrefix(path, "/devices/"))
+	case path == "/audit" && r.Method == http.MethodGet:
+		h.handleAuditTail(w, r)
 	default:
 		http.NotFound(w, r)
 	}
@@ -86,9 +98,11 @@ func (h *AdminHandler) createEnrollment(w http.ResponseWriter, r *http.Request) 
 
 func (h *AdminHandler) listDevices(w http.ResponseWriter) {
 	online := map[string]bool{}
+	workspaceCount := map[string]int{}
 	if h.Registry != nil {
 		for _, d := range h.Registry.List() {
 			online[d.ID] = true
+			workspaceCount[d.ID] = len(d.Workspaces)
 		}
 	}
 	devices := h.Auth.ListDevices()
@@ -101,6 +115,7 @@ func (h *AdminHandler) listDevices(w http.ResponseWriter) {
 			"created_at": d.CreatedAt,
 			"updated_at": d.UpdatedAt,
 			"online":     online[d.ID],
+			"workspaces": workspaceCount[d.ID],
 		})
 	}
 	_ = json.NewEncoder(w).Encode(out)
