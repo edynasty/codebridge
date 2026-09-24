@@ -22,9 +22,13 @@ import (
 	"github.com/edynasty/codebridge/internal/clientconfig"
 	"github.com/edynasty/codebridge/internal/clientcred"
 	"github.com/edynasty/codebridge/internal/config"
+	"github.com/edynasty/codebridge/internal/pb"
 	"github.com/edynasty/codebridge/internal/protocol"
 	"github.com/edynasty/codebridge/internal/ui"
 	"github.com/gorilla/websocket"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 )
 
 var version = "dev"
@@ -35,6 +39,8 @@ const maxAgentResponseBytes = 768 * 1024
 // needs, rebuilt from scratch whenever the UI saves a new configuration.
 type runtime struct {
 	managerURL      string
+	grpcTarget      string // host:port for the gRPC agent transport
+	transport       string // grpc | ws
 	allowInsecureWS bool
 	reg             protocol.RegisterRequest
 	service         *agentops.Service
@@ -86,6 +92,7 @@ func main() {
 	allowSensitiveDefault, allowSensitivePinned := envBoolPinned("CODEBRIDGE_ALLOW_SENSITIVE_FILES", fileConfig.AllowSensitiveFiles)
 	enableLSPDefault, enableLSPPinned := envBoolPinned("CODEBRIDGE_ENABLE_LSP", fileConfig.EnableLSP)
 	uiAddr := flag.String("ui-addr", firstNonEmpty(os.Getenv("CODEBRIDGE_UI_ADDR"), "127.0.0.1:8190"), "local configuration UI listen address; empty disables the UI")
+	transport := flag.String("transport", firstNonEmpty(os.Getenv("CODEBRIDGE_AGENT_TRANSPORT"), "grpc"), "agent transport: grpc (preferred) or ws")
 	_ = flag.Bool("allow-insecure-ws", allowInsecureWSDefault, "allow plaintext ws:// to a non-loopback manager (local container networking only)")
 	_ = flag.Bool("allow-sensitive-files", allowSensitiveDefault, "allow MCP tools to read normally blocked sensitive files inside workspaces (equivalent to CODEBRIDGE_ALLOW_SENSITIVE_FILES)")
 	writableRaw := flag.String("writable-workspaces", firstNonEmpty(os.Getenv("CODEBRIDGE_WRITABLE_WORKSPACES"), strings.Join(fileConfig.WritableWorkspaces, ",")), "comma-separated workspaces with explicit local write opt-in (empty disables write mode)")
@@ -112,6 +119,7 @@ func main() {
 	// flags override the JSON file, and those origins cannot be changed by
 	// the UI (only the JSON file is editable at runtime).
 	boot := bootOptions{
+		transport:               *transport,
 		managerURLFromEnvOrFlag: *managerURL,
 		workspacesFromEnv:       strings.TrimSpace(*workspacesRaw),
 		deviceID:                *deviceID,
@@ -175,7 +183,7 @@ func main() {
 		sessionCtx, cancelSession := context.WithCancel(ctx)
 		sessionDone := make(chan error, 1)
 		go func() {
-			sessionDone <- runSession(sessionCtx, rt, state, func(issued string) error {
+			sessionDone <- runSessionTransport(sessionCtx, rt, state, func(issued string) error {
 				return persistCredential(rt, issued, state)
 			})
 		}()
@@ -237,6 +245,7 @@ func persistCredential(rt *runtime, issued string, state *clientState) error {
 // bootOptions captures the flag/env origin of each setting so reloads can
 // tell "user edited the JSON file" apart from "operator pinned this via env".
 type bootOptions struct {
+	transport               string
 	managerURLFromEnvOrFlag string
 	workspacesFromEnv       string
 	deviceID                string
@@ -372,9 +381,24 @@ func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots m
 	} else {
 		log.Printf("tool policy: %d enabled, %d disabled, %d custom", len(policy.EnabledTools), len(policy.DisabledTools), len(policy.CustomTools))
 	}
+	// gRPC target resolution: explicit env wins; otherwise the manager URL
+	// host with the default gRPC port (8081).
+	grpcTarget := strings.TrimSpace(os.Getenv("CODEBRIDGE_GRPC_TARGET"))
+	if grpcTarget == "" {
+		if u, err := url.Parse(managerURL); err == nil && u.Host != "" {
+			host := u.Hostname()
+			if port := u.Port(); port != "" && port != "8080" {
+				grpcTarget = net.JoinHostPort(host, port)
+			} else {
+				grpcTarget = net.JoinHostPort(host, "8081")
+			}
+		}
+	}
 	return &runtime{
 		credentialFile:  boot.credentialFile,
 		managerURL:      managerURL,
+		grpcTarget:      grpcTarget,
+		transport:       strings.TrimSpace(boot.transport),
 		allowInsecureWS: allowInsecureWS,
 		reg: protocol.RegisterRequest{
 			EnrollmentCode:   state.EnrollmentCode(),
@@ -458,16 +482,35 @@ func runSession(ctx context.Context, rt *runtime, state *clientState, onCredenti
 				if err := json.Unmarshal(env.Payload, &req); err != nil {
 					resp.Error = err.Error()
 				} else {
+					// Live progress: subagent event lines stream to the manager
+					// as progress envelopes while the tool is still running.
+					agentProgress := func(tool, line string) {
+						b, _ := json.Marshal(protocol.ProgressEvent{RequestID: env.RequestID, Tool: tool, Event: line})
+						_ = write(protocol.Envelope{Type: protocol.TypeProgress, RequestID: env.RequestID, DeviceID: reg.DeviceID, Payload: b})
+					}
+					if req.Tool == "agent" {
+						agentops.OnSubagentEvent = agentProgress
+					} else {
+						agentops.OnSubagentEvent = nil
+					}
 					// Subagent runs are long; every other tool stays bounded.
+					// A non-positive timeout_seconds means no wall-clock
+					// budget: the subagent runs until its harness exits.
 					budget := 30 * time.Second
 					if req.Tool == "agent" {
 						if secs := intArgAny(req.Args, "timeout_seconds", 0); secs > 0 {
 							budget = time.Duration(secs) * time.Second
 						} else {
-							budget = 10 * time.Minute
+							budget = 0 // no client-side deadline; harness budget applies
 						}
 					}
-					callCtx, cancel := context.WithTimeout(ctx, budget)
+					var callCtx context.Context
+					var cancel context.CancelFunc
+					if budget > 0 {
+						callCtx, cancel = context.WithTimeout(ctx, budget)
+					} else {
+						callCtx, cancel = context.WithCancel(ctx)
+					}
 					result, err := rt.service.Execute(callCtx, req)
 					cancel()
 					if err != nil {
@@ -511,6 +554,153 @@ func intArgAny(m map[string]any, key string, def int) int {
 		return int(v)
 	}
 	return def
+}
+
+// runSessionTransport picks the gRPC stream or the legacy WebSocket.
+func runSessionTransport(ctx context.Context, rt *runtime, state *clientState, onCredential func(string) error) error {
+	if rt.transport == "grpc" && rt.grpcTarget != "" {
+		return runGRPCSession(ctx, rt, state, onCredential)
+	}
+	return runSession(ctx, rt, state, onCredential)
+}
+
+// runGRPCSession is the gRPC counterpart of runSession: one bidi stream,
+// HTTP/2 keepalive, exponential backoff reconnects handled by the caller.
+func runGRPCSession(ctx context.Context, rt *runtime, state *clientState, onCredential func(string) error) error {
+	conn, err := grpc.NewClient(rt.grpcTarget,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                15 * time.Second,
+			Timeout:             10 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("grpc dial %s: %w", rt.grpcTarget, err)
+	}
+	defer conn.Close()
+	client := pb.NewAgentServiceClient(conn)
+
+	stream, err := client.Connect(ctx)
+	if err != nil {
+		return err
+	}
+	regPayload, _ := json.Marshal(rt.reg)
+	if err := stream.Send(&pb.Envelope{Type: "register", DeviceId: rt.reg.DeviceID, Payload: regPayload}); err != nil {
+		return err
+	}
+	ack, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	if ack.Type != "registered" {
+		return fmt.Errorf("unexpected register response %q", ack.Type)
+	}
+	var rr protocol.RegisterResponse
+	if err := json.Unmarshal(ack.Payload, &rr); err != nil {
+		return err
+	}
+	if !rr.Accepted {
+		return fmt.Errorf("registration rejected: %s", rr.Message)
+	}
+	if rr.DeviceCredential != "" && onCredential != nil {
+		if err := onCredential(rr.DeviceCredential); err != nil {
+			return fmt.Errorf("persist issued device credential: %w", err)
+		}
+	}
+	state.connected.Store(true)
+	log.Printf("registered with manager (grpc) as %s; workspaces=%d", rt.reg.DeviceID, len(rt.reg.Workspaces))
+	defer state.connected.Store(false)
+
+	sendMu := make(chan struct{}, 1)
+	sendMu <- struct{}{}
+	send := func(env *pb.Envelope) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-sendMu:
+		}
+		defer func() { sendMu <- struct{}{} }()
+		return stream.Send(env)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		for {
+			env, err := stream.Recv()
+			if err != nil {
+				done <- err
+				return
+			}
+			switch env.Type {
+			case protocol.TypeRequest:
+				go func(env *pb.Envelope) {
+					var req protocol.AgentRequest
+					resp := protocol.AgentResponse{OK: false}
+					if err := json.Unmarshal(env.Payload, &req); err != nil {
+						resp.Error = err.Error()
+					} else {
+						if req.Tool == "agent" {
+							agentops.OnSubagentEvent = func(tool, line string) {
+								b, _ := json.Marshal(protocol.ProgressEvent{RequestID: env.RequestId, Tool: tool, Event: line})
+								_ = send(&pb.Envelope{Type: protocol.TypeProgress, RequestId: env.RequestId, DeviceId: rt.reg.DeviceID, Payload: b})
+							}
+						} else {
+							agentops.OnSubagentEvent = nil
+						}
+						budget := 30 * time.Second
+						if req.Tool == "agent" {
+							if secs := intArgAny(req.Args, "timeout_seconds", 0); secs > 0 {
+								budget = time.Duration(secs) * time.Second
+							} else {
+								budget = 0
+							}
+						}
+						var callCtx context.Context
+						var cancel context.CancelFunc
+						if budget > 0 {
+							callCtx, cancel = context.WithTimeout(ctx, budget)
+						} else {
+							callCtx, cancel = context.WithCancel(ctx)
+						}
+						result, err := rt.service.Execute(callCtx, req)
+						cancel()
+						if err != nil {
+							resp.Error = err.Error()
+						} else {
+							data, marshalErr := json.Marshal(result)
+							if marshalErr != nil {
+								resp.Error = marshalErr.Error()
+							} else if len(data) > maxAgentResponseBytes {
+								resp.Error = fmt.Sprintf("tool response exceeds %d bytes; narrow the request", maxAgentResponseBytes)
+							} else {
+								resp.OK = true
+								resp.Data = data
+							}
+						}
+					}
+					b, _ := json.Marshal(resp)
+					_ = send(&pb.Envelope{Type: protocol.TypeResponse, RequestId: env.RequestId, DeviceId: rt.reg.DeviceID, Payload: b})
+				}(env)
+			case protocol.TypeHeartbeat:
+			}
+		}
+	}()
+
+	ticker := time.NewTicker(20 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case err := <-done:
+			return err
+		case <-ticker.C:
+			if err := send(&pb.Envelope{Type: protocol.TypeHeartbeat, DeviceId: rt.reg.DeviceID}); err != nil {
+				return err
+			}
+		}
+	}
 }
 
 func envBool(name string, def bool) bool {

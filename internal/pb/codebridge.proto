@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package codebridge.v1;
+
+option go_package = "github.com/edynasty/codebridge/internal/pb";
+
+// AgentService is the stable long-lived transport between a local client
+// and the manager. One bidirectional stream per device connection: the
+// client opens it, registers, then the manager pushes tool requests and
+// the client streams responses and live progress back. HTTP/2 keepalives
+// keep the connection healthy; the manager reconnects state on stream
+// re-establishment via device credentials.
+service AgentService {
+  // Connect carries one device session. First message must be Register.
+  rpc Connect(stream Envelope) returns (stream Envelope);
+}
+
+// Envelope is the single frame type on the wire, mirroring the previous
+// WebSocket JSON envelope one-to-one so the registry layer stays intact.
+message Envelope {
+  string type = 1;        // registered | request | response | progress | heartbeat
+  string request_id = 2;
+  string device_id = 3;
+  bytes payload = 4;      // tool-specific JSON payload
+}
+
+message RegisterRequest {
+  string enrollment_code = 1;
+  string device_credential = 2;
+  string device_id = 3;
+  string device_name = 4;
+  string version = 5;
+  repeated Workspace workspaces = 6;
+  ToolPolicy tool_policy = 7;
+}
+
+message Workspace {
+  string name = 1;
+  string path = 2;
+  bool writable = 3;
+}
+
+message ToolPolicy {
+  repeated string enabled_tools = 1;
+  repeated string disabled_tools = 2;
+  repeated CustomTool custom_tools = 3;
+}
+
+message CustomTool {
+  string name = 1;
+  string description = 2;
+  string tool = 3;
+  map<string, string> args = 4;
+}
+
+message RegisterResponse {
+  bool accepted = 1;
+  string message = 2;
+  string device_credential = 3; // set on first enrollment
+}
+
+message AgentRequest {
+  string tool = 1;
+  string workspace = 2;
+  map<string, string> args = 3; // args values are JSON-encoded
+}
+
+message AgentResponse {
+  bool ok = 1;
+  bytes data = 2;
+  string error = 3;
+}
+
+message ProgressEvent {
+  string request_id = 1;
+  string tool = 2;
+  string event = 3;
+}

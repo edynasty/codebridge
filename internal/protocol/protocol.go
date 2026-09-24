@@ -8,7 +8,11 @@ const (
 	TypeHeartbeat  = "heartbeat"
 	TypeRequest    = "request"
 	TypeResponse   = "response"
-	TypeError      = "error"
+	// TypeProgress streams live subagent/in-flight events from agent to
+	// manager while a request is still running; the manager forwards them
+	// as MCP progress notifications.
+	TypeProgress = "progress"
+	TypeError    = "error"
 )
 
 type Workspace struct {
@@ -75,4 +79,12 @@ type AgentResponse struct {
 	OK    bool            `json:"ok"`
 	Data  json.RawMessage `json:"data,omitempty"`
 	Error string          `json:"error,omitempty"`
+}
+
+// ProgressEvent is the payload of a progress envelope: one live line from
+// an in-flight tool execution (today: subagent event stream).
+type ProgressEvent struct {
+	RequestID string `json:"request_id"`
+	Tool      string `json:"tool"`
+	Event     string `json:"event"`
 }

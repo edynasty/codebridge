@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/edynasty/codebridge/internal/protocol"
-	"github.com/gorilla/websocket"
 )
 
 type Device struct {
@@ -28,12 +27,20 @@ type Device struct {
 }
 
 type pendingCall struct {
-	ch chan protocol.AgentResponse
+	ch      chan protocol.AgentResponse
+	onEvent func(json.RawMessage)
+}
+
+// streamConn is the transport-neutral device connection the Registry
+// drives: the WebSocket handler and the gRPC adapter both implement it.
+type streamConn interface {
+	WriteJSON(v any) error
+	Close() error
 }
 
 type AgentConn struct {
 	device Device
-	ws     *websocket.Conn
+	ws     streamConn
 	mu     sync.Mutex
 	pendMu sync.Mutex
 	pend   map[string]pendingCall
@@ -55,7 +62,7 @@ func NewRegistry(maxInflight ...int) *Registry {
 	return &Registry{devices: make(map[string]*AgentConn), maxInflight: n}
 }
 
-func (r *Registry) Put(dev Device, ws *websocket.Conn) *AgentConn {
+func (r *Registry) Put(dev Device, ws streamConn) *AgentConn {
 	conn := &AgentConn{
 		device: dev,
 		ws:     ws,
@@ -155,6 +162,12 @@ func (r *Registry) Workspaces(account, id string) ([]protocol.Workspace, error) 
 }
 
 func (r *Registry) Call(ctx context.Context, account, deviceID string, req protocol.AgentRequest) (json.RawMessage, error) {
+	return r.CallProgress(ctx, account, deviceID, req, nil)
+}
+
+// CallProgress is Call with a hook receiving live progress envelopes for the
+// in-flight request (subagent event stream today).
+func (r *Registry) CallProgress(ctx context.Context, account, deviceID string, req protocol.AgentRequest, onEvent func(json.RawMessage)) (json.RawMessage, error) {
 	r.mu.RLock()
 	conn, ok := r.devices[deviceID]
 	r.mu.RUnlock()
@@ -178,7 +191,7 @@ func (r *Registry) Call(ctx context.Context, account, deviceID string, req proto
 	}
 	wait := make(chan protocol.AgentResponse, 1)
 	conn.pendMu.Lock()
-	conn.pend[id] = pendingCall{ch: wait}
+	conn.pend[id] = pendingCall{ch: wait, onEvent: onEvent}
 	conn.pendMu.Unlock()
 	defer func() {
 		conn.pendMu.Lock()
@@ -204,6 +217,16 @@ func (r *Registry) Call(ctx context.Context, account, deviceID string, req proto
 			return nil, errors.New(resp.Error)
 		}
 		return resp.Data, nil
+	}
+}
+
+// DeliverEvent forwards a progress envelope to the pending request's hook.
+func (c *AgentConn) DeliverEvent(requestID string, payload json.RawMessage) {
+	c.pendMu.Lock()
+	p, ok := c.pend[requestID]
+	c.pendMu.Unlock()
+	if ok && p.onEvent != nil {
+		p.onEvent(payload)
 	}
 }
 

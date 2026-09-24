@@ -45,6 +45,7 @@ services:
       - codebridge-data:/data
     ports:
       - "127.0.0.1:${CODEBRIDGE_MANAGER_PORT:-8180}:8080"
+      - "127.0.0.1:${CODEBRIDGE_GRPC_PORT:-8181}:8081"
 
   client:
     build:
@@ -59,6 +60,9 @@ services:
       TZ: Asia/Shanghai
       <<: *host-info
       CODEBRIDGE_MANAGER_URL: ${CODEBRIDGE_MANAGER_URL:-ws://manager:8080/agent}
+      # Preferred agent transport: gRPC bidi stream over HTTP/2 keepalive.
+      CODEBRIDGE_AGENT_TRANSPORT: ${CODEBRIDGE_AGENT_TRANSPORT:-grpc}
+      CODEBRIDGE_GRPC_TARGET: ${CODEBRIDGE_GRPC_TARGET:-manager:8081}
       # plaintext ws inside the compose network only; never enable against a
       # public manager
       CODEBRIDGE_ALLOW_INSECURE_WS: ${CODEBRIDGE_ALLOW_INSECURE_WS:-true}

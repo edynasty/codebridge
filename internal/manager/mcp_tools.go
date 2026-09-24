@@ -124,7 +124,7 @@ type AgentInput struct {
 	Agent          string `json:"agent,omitempty" jsonschema:"opencode agent name, codex profile, or a subagent profile configured on the client"`
 	Model          string `json:"model,omitempty" jsonschema:"Model override, provider/model format"`
 	Thinking       string `json:"thinking,omitempty" jsonschema:"Reasoning effort: off, minimal, low, medium, high, xhigh, max"`
-	TimeoutSeconds int    `json:"timeout_seconds,omitempty" jsonschema:"Wall-clock budget; default 600, max 1800"`
+	TimeoutSeconds int    `json:"timeout_seconds,omitempty" jsonschema:"Optional wall-clock budget in seconds; 0 or omitted means no limit"`
 }
 
 type PermissionGrantInput struct {
@@ -233,7 +233,9 @@ var toolTable = map[string]func(t *ToolService, server *mcp.Server){
 				"model": in.Model, "thinking": in.Thinking,
 				"timeout_seconds": in.TimeoutSeconds,
 			}, func() (*mcp.CallToolResult, any, error) {
-				return t.forward(ctx, account, in.DeviceID, in.Workspace, "agent", map[string]any{
+				// forwardProgress streams live subagent events to the MCP
+				// client as progress notifications while the call runs.
+				return t.forwardProgress(ctx, req, account, in.DeviceID, in.Workspace, "agent", map[string]any{
 					"task": in.Task, "client": in.Client, "agent": in.Agent,
 					"model": in.Model, "thinking": in.Thinking,
 					"timeout_seconds": in.TimeoutSeconds,

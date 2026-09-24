@@ -424,7 +424,7 @@
           <button class="ghost" id="subagent-add">添加子代理配置</button>
         </div>
         <div class="hint" style="color:var(--text-4);font-size:11.5px;margin-top:10px;line-height:1.5">
-          ChatGPT 调用 <span style="font-family:var(--mono)">agent</span> 工具时把 <span style="font-family:var(--mono)">agent</span> 参数设为配置名称即可套用整套参数（客户端/模型/思考强度/超时/额外 CLI 参数）。超时留空 = 默认 600 秒。额外参数原样追加在命令中（无头模式示例 <span style="font-family:var(--mono)">--print-logs=false --log-level WARN</span>）。预置的 omo catalog（explore/librarian/general/build/oracle/metis/momus 等）直接复用本机 opencode 的同名 agent。
+          ChatGPT 调用 <span style="font-family:var(--mono)">agent</span> 工具时把 <span style="font-family:var(--mono)">agent</span> 参数设为配置名称即可套用整套参数（客户端/模型/思考强度/超时/额外 CLI 参数）。超时留空 = 永不超时（跑到子代理自然结束）。额外参数原样追加在命令中（无头模式示例 <span style="font-family:var(--mono)">--print-logs=false --log-level WARN</span>）。预置的 omo catalog（explore/librarian/general/build/oracle/metis/momus 等）直接复用本机 opencode 的同名 agent。
         </div>
       </div>
     </section>
@@ -690,7 +690,7 @@
         thinkSel.appendChild(opt);
       });
       thinkTd.appendChild(thinkSel);
-      var timeout = cellInput(row.timeout, '留空=600');
+      var timeout = cellInput(row.timeout, '留空=永不超时');
       var extra = cellInput(row.extra, '--print-logs=false --log-level WARN');
       var tdDel = document.createElement('td');
       var del = document.createElement('button');

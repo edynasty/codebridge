@@ -128,6 +128,10 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				conn.Deliver(env.RequestID, resp)
 			}
+		case protocol.TypeProgress:
+			// Live progress from an in-flight tool (subagent event stream);
+			// forwarded to the pending request's hook without completing it.
+			conn.DeliverEvent(env.RequestID, env.Payload)
 		}
 	}
 }

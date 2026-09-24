@@ -48,7 +48,7 @@ func (t *ToolService) invokeArgs(req *mcp.CallToolRequest, tool, deviceID, works
 			}
 		}
 		if insertErr := t.CallStore.Insert(mcpcallstore.Call{
-			ArgsJSON: argsJSON,
+			ArgsJSON:   argsJSON,
 			Time:       time.Now().UTC(),
 			RequestID:  requestID,
 			ActorID:    actorID,
@@ -76,6 +76,53 @@ func (t *ToolService) invokeArgs(req *mcp.CallToolRequest, tool, deviceID, works
 	return result, out, err
 }
 
+// summarizeProgress renders one progress envelope as a short message for
+// the MCP progress notification (tool calls and text snippets, bounded).
+func summarizeProgress(payload json.RawMessage) string {
+	var ev struct {
+		Tool  string `json:"tool"`
+		Event string `json:"event"`
+	}
+	if json.Unmarshal(payload, &ev) != nil || ev.Event == "" {
+		return "progress"
+	}
+	line := strings.TrimSpace(ev.Event)
+	var parsed struct {
+		Type string `json:"type"`
+		Part struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+			Tool string `json:"tool"`
+		} `json:"part"`
+	}
+	if json.Unmarshal([]byte(line), &parsed) == nil {
+		switch parsed.Type {
+		case "tool_use", "tool_result":
+			name := parsed.Part.Tool
+			if name == "" {
+				name = parsed.Type
+			}
+			return "tool: " + name
+		case "text":
+			if parsed.Part.Text != "" {
+				t := parsed.Part.Text
+				if len(t) > 120 {
+					t = t[:120] + "…"
+				}
+				return strings.ReplaceAll(t, "\n", " ")
+			}
+		case "step_start":
+			return "step started"
+		case "step_finish":
+			return "step finished"
+		}
+	}
+	if len(line) > 120 {
+		line = line[:120] + "…"
+	}
+	return line
+}
+
 func auditErrorKind(err error) string {
 	if err == nil {
 		return ""
@@ -95,10 +142,33 @@ func auditErrorKind(err error) string {
 }
 
 func (t *ToolService) forward(ctx context.Context, account, deviceID, workspace, tool string, args map[string]any) (*mcp.CallToolResult, any, error) {
+	return t.forwardProgress(ctx, nil, account, deviceID, workspace, tool, args)
+}
+
+// forwardProgress is forward with live progress: onEvent is invoked for
+// every progress envelope the agent streams while the call is running.
+func (t *ToolService) forwardProgress(ctx context.Context, req *mcp.CallToolRequest, account, deviceID, workspace, tool string, args map[string]any) (*mcp.CallToolResult, any, error) {
 	if deviceID == "" || workspace == "" {
 		return nil, nil, fmt.Errorf("device_id and workspace are required")
 	}
-	raw, err := t.Registry.Call(ctx, account, deviceID, protocolRequest(tool, workspace, args))
+	var onEvent func(json.RawMessage)
+	if req != nil && req.Session != nil {
+		token := req.Params.GetProgressToken()
+		if token != nil {
+			session := req.Session
+			var seq int64
+			onEvent = func(payload json.RawMessage) {
+				seq++
+				msg := summarizeProgress(payload)
+				_ = session.NotifyProgress(ctx, &mcp.ProgressNotificationParams{
+					ProgressToken: token,
+					Progress:      float64(seq),
+					Message:       msg,
+				})
+			}
+		}
+	}
+	raw, err := t.Registry.CallProgress(ctx, account, deviceID, protocolRequest(tool, workspace, args), onEvent)
 	if err != nil {
 		return nil, nil, err
 	}

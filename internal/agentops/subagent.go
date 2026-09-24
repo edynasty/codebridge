@@ -13,10 +13,8 @@ import (
 )
 
 const (
-	subagentDefaultTimeout = 10 * time.Minute
-	subagentMaxTimeout     = 30 * time.Minute
-	subagentMaxOutput      = 256 * 1024
-	subagentMaxConcurrent  = 2
+	subagentMaxOutput     = 256 * 1024
+	subagentMaxConcurrent = 2
 )
 
 var subagentInflight atomic.Int32
@@ -120,6 +118,10 @@ func orDefault(v, def string) string {
 	return v
 }
 
+// OnSubagentEvent, when set, receives each raw JSONL event line while the
+// subagent runs; the client uses it to stream progress to the manager.
+var OnSubagentEvent func(tool, eventLine string)
+
 func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, model, thinking string, timeoutSeconds int) (*SubagentResult, error) {
 	task = strings.TrimSpace(task)
 	if task == "" {
@@ -163,12 +165,12 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 		return nil, &PermissionNeededError{RequestID: requestID, Command: client + " subagent"}
 	}
 
-	timeout := subagentDefaultTimeout
+	// timeoutSeconds <= 0 means no wall-clock limit: the subagent runs
+	// until its harness finishes (still bounded by the MCP request
+	// context and the client-side agent budget).
+	var timeout time.Duration
 	if timeoutSeconds > 0 {
 		timeout = time.Duration(timeoutSeconds) * time.Second
-	}
-	if timeout > subagentMaxTimeout {
-		timeout = subagentMaxTimeout
 	}
 
 	permit, err := acquireSubagent(ctx)
@@ -177,7 +179,14 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 	}
 	defer permit.release()
 
-	runCtx, cancel := context.WithTimeout(ctx, timeout)
+	// A zero timeout leaves ctx unbounded; harness-level budgets still apply.
+	var runCtx context.Context
+	var cancel context.CancelFunc
+	if timeout > 0 {
+		runCtx, cancel = context.WithTimeout(ctx, timeout)
+	} else {
+		runCtx, cancel = context.WithCancel(ctx)
+	}
 	defer cancel()
 
 	var args []string
@@ -214,10 +223,34 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 	cmd := exec.CommandContext(runCtx, client, args...)
 	cmd.Dir = rootReal
 	var buf bytes.Buffer
-	limited := &limitedBuffer{buf: &buf, max: subagentMaxOutput}
-	cmd.Stdout = limited
-	cmd.Stderr = limited
+	// Tee the subagent output: every line is forwarded live to the progress
+	// callback (manager streams it as MCP progress notifications) and kept
+	// in the bounded buffer for the final result.
+	var events chan string
+	if OnSubagentEvent != nil {
+		events = make(chan string, 256)
+		limited := &lineTee{buf: &buf, max: subagentMaxOutput, onLine: func(line string) {
+			select {
+			case events <- line:
+			default: // drop on backpressure; the final result keeps everything
+			}
+		}}
+		cmd.Stdout = limited
+		cmd.Stderr = limited
+		go func() {
+			for line := range events {
+				OnSubagentEvent("agent", line)
+			}
+		}()
+	} else {
+		limited := &limitedBuffer{buf: &buf, max: subagentMaxOutput}
+		cmd.Stdout = limited
+		cmd.Stderr = limited
+	}
 	runErr := cmd.Run()
+	if events != nil {
+		close(events)
+	}
 
 	result := &SubagentResult{
 		Client: client, Agent: agent, Model: model, Thinking: thinking,
@@ -280,6 +313,39 @@ func (s *Service) pendingSubagentRequest(client string) (string, string) {
 		}
 	}
 	return "", ""
+}
+
+// lineTee is a bounded buffer that also emits each written line to a
+// callback, used for live subagent progress streaming.
+type lineTee struct {
+	buf    *bytes.Buffer
+	max    int
+	onLine func(string)
+	carry  []byte
+}
+
+func (t *lineTee) Write(p []byte) (int, error) {
+	t.carry = append(t.carry, p...)
+	for {
+		idx := bytes.IndexByte(t.carry, '\n')
+		if idx < 0 {
+			break
+		}
+		line := string(t.carry[:idx])
+		t.carry = t.carry[idx+1:]
+		if t.onLine != nil && strings.TrimSpace(line) != "" {
+			t.onLine(line)
+		}
+	}
+	if t.buf.Len() < t.max {
+		remaining := t.max - t.buf.Len()
+		if len(p) <= remaining {
+			t.buf.Write(p)
+		} else {
+			t.buf.Write(p[:remaining])
+		}
+	}
+	return len(p), nil
 }
 
 func countJSONLines(s string) int {

@@ -123,10 +123,23 @@ func main() {
 		}
 		return toolService.Accounts.ForSubject(info.UserID)
 	}
+	// SSE (not JSONResponse) so progress notifications can stream while a
+	// long tool call runs; stateless keeps per-request semantics for the
+	// many ChatGPT-side clients.
 	mcpHandler := mcp.NewStreamableHTTPHandler(toolService.ServerForRequest, &mcp.StreamableHTTPOptions{
-		Stateless:    true,
-		JSONResponse: true,
+		Stateless: true,
 	})
+
+	// Agent transport: gRPC bidi stream (preferred, HTTP/2 keepalive) on
+	// CODEBRIDGE_GRPC_ADDR (default :8081). The legacy /agent WebSocket
+	// stays mounted during migration.
+	grpcAddr := envOrDefault("CODEBRIDGE_GRPC_ADDR", ":8081")
+	grpcSrv, grpcLis, err := mgr.ServeGRPC(grpcAddr, &mgr.GRPCAgentServer{Auth: deviceAuth, Registry: registry, Audit: audit})
+	if err != nil {
+		log.Fatalf("grpc agent listener: %v", err)
+	}
+	defer grpcSrv.Stop()
+	log.Printf("agent gRPC listening on %s (HTTP/2 keepalive)", grpcLis.Addr())
 
 	mux := http.NewServeMux()
 	publicURL := strings.TrimSpace(os.Getenv("CODEBRIDGE_PUBLIC_URL"))
