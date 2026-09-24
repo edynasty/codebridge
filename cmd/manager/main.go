@@ -17,6 +17,7 @@ import (
 	"github.com/edynasty/codebridge/internal/auditlog"
 	"github.com/edynasty/codebridge/internal/authstore"
 	mgr "github.com/edynasty/codebridge/internal/manager"
+	"github.com/edynasty/codebridge/internal/mcpcallstore"
 	"github.com/edynasty/codebridge/internal/oauthresource"
 	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -65,15 +66,31 @@ func main() {
 	maxMCPRequestBytes := envInt("CODEBRIDGE_MAX_MCP_REQUEST_BYTES", 1024*1024, 64*1024, 8*1024*1024)
 	maxAgentConnections := envInt("CODEBRIDGE_MAX_AGENT_CONNECTIONS", 32, 1, 512)
 
+	mcpDBPath := strings.TrimSpace(os.Getenv("CODEBRIDGE_MCP_DB"))
+	callStore, err := mcpcallstore.Open(mcpDBPath)
+	if err != nil {
+		log.Fatalf("mcp call store: %v", err)
+	}
+	if callStore != nil {
+		defer callStore.Close()
+		retainDays := envInt("CODEBRIDGE_MCP_DB_RETAIN_DAYS", 30, 1, 3650)
+		if removed, pruneErr := callStore.Prune(time.Now().AddDate(0, 0, -retainDays)); pruneErr == nil && removed > 0 {
+			log.Printf("mcp call store: pruned %d call(s) older than %d days", removed, retainDays)
+		}
+		log.Printf("mcp call store enabled: %s (retaining %d days)", mcpDBPath, retainDays)
+	} else {
+		log.Printf("mcp call store disabled: CODEBRIDGE_MCP_DB is unset (JSONL audit log still records calls)")
+	}
 	registry := mgr.NewRegistry(maxDeviceInflight)
 	accountMap, err := parseAccountMap(os.Getenv("CODEBRIDGE_OAUTH_ACCOUNT_MAP"))
 	if err != nil {
 		log.Fatalf("CODEBRIDGE_OAUTH_ACCOUNT_MAP: %v", err)
 	}
 	toolService := &mgr.ToolService{
-		Registry: registry,
-		Accounts: &mgr.AccountResolver{Map: accountMap},
-		Audit:    audit,
+		Registry:  registry,
+		Accounts:  &mgr.AccountResolver{Map: accountMap},
+		Audit:     audit,
+		CallStore: callStore,
 	}
 	if oauthCfg != nil {
 		toolService.OAuthScopes = []string{oauthCfg.Scope}
@@ -114,7 +131,7 @@ func main() {
 	mux := http.NewServeMux()
 	publicURL := strings.TrimSpace(os.Getenv("CODEBRIDGE_PUBLIC_URL"))
 	contactEmail := envOrDefault("CODEBRIDGE_CONTACT_EMAIL", "admin@"+strings.TrimSuffix(strings.TrimPrefix(publicURL, "https://"), "/"))
-	adminHandler := &mgr.AdminHandler{Auth: deviceAuth, Registry: registry, AdminToken: os.Getenv("CODEBRIDGE_ADMIN_TOKEN"), Audit: audit, AuditTail: mgr.NewAuditTailer(auditLogPath)}
+	adminHandler := &mgr.AdminHandler{Auth: deviceAuth, Registry: registry, AdminToken: adminToken(), Audit: audit, AuditTail: mgr.NewAuditTailer(auditLogPath), CallStore: callStore}
 	// GPT plugins spec: /.well-known/ai-plugin.json must be served over the
 	// public HTTPS origin; refused (404) when CODEBRIDGE_PUBLIC_URL is unset
 	// or not HTTPS so local deployments never advertise themselves.

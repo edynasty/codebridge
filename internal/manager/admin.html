@@ -104,7 +104,22 @@
 
   .credbox { background: var(--amber-soft); border: 1px solid rgba(180,83,9,.25); border-radius: var(--r-md); padding: 10px 14px; margin: 12px 0 0; font-size: 12.5px; word-break: break-all; color: var(--amber); font-family: var(--mono); }
 
+  .tabs { display: flex; gap: 4px; padding: 8px 12px 0; }
+  .tab { background: none; border: none; padding: 6px 12px; font-size: 12.5px; color: var(--text-3); border-bottom: 2px solid transparent; border-radius: 0; }
+  .tab:hover { color: var(--text); }
+  .tab.on { color: var(--indigo); border-bottom-color: var(--indigo); font-weight: 600; }
+  .filterbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); align-items: center; }
+  .filterbar input, .filterbar select { width: auto; min-width: 120px; font-size: 12px; padding: 5px 9px; background: #fff; }
+  .filterbar input.fq { min-width: 180px; }
+  .statsbar { display: flex; gap: 16px; padding: 8px 16px; border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--text-3); flex-wrap: wrap; }
+  .statsbar b { color: var(--text-2); font-family: var(--mono); font-weight: 600; }
+  .pager { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-3); }
   #audit { margin: 0; max-height: 380px; overflow: auto; background: #f1f2f4; font-family: var(--mono); font-size: 11.5px; }
+  #mcpcalls { margin: 0; max-height: 420px; overflow: auto; font-family: var(--mono); font-size: 11.5px; background: #f1f2f4; }
+  #mcpcalls .arow { display: grid; grid-template-columns: 120px 105px minmax(140px, 1.2fr) minmax(110px, 1fr) minmax(130px, 1fr) 56px 62px; gap: 10px; padding: 5px 16px; border-bottom: 1px solid rgba(16,18,27,.05); line-height: 1.5; }
+  #mcpcalls .arow > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  #mcpcalls .arow:hover { background: rgba(16,18,27,.025); }
+  #mcpcalls .ahead { color: var(--text-4); font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid var(--line-2); background: #f1f2f4; padding: 6px 0; }
   #audit .arow { display: grid; grid-template-columns: 128px 148px 52px 1fr 56px; gap: 10px; padding: 5px 16px; border-bottom: 1px solid rgba(16,18,27,.05); line-height: 1.5; }
   #audit .arow:hover { background: rgba(16,18,27,.025); }
   #audit .at { color: var(--text-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -203,8 +218,37 @@
   </section>
 
   <section class="card">
-    <div class="card-h"><b>审计日志</b><span class="hint">最近 200 条 · 失败事件高亮</span></div>
-    <div id="audit" aria-label="audit log"><div class="arow ahead"><span>时间</span><span>事件</span><span>结果</span><span>详情</span><span>耗时</span></div></div>
+    <div class="card-h">
+      <b>调用日志</b>
+      <span class="hint">JSONL 审计为真相源 · MCP 调用支持过滤检索</span>
+    </div>
+    <div class="tabs">
+      <button class="tab on" id="tab-audit">审计流</button>
+      <button class="tab" id="tab-calls">MCP 调用记录</button>
+    </div>
+    <div id="pane-audit">
+      <div id="audit" aria-label="audit log"><div class="arow ahead"><span>时间</span><span>事件</span><span>结果</span><span>详情</span><span>耗时</span></div></div>
+    </div>
+    <div id="pane-calls" hidden>
+      <div class="filterbar">
+        <select id="cf-tool"><option value="">全部工具</option></select>
+        <select id="cf-success">
+          <option value="">全部结果</option>
+          <option value="true">成功</option>
+          <option value="false">失败</option>
+        </select>
+        <input type="text" id="cf-device" class="fq" placeholder="设备 ID">
+        <input type="text" id="cf-q" class="fq" placeholder="关键词（工具/工作区/请求ID/错误）">
+        <button class="ghost" id="cf-apply">查询</button>
+      </div>
+      <div class="statsbar" id="call-stats"></div>
+      <div id="mcpcalls" aria-label="mcp calls"></div>
+      <div class="pager">
+        <button class="ghost" id="pg-prev">上一页</button>
+        <span id="pg-info">—</span>
+        <button class="ghost" id="pg-next">下一页</button>
+      </div>
+    </div>
   </section>
 
 </div>
@@ -362,6 +406,12 @@
   function okMsg(id, t) { var e = $(id); e.className = 'msg ok'; e.textContent = t; }
   function err(id, t) { var e = $(id); e.className = 'msg err'; e.textContent = t; }
 
+  ['list_devices','list_workspaces','list','read','write','edit','bash','agent','permission_grant'].forEach(function (t) {
+    var opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    $('cf-tool').appendChild(opt);
+  });
+
   $('enr-create').addEventListener('click', function () {
     var body = {};
     var account = $('enr-account').value.trim();
@@ -393,6 +443,92 @@
       parsed.reverse().forEach(function (ev) { el.appendChild(mkRow(ev)); });
     }).catch(function () {});
   }
+
+  // ── MCP call history pane ─────────────────────────
+  var callsOffset = 0, callsLimit = 50, callsTotal = 0;
+
+  function switchTab(which) {
+    var audit = which === 'audit';
+    $('tab-audit').classList.toggle('on', audit);
+    $('tab-calls').classList.toggle('on', !audit);
+    $('pane-audit').hidden = !audit;
+    $('pane-calls').hidden = audit;
+  }
+  $('tab-audit').addEventListener('click', function () { switchTab('audit'); });
+  $('tab-calls').addEventListener('click', function () { switchTab('calls'); loadCalls(); });
+
+  function callQuery() {
+    var p = new URLSearchParams();
+    if ($('cf-tool').value) p.set('tool', $('cf-tool').value);
+    if ($('cf-success').value) p.set('success', $('cf-success').value);
+    if ($('cf-device').value.trim()) p.set('device_id', $('cf-device').value.trim());
+    if ($('cf-q').value.trim()) p.set('q', $('cf-q').value.trim());
+    p.set('limit', callsLimit);
+    p.set('offset', callsOffset);
+    return p.toString();
+  }
+
+  function renderCalls(calls, stats) {
+    var el = $('mcpcalls');
+    el.innerHTML = '<div class="arow ahead"><span>时间</span><span>工具</span><span>设备 / 工作区</span><span>Actor</span><span>请求 ID</span><span>结果</span><span>耗时</span></div>';
+    if (!calls || !calls.length) {
+      var row = document.createElement('div');
+      row.className = 'arow';
+      row.innerHTML = '<span style="grid-column:1/-1;color:var(--text-4);text-align:center;padding:14px 0">没有匹配的调用记录</span>';
+      el.appendChild(row);
+    } else {
+      calls.forEach(function (c) {
+        var row = document.createElement('div');
+        row.className = 'arow';
+        function span(text, cls) { var s = document.createElement('span'); if (cls) s.className = cls; s.textContent = text; return s; }
+        row.appendChild(span(fmtTimeShort(c.time)));
+        row.appendChild(span(c.tool || '—'));
+        row.appendChild(span((c.device_id || '—') + (c.workspace ? ' / ' + c.workspace : ''), 'ameta'));
+        row.appendChild(span(c.actor_id || '—', 'ameta'));
+        var rid = span(c.request_id || '—', 'ameta');
+        rid.title = c.request_id || '';
+        row.appendChild(rid);
+        var ok = span(c.success ? '成功' : (c.error_kind || '失败'), c.success ? 'aok' : 'afail');
+        row.appendChild(ok);
+        row.appendChild(span(c.duration_ms != null ? c.duration_ms + 'ms' : '—', 'ameta'));
+        el.appendChild(row);
+      });
+    }
+    $('call-stats').innerHTML = '';
+    [['调用总数', stats.total], ['失败', stats.failed], ['平均耗时', stats.avg_ms + 'ms'], ['累计耗时', (stats.total_ms/1000).toFixed(1) + 's']].forEach(function (kv) {
+      var s = document.createElement('span');
+      s.innerHTML = kv[0] + ' <b>' + kv[1] + '</b>';
+      $('call-stats').appendChild(s);
+    });
+    callsTotal = stats.total;
+    var from = callsTotal === 0 ? 0 : callsOffset + 1;
+    var to = Math.min(callsOffset + callsLimit, callsTotal);
+    $('pg-info').textContent = from + '–' + to + ' / ' + callsTotal;
+  }
+
+  function fmtTimeShort(iso) {
+    if (!iso) return '—';
+    return iso.replace(/^\d{4}-/, '').replace('T', ' ').replace(/\.\d+Z$/, '');
+  }
+
+  function loadCalls() {
+    api('GET', '/admin/mcp-calls?' + callQuery()).then(function (r) {
+      renderCalls(r.calls || [], r.stats || {});
+    }).catch(function (e) {
+      var el = $('mcpcalls');
+      el.innerHTML = '';
+      var row = document.createElement('div');
+      row.className = 'arow';
+      row.innerHTML = '<span style="grid-column:1/-1;color:var(--amber);padding:14px 16px">' + (e.message || '无法加载') + '</span>';
+      el.appendChild(row);
+    });
+  }
+
+  $('cf-apply').addEventListener('click', function () { callsOffset = 0; loadCalls(); });
+  ['cf-tool', 'cf-success'].forEach(function (id) { $(id).addEventListener('change', function () { callsOffset = 0; loadCalls(); }); });
+  ['cf-device', 'cf-q'].forEach(function (id) { $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter') { callsOffset = 0; loadCalls(); } }); });
+  $('pg-prev').addEventListener('click', function () { if (callsOffset > 0) { callsOffset = Math.max(0, callsOffset - callsLimit); loadCalls(); } });
+  $('pg-next').addEventListener('click', function () { if (callsOffset + callsLimit < callsTotal) { callsOffset += callsLimit; loadCalls(); } });
 
   setInterval(function () { $('clock').textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false }); }, 1000);
 

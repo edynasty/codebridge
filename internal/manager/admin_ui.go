@@ -7,8 +7,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/edynasty/codebridge/internal/mcpcallstore"
 )
 
 // The admin maintenance UI is a single embedded page served at /admin/ui.
@@ -88,6 +92,53 @@ func (h *AdminHandler) handleAuditTail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = jsonEncode(w, map[string]any{"available": true, "events": h.AuditTail.Tail(adminAuditTailLines)})
+}
+
+// handleMCPCalls serves filtered, paged MCP call history from the SQLite
+// store. Every parameter is bound, never concatenated.
+func (h *AdminHandler) handleMCPCalls(w http.ResponseWriter, r *http.Request) {
+	if h.CallStore == nil {
+		writeJSONError(w, http.StatusNotFound, "mcp call store is not configured (set CODEBRIDGE_MCP_DB)")
+		return
+	}
+	q := r.URL.Query()
+	f := mcpcallstore.Filter{
+		Tool:      strings.TrimSpace(q.Get("tool")),
+		ActorID:   strings.TrimSpace(q.Get("actor")),
+		DeviceID:  strings.TrimSpace(q.Get("device_id")),
+		Workspace: strings.TrimSpace(q.Get("workspace")),
+		Query:     strings.TrimSpace(q.Get("q")),
+	}
+	if v := strings.TrimSpace(q.Get("success")); v != "" {
+		b := v == "true" || v == "1"
+		f.Success = &b
+	}
+	if v := strings.TrimSpace(q.Get("since")); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			f.Since = t
+		}
+	}
+	if v := strings.TrimSpace(q.Get("until")); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			f.Until = t
+		}
+	}
+	if v := strings.TrimSpace(q.Get("limit")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			f.Limit = n
+		}
+	}
+	if v := strings.TrimSpace(q.Get("offset")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			f.Offset = n
+		}
+	}
+	calls, stats, err := h.CallStore.List(f)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	_ = jsonEncode(w, map[string]any{"calls": calls, "stats": stats, "limit": f.Limit, "offset": f.Offset})
 }
 
 func jsonEncode(w http.ResponseWriter, v any) error {

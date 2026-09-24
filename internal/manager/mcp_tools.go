@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/edynasty/codebridge/internal/auditlog"
+	"github.com/edynasty/codebridge/internal/mcpcallstore"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -15,6 +16,9 @@ type ToolService struct {
 	Accounts    *AccountResolver
 	OAuthScopes []string
 	Audit       *auditlog.Logger
+	// CallStore persists MCP tool calls for the admin console (optional;
+	// nil disables the query API, the JSONL audit log still records them).
+	CallStore *mcpcallstore.Store
 }
 
 func (t *ToolService) readOnlyTool(name, description string) *mcp.Tool {

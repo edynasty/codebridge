@@ -10,6 +10,7 @@ import (
 
 	"github.com/edynasty/codebridge/internal/auditlog"
 	"github.com/edynasty/codebridge/internal/authstore"
+	"github.com/edynasty/codebridge/internal/mcpcallstore"
 )
 
 type AdminHandler struct {
@@ -20,6 +21,9 @@ type AdminHandler struct {
 	// AuditTail backs the admin UI's audit viewer; nil when the audit log
 	// is stdout-only.
 	AuditTail *AuditTailer
+	// CallStore backs the MCP call history API; nil when CODEBRIDGE_MCP_DB
+	// is unset.
+	CallStore *mcpcallstore.Store
 }
 
 const maxAdminAccountIDBytes = 128
@@ -57,6 +61,8 @@ func (h *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.deviceAction(w, r, strings.TrimPrefix(path, "/devices/"))
 	case path == "/audit" && r.Method == http.MethodGet:
 		h.handleAuditTail(w, r)
+	case path == "/mcp-calls" && r.Method == http.MethodGet:
+		h.handleMCPCalls(w, r)
 	default:
 		http.NotFound(w, r)
 	}

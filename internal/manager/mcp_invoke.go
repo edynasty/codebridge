@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/edynasty/codebridge/internal/auditlog"
+	"github.com/edynasty/codebridge/internal/mcpcallstore"
 	"github.com/edynasty/codebridge/internal/protocol"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -31,6 +33,23 @@ func (t *ToolService) invoke(req *mcp.CallToolRequest, tool, deviceID, workspace
 		requestID = auditlog.NewRequestID()
 	}
 
+	// Dual write: the JSONL audit log is the append-only source of truth;
+	// the SQLite store backs filtering/paging in the admin console.
+	if t.CallStore != nil {
+		if insertErr := t.CallStore.Insert(mcpcallstore.Call{
+			Time:       time.Now().UTC(),
+			RequestID:  requestID,
+			ActorID:    actorID,
+			Tool:       tool,
+			DeviceID:   deviceID,
+			Workspace:  workspace,
+			Success:    err == nil,
+			DurationMS: time.Since(start).Milliseconds(),
+			ErrorKind:  auditErrorKind(err),
+		}); insertErr != nil {
+			log.Printf("mcp call store insert: %v", insertErr)
+		}
+	}
 	_ = t.Audit.Log(auditlog.Event{
 		Event:      "mcp.tool",
 		RequestID:  requestID,

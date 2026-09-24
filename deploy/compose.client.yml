@@ -38,6 +38,9 @@ services:
       # Local dev bearer token for MCP (doctor / smoke testing). The real
       # deployment uses OAuth instead of CODEBRIDGE_MCP_TOKEN.
       CODEBRIDGE_MCP_TOKEN: ${CODEBRIDGE_MCP_TOKEN:-local-dev-mcp-token}
+      # MCP call history (filterable/paged in /admin/ui), persisted on the
+      # data volume; JSONL audit log remains the append-only source of truth.
+      CODEBRIDGE_MCP_DB: /data/mcp-calls.db
     volumes:
       - codebridge-data:/data
     ports:
