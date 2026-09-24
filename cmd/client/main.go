@@ -331,6 +331,10 @@ func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots m
 	if len(rules) > 0 {
 		log.Printf("bash permission rules active: %d", len(rules))
 	}
+	if profiles := subagentProfilesFrom(cfg); len(profiles) > 0 {
+		agentops.SubagentProfiles = profiles
+		log.Printf("subagent profiles active: %d", len(profiles))
+	}
 	service := &agentops.Service{
 		Roots:               roots,
 		AllowSensitiveFiles: allowSensitive,
@@ -544,6 +548,7 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 			BashAllowlist:       cfg.BashAllowlist,
 			Permissions:         cfg.Permissions,
 			CustomTools:         cfg.CustomTools,
+			SubagentProfiles:    subagentProfilesToDTO(cfg.SubagentProfiles),
 			AllowSensitiveFiles: cfg.AllowSensitiveFiles || boot.allowSensitivePinned,
 			EnableLSP:           cfg.EnableLSP || boot.enableLSPPinned,
 			EnrollmentCode:      "",
@@ -580,6 +585,7 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 		cfg.BashAllowlist = in.BashAllowlist
 		cfg.Permissions = in.Permissions
 		cfg.CustomTools = sanitizeCustomTools(in.CustomTools)
+		cfg.SubagentProfiles = subagentProfilesFromDTO(in.SubagentProfiles)
 		if strings.TrimSpace(in.EnrollmentCode) != "" {
 			state.enrollCode.Store(strings.TrimSpace(in.EnrollmentCode))
 		}
@@ -653,6 +659,45 @@ func splitTrim(raw, sep string) []string {
 		if part = strings.TrimSpace(part); part != "" {
 			out = append(out, part)
 		}
+	}
+	return out
+}
+
+func subagentProfilesToDTO(in []clientconfig.SubagentProfile) []agentops.SubagentProfileConfig {
+	out := make([]agentops.SubagentProfileConfig, 0, len(in))
+	for _, p := range in {
+		out = append(out, agentops.SubagentProfileConfig{
+			Name: p.Name, Client: p.Client, Agent: p.Agent, Model: p.Model,
+			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs,
+		})
+	}
+	return out
+}
+
+func subagentProfilesFromDTO(in []agentops.SubagentProfileConfig) []clientconfig.SubagentProfile {
+	out := make([]clientconfig.SubagentProfile, 0, len(in))
+	for _, p := range in {
+		out = append(out, clientconfig.SubagentProfile{
+			Name: p.Name, Client: p.Client, Agent: p.Agent, Model: p.Model,
+			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs,
+		})
+	}
+	return out
+}
+
+func subagentProfilesFrom(cfg clientconfig.Config) []agentops.SubagentProfile {
+	out := make([]agentops.SubagentProfile, 0, len(cfg.SubagentProfiles))
+	seen := map[string]bool{}
+	for _, p := range cfg.SubagentProfiles {
+		name := strings.TrimSpace(p.Name)
+		if name == "" || seen[name] || len(name) > 64 {
+			continue
+		}
+		seen[name] = true
+		out = append(out, agentops.SubagentProfile{
+			Name: name, Client: p.Client, Agent: p.Agent, Model: p.Model,
+			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs,
+		})
 	}
 	return out
 }

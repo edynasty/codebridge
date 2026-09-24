@@ -12,6 +12,20 @@ import (
 	"github.com/edynasty/codebridge/internal/protocol"
 )
 
+// SubagentProfile is one named subagent configuration: the harness binary,
+// the opencode agent / codex profile, model, reasoning effort, wall-clock
+// budget, and extra CLI flags (e.g. opencode headless flags). The MCP agent
+// tool selects a profile by name.
+type SubagentProfile struct {
+	Name       string   `json:"name"`
+	Client     string   `json:"client,omitempty"`     // opencode (default) | codex
+	Agent      string   `json:"agent,omitempty"`      // opencode agent / codex profile
+	Model      string   `json:"model,omitempty"`
+	Thinking   string   `json:"thinking,omitempty"`   // off|minimal|low|medium|high|xhigh|max
+	TimeoutSec int      `json:"timeout_seconds,omitempty"`
+	ExtraArgs  []string `json:"extra_args,omitempty"` // appended verbatim before the task
+}
+
 type Config struct {
 	ManagerURL          string                    `json:"manager_url,omitempty"`
 	DeviceID            string                    `json:"device_id,omitempty"`
@@ -22,6 +36,7 @@ type Config struct {
 	EnabledTools        []string                  `json:"enabled_tools,omitempty"`
 	DisabledTools       []string                  `json:"disabled_tools,omitempty"`
 	CustomTools         []protocol.CustomTool     `json:"custom_tools,omitempty"`
+	SubagentProfiles    []SubagentProfile         `json:"subagent_profiles,omitempty"`
 	CredentialFile      string                    `json:"credential_file,omitempty"`
 	AllowSensitiveFiles bool                      `json:"allow_sensitive_files,omitempty"`
 	AllowInsecureWS     bool                      `json:"allow_insecure_ws,omitempty"`

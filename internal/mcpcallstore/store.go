@@ -14,7 +14,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// Call is one persisted MCP tool invocation.
+// Call is one persisted MCP tool invocation. ArgsJSON carries the tool
+// arguments (including the bash command or subagent task) as compact JSON,
+// truncated at maxArgsBytes; it exists so operators can answer "what
+// exactly ran" from the console. Treat it as potentially sensitive when
+// choosing where the DB file lives.
 type Call struct {
 	Time       time.Time `json:"time"`
 	RequestID  string    `json:"request_id"`
@@ -25,6 +29,7 @@ type Call struct {
 	Success    bool      `json:"success"`
 	DurationMS int64     `json:"duration_ms"`
 	ErrorKind  string    `json:"error_kind,omitempty"`
+	ArgsJSON   string    `json:"args,omitempty"`
 }
 
 // Filter selects calls for the admin console. Zero values mean "any".
@@ -62,6 +67,9 @@ func Open(path string) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open mcp call store: %w", err)
 	}
+	// Schema. The ALTER is idempotent-by-ignoring: it fails harmlessly when
+	// the column already exists (every run after the first).
+	_, _ = db.Exec(`ALTER TABLE mcp_calls ADD COLUMN args TEXT NOT NULL DEFAULT ''`)
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS mcp_calls (
 		id           INTEGER PRIMARY KEY AUTOINCREMENT,
 		time         TEXT NOT NULL,
@@ -72,7 +80,8 @@ func Open(path string) (*Store, error) {
 		workspace    TEXT NOT NULL DEFAULT '',
 		success      INTEGER NOT NULL DEFAULT 0,
 		duration_ms  INTEGER NOT NULL DEFAULT 0,
-		error_kind   TEXT NOT NULL DEFAULT ''
+		error_kind   TEXT NOT NULL DEFAULT '',
+		args         TEXT NOT NULL DEFAULT ''
 	);
 	CREATE INDEX IF NOT EXISTS idx_mcp_calls_time ON mcp_calls(time DESC);
 	CREATE INDEX IF NOT EXISTS idx_mcp_calls_tool ON mcp_calls(tool);
@@ -97,10 +106,11 @@ func (s *Store) Insert(call Call) error {
 	if s == nil {
 		return nil
 	}
-	_, err := s.db.Exec(`INSERT INTO mcp_calls (time, request_id, actor_id, tool, device_id, workspace, success, duration_ms, error_kind)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.Exec(`INSERT INTO mcp_calls (time, request_id, actor_id, tool, device_id, workspace, success, duration_ms, error_kind, args)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		call.Time.UTC().Format(time.RFC3339Nano), call.RequestID, call.ActorID, call.Tool,
-		call.DeviceID, call.Workspace, boolToInt(call.Success), call.DurationMS, call.ErrorKind)
+		call.DeviceID, call.Workspace, boolToInt(call.Success), call.DurationMS, call.ErrorKind,
+		truncateArgs(call.ArgsJSON))
 	return err
 }
 
@@ -110,7 +120,7 @@ func (s *Store) List(f Filter) ([]Call, Stats, error) {
 		return nil, Stats{}, errors.New("mcp call store is not configured")
 	}
 	where, args := filterSQL(f)
-	listSQL := `SELECT time, request_id, actor_id, tool, device_id, workspace, success, duration_ms, error_kind
+	listSQL := `SELECT time, request_id, actor_id, tool, device_id, workspace, success, duration_ms, error_kind, args
 		FROM mcp_calls` + where + ` ORDER BY id DESC LIMIT ? OFFSET ?`
 	limit, offset := f.Limit, f.Offset
 	if limit <= 0 || limit > 500 {
@@ -129,7 +139,7 @@ func (s *Store) List(f Filter) ([]Call, Stats, error) {
 		var c Call
 		var success int
 		var timeStr string
-		if err := rows.Scan(&timeStr, &c.RequestID, &c.ActorID, &c.Tool, &c.DeviceID, &c.Workspace, &success, &c.DurationMS, &c.ErrorKind); err != nil {
+		if err := rows.Scan(&timeStr, &c.RequestID, &c.ActorID, &c.Tool, &c.DeviceID, &c.Workspace, &success, &c.DurationMS, &c.ErrorKind, &c.ArgsJSON); err != nil {
 			return nil, Stats{}, err
 		}
 		if parsed, parseErr := time.Parse(time.RFC3339Nano, timeStr); parseErr == nil {
@@ -209,6 +219,17 @@ func filterSQL(f Filter) (string, []any) {
 		return "", nil
 	}
 	return " WHERE " + strings.Join(clauses, " AND "), args
+}
+
+// maxArgsBytes bounds the persisted argument payload; longer inputs are
+// truncated with an ellipsis marker.
+const maxArgsBytes = 16 * 1024
+
+func truncateArgs(args string) string {
+	if len(args) <= maxArgsBytes {
+		return args
+	}
+	return args[:maxArgsBytes] + "…(truncated)"
 }
 
 func boolToInt(b bool) int {

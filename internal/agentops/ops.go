@@ -108,9 +108,12 @@ func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, 
 	case "permission_grant":
 		return s.permissionGrant(stringArg(req.Args, "request_id", ""), stringArg(req.Args, "decision", ""))
 	case "agent":
+		// The client parameter may name a subagent profile configured in the
+		// local UI (extra CLI flags, model, effort); profiles resolve in
+		// resolveSubagentCall.
 		return s.runSubagent(ctx, root,
 			stringArg(req.Args, "task", ""),
-			stringArg(req.Args, "client", "opencode"),
+			stringArg(req.Args, "client", ""),
 			stringArg(req.Args, "agent", ""),
 			stringArg(req.Args, "model", ""),
 			stringArg(req.Args, "thinking", ""),

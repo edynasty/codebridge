@@ -163,7 +163,7 @@ func (t *ToolService) registerCustom(server *mcp.Server, custom protocol.CustomT
 		}
 		deviceID := stringArg(args, "device_id", "")
 		workspace := stringArg(args, "workspace", "")
-		return t.invoke(req, custom.Name, deviceID, workspace, func() (*mcp.CallToolResult, any, error) {
+		return t.invokeArgs(req, custom.Name, deviceID, workspace, args, func() (*mcp.CallToolResult, any, error) {
 			return t.forward(ctx, account, deviceID, workspace, custom.Tool, args)
 		})
 	})

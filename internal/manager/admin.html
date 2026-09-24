@@ -116,7 +116,7 @@
   .pager { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-3); }
   #audit { margin: 0; max-height: 380px; overflow: auto; background: #f1f2f4; font-family: var(--mono); font-size: 11.5px; }
   #mcpcalls { margin: 0; max-height: 420px; overflow: auto; font-family: var(--mono); font-size: 11.5px; background: #f1f2f4; }
-  #mcpcalls .arow { display: grid; grid-template-columns: 120px 105px minmax(140px, 1.2fr) minmax(110px, 1fr) minmax(130px, 1fr) 56px 62px; gap: 10px; padding: 5px 16px; border-bottom: 1px solid rgba(16,18,27,.05); line-height: 1.5; }
+  #mcpcalls .arow { display: grid; grid-template-columns: 112px 96px minmax(120px, 1fr) minmax(180px, 1.6fr) 52px 60px; gap: 10px; padding: 5px 16px; border-bottom: 1px solid rgba(16,18,27,.05); line-height: 1.5; }
   #mcpcalls .arow > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   #mcpcalls .arow:hover { background: rgba(16,18,27,.025); }
   #mcpcalls .ahead { color: var(--text-4); font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid var(--line-2); background: #f1f2f4; padding: 6px 0; }
@@ -470,7 +470,7 @@
 
   function renderCalls(calls, stats) {
     var el = $('mcpcalls');
-    el.innerHTML = '<div class="arow ahead"><span>时间</span><span>工具</span><span>设备 / 工作区</span><span>Actor</span><span>请求 ID</span><span>结果</span><span>耗时</span></div>';
+    el.innerHTML = '<div class="arow ahead"><span>时间</span><span>工具</span><span>设备 / 工作区</span><span>参数 / 请求 ID</span><span>结果</span><span>耗时</span></div>';
     if (!calls || !calls.length) {
       var row = document.createElement('div');
       row.className = 'arow';
@@ -484,10 +484,9 @@
         row.appendChild(span(fmtTimeShort(c.time)));
         row.appendChild(span(c.tool || '—'));
         row.appendChild(span((c.device_id || '—') + (c.workspace ? ' / ' + c.workspace : ''), 'ameta'));
-        row.appendChild(span(c.actor_id || '—', 'ameta'));
-        var rid = span(c.request_id || '—', 'ameta');
-        rid.title = c.request_id || '';
-        row.appendChild(rid);
+        var argSpan = span(argsPreview(c.args), 'ameta');
+        argSpan.title = (c.args || '') + (c.actor_id ? '\nactor: ' + c.actor_id : '') + (c.request_id ? '\nrequest: ' + c.request_id : '');
+        row.appendChild(argSpan);
         var ok = span(c.success ? '成功' : (c.error_kind || '失败'), c.success ? 'aok' : 'afail');
         row.appendChild(ok);
         row.appendChild(span(c.duration_ms != null ? c.duration_ms + 'ms' : '—', 'ameta'));
@@ -504,6 +503,21 @@
     var from = callsTotal === 0 ? 0 : callsOffset + 1;
     var to = Math.min(callsOffset + callsLimit, callsTotal);
     $('pg-info').textContent = from + '–' + to + ' / ' + callsTotal;
+  }
+
+  function argsPreview(args) {
+    if (!args) return '—';
+    try {
+      var o = JSON.parse(args);
+      var parts = [];
+      Object.keys(o).forEach(function (k) {
+        if (k === 'content' || k === 'new_text') { parts.push(k + '=<' + String(o[k]).length + 'B>'); return; }
+        var v = String(o[k]);
+        if (v.length > 60) v = v.slice(0, 60) + '…';
+        parts.push(k + '=' + v);
+      });
+      return parts.join(' ') || '{}';
+    } catch (e) { return args.slice(0, 80); }
   }
 
   function fmtTimeShort(iso) {

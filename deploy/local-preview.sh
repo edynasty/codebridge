@@ -36,6 +36,7 @@ seed_client_config() {
       # host workspace = real home directory (~) in full-access mode;
       # workspaces mode does not register it
       add_ws host /host
+      # (subagent profiles are edited at runtime via the client UI)
       for dir in "$PROJECTS_DIR"/*/; do
         [ -d "$dir" ] || continue
         name=$(basename "$dir")

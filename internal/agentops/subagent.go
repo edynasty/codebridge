@@ -55,11 +55,78 @@ type SubagentResult struct {
 // and returns its output. Supported clients: opencode (opencode run) and
 // codex (codex exec). Gated by the same permission rules as bash: the
 // operator must allow the client binary first.
+// SubagentProfileConfig is the exported wire form of a profile (used by the
+// UI config API); it mirrors clientconfig.SubagentProfile.
+type SubagentProfileConfig struct {
+	Name       string   `json:"name"`
+	Client     string   `json:"client,omitempty"`
+	Agent      string   `json:"agent,omitempty"`
+	Model      string   `json:"model,omitempty"`
+	Thinking   string   `json:"thinking,omitempty"`
+	TimeoutSec int      `json:"timeout_seconds,omitempty"`
+	ExtraArgs  []string `json:"extra_args,omitempty"`
+}
+
+// SubagentProfiles is the profile table the client injects at boot; the
+// MCP agent tool resolves its agent/agent_profile parameter against it.
+var SubagentProfiles []SubagentProfile
+
+// SubagentProfile mirrors clientconfig.SubagentProfile; duplicated to keep
+// agentops free of a config dependency.
+type SubagentProfile struct {
+	Name       string
+	Client     string
+	Agent      string
+	Model      string
+	Thinking   string
+	TimeoutSec int
+	ExtraArgs  []string
+}
+
+// resolveSubagentCall merges an explicit profile selection with per-call
+// overrides. Profile fields win over defaults; explicit call fields win
+// over the profile so the caller can still narrow model/effort per task.
+func resolveSubagentCall(client, agent, model, thinking string, timeoutSeconds int) (string, string, string, string, int, []string) {
+	// The agent parameter doubles as the profile selector when it names a
+	// configured profile.
+	for _, p := range SubagentProfiles {
+		if p.Name != "" && p.Name == strings.TrimSpace(agent) {
+			if client == "" || client == p.Client {
+				client = orDefault(p.Client, "opencode")
+				agent = p.Agent
+				if model == "" {
+					model = p.Model
+				}
+				if thinking == "" {
+					thinking = p.Thinking
+				}
+				if timeoutSeconds <= 0 {
+					timeoutSeconds = p.TimeoutSec
+				}
+				return client, agent, model, thinking, timeoutSeconds, p.ExtraArgs
+			}
+		}
+	}
+	if client == "" {
+		client = "opencode"
+	}
+	return client, agent, model, thinking, timeoutSeconds, nil
+}
+
+func orDefault(v, def string) string {
+	if strings.TrimSpace(v) == "" {
+		return def
+	}
+	return v
+}
+
 func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, model, thinking string, timeoutSeconds int) (*SubagentResult, error) {
 	task = strings.TrimSpace(task)
 	if task == "" {
 		return nil, errors.New("task is required")
 	}
+	var extraArgs []string
+	client, agent, model, thinking, timeoutSeconds, extraArgs = resolveSubagentCall(client, agent, model, thinking, timeoutSeconds)
 	client = strings.TrimSpace(client)
 	if client == "" {
 		client = "opencode"
@@ -126,6 +193,7 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 		if thinking != "" && thinking != "off" {
 			args = append(args, "--variant", thinking)
 		}
+		args = append(args, extraArgs...)
 		args = append(args, "--", task)
 	case "codex":
 		args = []string{"exec"}
@@ -138,6 +206,7 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 		if thinking != "" && thinking != "off" {
 			args = append(args, "-c", "model_reasoning_effort="+thinking)
 		}
+		args = append(args, extraArgs...)
 		args = append(args, task)
 	}
 

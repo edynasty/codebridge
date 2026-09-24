@@ -18,6 +18,11 @@ import (
 const requestIDHeader = "X-CodeBridge-Request-ID"
 
 func (t *ToolService) invoke(req *mcp.CallToolRequest, tool, deviceID, workspace string, fn func() (*mcp.CallToolResult, any, error)) (*mcp.CallToolResult, any, error) {
+	return t.invokeArgs(req, tool, deviceID, workspace, nil, fn)
+}
+
+// invokeArgs is invoke with the tool arguments captured for the call store.
+func (t *ToolService) invokeArgs(req *mcp.CallToolRequest, tool, deviceID, workspace string, args map[string]any, fn func() (*mcp.CallToolResult, any, error)) (*mcp.CallToolResult, any, error) {
 	start := time.Now()
 	result, out, err := fn()
 
@@ -36,7 +41,14 @@ func (t *ToolService) invoke(req *mcp.CallToolRequest, tool, deviceID, workspace
 	// Dual write: the JSONL audit log is the append-only source of truth;
 	// the SQLite store backs filtering/paging in the admin console.
 	if t.CallStore != nil {
+		argsJSON := ""
+		if args != nil {
+			if b, marshalErr := json.Marshal(args); marshalErr == nil {
+				argsJSON = string(b)
+			}
+		}
 		if insertErr := t.CallStore.Insert(mcpcallstore.Call{
+			ArgsJSON: argsJSON,
 			Time:       time.Now().UTC(),
 			RequestID:  requestID,
 			ActorID:    actorID,
