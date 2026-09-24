@@ -51,7 +51,16 @@ func ResolveUnderRoot(root, rel string) (string, error) {
 		candidate = real
 	}
 	if !contained(rootReal, candidate) {
-		return "", fmt.Errorf("path escapes workspace")
+		// A root that is itself a symlink (for example a whole-host bind
+		// mount where /host/Users points at the real user tree) must still
+		// resolve its own children: containment is re-checked against the
+		// symlink-resolved root.
+		if rootLink, linkErr := filepath.EvalSymlinks(rootAbs); linkErr == nil {
+			rootReal = rootLink
+		}
+		if !contained(rootReal, candidate) {
+			return "", fmt.Errorf("path escapes workspace")
+		}
 	}
 	return candidate, nil
 }

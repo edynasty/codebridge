@@ -29,12 +29,17 @@ seed_client_config() {
     {
       printf '{\n  "manager_url": "ws://manager:8080/agent",\n  "allow_insecure_ws": true,\n  "workspaces": {\n'
       first=1
+      add_ws() {
+        if [ $first -eq 1 ]; then first=0; else printf ',\n'; fi
+        printf '    "%s": "%s"' "$1" "$2"
+      }
+      # whole user-tree workspace (system trees are skipped by scan tools)
+      add_ws host /host
       for dir in "$PROJECTS_DIR"/*/; do
         [ -d "$dir" ] || continue
         name=$(basename "$dir")
         # container workspaces are mounted under /workspaces/<name>
-        if [ $first -eq 1 ]; then first=0; else printf ',\n'; fi
-        printf '    "%s": "/workspaces/%s"' "$name" "$name"
+        add_ws "$name" "/workspaces/$name"
       done
       printf '\n  }\n}\n'
     } > "${STATE_DIR}/client.json"

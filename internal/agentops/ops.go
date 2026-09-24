@@ -607,9 +607,13 @@ func intArg(m map[string]any, key string, def int) int {
 	}
 }
 
+// shouldSkipDir lists directories the walk-based tools never descend into:
+// dependency/build caches and, for whole-host workspaces, OS system trees
+// that are huge, slow to scan, and never contain user source code.
 func shouldSkipDir(name string) bool {
 	switch name {
-	case ".git", "node_modules", "target", "dist", "build", ".idea", ".vscode", ".next", ".gradle":
+	case ".git", "node_modules", "target", "dist", "build", ".idea", ".vscode", ".next", ".gradle",
+		"Library", "System", "Applications", "usr", "var", "opt", "proc", "sys", "dev", "run", "Volumes", ".Trash":
 		return true
 	default:
 		return false

@@ -78,6 +78,12 @@ services:
       - "127.0.0.1:${CODEBRIDGE_UI_PORT:-8190}:8190"
     volumes:
       - ./client-state:/state
+      # Whole user tree, read-only: the "host" workspace lets MCP callers
+      # browse every directory under it. Scan tools automatically skip bulky
+      # system trees (see shouldSkipDir) and sensitive paths stay
+      # policy-blocked. Mounting "/" would surface the Docker VM root
+      # instead of macOS, so the default is the user home's parent.
+      - ${HOST_ROOT_DIR:-/Users}:/host:ro
       - ${HOST_PROJECTS_DIR:-/Users/tangxingpeng/IdeaProjects}:/workspaces:ro
 
 volumes:
