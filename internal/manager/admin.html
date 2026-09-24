@@ -6,25 +6,25 @@
 <title>CodeBridge Manager</title>
 <style>
   :root {
-    --bg: #08090a;
-    --panel: #0f1011;
-    --raised: #191a1b;
-    --hover-surface: rgba(255,255,255,.045);
-    --text: #f7f8f8;
-    --text-2: #d0d6e0;
-    --text-3: #8a8f98;
-    --text-4: #62666d;
-    --line: rgba(255,255,255,.06);
-    --line-2: rgba(255,255,255,.09);
-    --indigo: #5e6ad2;
-    --indigo-hi: #7170ff;
-    --indigo-soft: rgba(94,106,210,.14);
-    --green: #10b981;
-    --green-soft: rgba(16,185,129,.12);
-    --amber: #e0a458;
-    --amber-soft: rgba(224,164,88,.12);
-    --red: #e5606a;
-    --red-soft: rgba(229,96,106,.1);
+    --bg: #f7f8f8;
+    --panel: #ffffff;
+    --raised: #f3f4f5;
+    --hover-surface: rgba(16,18,27,.035);
+    --text: #16181d;
+    --text-2: #3d4451;
+    --text-3: #5b6370;
+    --text-4: #6b7280;
+    --line: rgba(16,18,27,.09);
+    --line-2: rgba(16,18,27,.16);
+    --indigo: #4d58c4;
+    --indigo-hi: #5a67d8;
+    --indigo-soft: rgba(77,88,196,.07);
+    --green: #15803d;
+    --green-soft: rgba(21,128,61,.09);
+    --amber: #b45309;
+    --amber-soft: rgba(180,83,9,.08);
+    --red: #dc2626;
+    --red-soft: rgba(220,38,38,.07);
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
     --r-sm: 6px;
@@ -34,13 +34,13 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13.5px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
-  ::selection { background: rgba(94,106,210,.35); }
+  ::selection { background: rgba(77,88,196,.18); }
 
   header {
     position: sticky; top: 0; z-index: 10;
     display: flex; align-items: center; gap: 12px;
     padding: 0 24px; height: 52px;
-    background: rgba(8,9,10,.82);
+    background: rgba(247,248,248,.86);
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--line);
   }
@@ -63,7 +63,7 @@
   table.grid td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 12.5px; color: var(--text-2); }
   tr:last-child td { border-bottom: none; }
   tbody tr { transition: background .12s var(--ease); }
-  tbody tr:hover { background: rgba(255,255,255,.025); }
+  tbody tr:hover { background: rgba(16,18,27,.02); }
   .mono { font-family: var(--mono); font-size: 11.5px; }
   .on { color: var(--green); }
   .off { color: var(--text-4); }
@@ -73,28 +73,28 @@
 
   button { font-family: var(--sans); font-size: 12.5px; font-weight: 500; cursor: pointer; border-radius: var(--r-sm); padding: 7px 15px; transition: all .15s var(--ease); }
   button.primary {
-    background: linear-gradient(180deg, #6a75d8 0%, var(--indigo) 100%);
-    color: #fff; border: 1px solid rgba(255,255,255,.14);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 4px rgba(0,0,0,.5), 0 0 0 1px rgba(94,106,210,.35);
+    background: var(--indigo);
+    color: #fff; border: 1px solid rgba(16,18,27,.08);
+    box-shadow: 0 1px 2px rgba(16,18,27,.16), 0 1px 1px rgba(16,18,27,.08);
     padding: 8px 22px; font-weight: 600;
   }
-  button.primary:hover { background: linear-gradient(180deg, #7d88e2 0%, #6670d6 100%); }
-  button.primary:active { transform: translateY(1px); }
-  button.ghost { background: rgba(255,255,255,.03); color: var(--text-2); border: 1px solid var(--line-2); }
-  button.ghost:hover { background: var(--hover-surface); color: var(--text); border-color: rgba(255,255,255,.16); }
+  button.primary:hover { background: var(--indigo-hi); box-shadow: 0 2px 6px rgba(16,18,27,.18); }
+  button.primary:active { transform: translateY(1px); box-shadow: 0 1px 1px rgba(16,18,27,.14); }
+  button.ghost { background: var(--panel); color: var(--text-2); border: 1px solid var(--line-2); }
+  button.ghost:hover { background: var(--raised); color: var(--text); border-color: rgba(16,18,27,.18); }
   button.ghost:active { transform: translateY(1px); }
-  button.danger { background: none; color: var(--red); border: 1px solid rgba(229,96,106,.3); }
-  button.danger:hover { background: var(--red-soft); border-color: rgba(229,96,106,.5); }
+  button.danger { background: #fff; color: var(--red); border: 1px solid rgba(220,38,38,.28); }
+  button.danger:hover { background: var(--red-soft); border-color: rgba(220,38,38,.45); }
 
   input[type=text], input[type=password] {
-    width: 100%; background: rgba(255,255,255,.02); color: var(--text);
+    width: 100%; background: #fff; color: var(--text);
     border: 1px solid var(--line-2); border-radius: var(--r-sm);
     padding: 7px 11px; font-family: var(--mono); font-size: 12.5px;
     transition: border-color .15s var(--ease), background .15s var(--ease), box-shadow .15s var(--ease);
   }
   input::placeholder { color: var(--text-4); }
-  input:hover { border-color: rgba(255,255,255,.16); }
-  input:focus { outline: none; border-color: var(--indigo); background: rgba(94,106,210,.05); box-shadow: 0 0 0 3px rgba(94,106,210,.18); }
+  input:hover { border-color: rgba(16,18,27,.2); }
+  input:focus { outline: none; border-color: var(--indigo); background: #fff; box-shadow: 0 0 0 3px rgba(77,88,196,.14); }
 
   .grid2 { display: grid; grid-template-columns: minmax(220px, 340px) minmax(160px, 220px); gap: 14px; }
   .field label { display: block; font-size: 12px; font-weight: 500; color: var(--text-2); margin-bottom: 5px; }
@@ -102,35 +102,35 @@
   .msg.ok { color: var(--green); }
   .msg.err { color: var(--red); }
 
-  .credbox { background: rgba(224,164,88,.06); border: 1px solid rgba(224,164,88,.3); border-radius: var(--r-md); padding: 10px 14px; margin: 12px 0 0; font-size: 12.5px; word-break: break-all; color: var(--amber); font-family: var(--mono); }
+  .credbox { background: var(--amber-soft); border: 1px solid rgba(180,83,9,.25); border-radius: var(--r-md); padding: 10px 14px; margin: 12px 0 0; font-size: 12.5px; word-break: break-all; color: var(--amber); font-family: var(--mono); }
 
-  #audit { margin: 0; max-height: 380px; overflow: auto; background: #0a0b0c; font-family: var(--mono); font-size: 11.5px; }
-  #audit .arow { display: grid; grid-template-columns: 128px 148px 52px 1fr 56px; gap: 10px; padding: 5px 16px; border-bottom: 1px solid rgba(255,255,255,.03); line-height: 1.5; }
-  #audit .arow:hover { background: rgba(255,255,255,.025); }
+  #audit { margin: 0; max-height: 380px; overflow: auto; background: #f1f2f4; font-family: var(--mono); font-size: 11.5px; }
+  #audit .arow { display: grid; grid-template-columns: 128px 148px 52px 1fr 56px; gap: 10px; padding: 5px 16px; border-bottom: 1px solid rgba(16,18,27,.05); line-height: 1.5; }
+  #audit .arow:hover { background: rgba(16,18,27,.025); }
   #audit .at { color: var(--text-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #audit .aev { white-space: nowrap; }
   #audit .aev .b { border-radius: 3px; padding: 0 6px; font-size: 10.5px; }
   #audit .aok { color: var(--green); }
   #audit .afail { color: var(--amber); }
   #audit .ameta { color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #audit .ahead { color: var(--text-4); font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid var(--line); background: #0a0b0c; padding: 6px 0; }
+  #audit .ahead { color: var(--text-4); font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid var(--line-2); background: #f1f2f4; padding: 6px 0; }
   #audit::-webkit-scrollbar { width: 8px; }
-  #audit::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 4px; }
+  #audit::-webkit-scrollbar-thumb { background: rgba(16,18,27,.16); border-radius: 4px; }
   .ev-admin { background: var(--indigo-soft); color: var(--indigo-hi); }
-  .ev-device { background: rgba(255,255,255,.06); color: var(--text-2); }
+  .ev-device { background: rgba(16,18,27,.05); color: var(--text-2); }
   .ev-mcp { background: var(--green-soft); color: var(--green); }
-  .ev-other { background: rgba(255,255,255,.04); color: var(--text-3); }
+  .ev-other { background: rgba(16,18,27,.035); color: var(--text-3); }
 
   #gate { max-width: 400px; margin: 14vh auto; padding: 30px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel); }
   #gate h1 { font-size: 15px; font-weight: 600; margin: 0 0 6px; display: flex; align-items: center; gap: 9px; }
   #gate p { color: var(--text-4); font-size: 12.5px; margin: 0 0 18px; line-height: 1.6; }
 
-  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line-2); border-radius: var(--r-lg); font-family: var(--sans); font-size: 13px; padding: 24px; max-width: 460px; box-shadow: 0 16px 48px rgba(0,0,0,.5); }
-  dialog::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(2px); }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line-2); border-radius: var(--r-lg); font-family: var(--sans); font-size: 13px; padding: 24px; max-width: 460px; box-shadow: 0 16px 48px rgba(16,18,27,.18), 0 2px 8px rgba(16,18,27,.08); }
+  dialog::backdrop { background: rgba(16,18,27,.28); backdrop-filter: blur(2px); }
 
   .empty-hint { color: var(--text-4); font-size: 12px; text-align: center; padding: 18px 0; }
 
-  :focus-visible { outline: 2px solid var(--indigo-hi); outline-offset: 1px; border-radius: 4px; }
+  :focus-visible { outline: 2px solid var(--indigo); outline-offset: 1px; border-radius: 4px; }
   input:focus-visible { outline: none; }
 </style>
 </head>
@@ -139,8 +139,8 @@
 <div id="gate" hidden>
   <h1>
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <rect x="4" y="8.5" width="12" height="8" rx="1.5" stroke="#5e6ad2" stroke-width="1.6"/>
-      <path d="M7 8.5 V6 a3 3 0 0 1 6 0 V2.5" stroke="#8a8f98" stroke-width="1.6" stroke-linecap="round"/>
+      <rect x="4" y="8.5" width="12" height="8" rx="1.5" stroke="#4d58c4" stroke-width="1.6"/>
+      <path d="M7 8.5 V6 a3 3 0 0 1 6 0 V2.5" stroke="#656d7a" stroke-width="1.6" stroke-linecap="round"/>
     </svg>
     CodeBridge Manager
   </h1>
@@ -156,9 +156,9 @@
 <header>
   <div class="brand">
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path d="M3 14 L3 10 Q3 5 10 5 Q17 5 17 10 L17 14" stroke="#5e6ad2" stroke-width="1.6" stroke-linecap="round"/>
-      <path d="M3 14 L7 14 M13 14 L17 14" stroke="#8a8f98" stroke-width="1.6" stroke-linecap="round"/>
-      <circle cx="10" cy="9" r="1.4" fill="#7170ff"/>
+      <path d="M3 14 L3 10 Q3 5 10 5 Q17 5 17 10 L17 14" stroke="#4d58c4" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M3 14 L7 14 M13 14 L17 14" stroke="#656d7a" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="10" cy="9" r="1.4" fill="#5a67d8"/>
     </svg>
     <b>CodeBridge</b><span class="sub">Manager 维护台</span>
   </div>
@@ -355,7 +355,7 @@
     if (ev.workspace) meta.push('ws=' + ev.workspace);
     if (ev.error_kind) meta.push('err=' + ev.error_kind);
     row.appendChild(span('ameta', meta.join(' · ') || '—'));
-    row.appendChild(span('ameta', ev.duration_ms != null ? ev.duration_ms + 'ms' : ''));
+    row.appendChild(span('ameta', ev.duration_ms != null ? ev.duration_ms + 'ms' : '—'));
     return row;
   }
 

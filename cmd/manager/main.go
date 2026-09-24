@@ -186,7 +186,10 @@ func main() {
 	if os.Getenv("CODEBRIDGE_ADMIN_TOKEN") == "" {
 		log.Printf("admin API disabled: CODEBRIDGE_ADMIN_TOKEN is empty")
 	} else {
-		log.Printf("admin API enabled at /admin/")
+		log.Printf("admin API enabled at /admin/ (UI: /admin/ui)")
+		if strings.TrimSpace(os.Getenv("CODEBRIDGE_ADMIN_TOKEN_LOG")) != "false" {
+			log.Printf("admin token: %s (set CODEBRIDGE_ADMIN_TOKEN_LOG=false to hide)", adminToken())
+		}
 	}
 	if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
@@ -406,6 +409,10 @@ func logRequests(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 		log.Printf("request_id=%s method=%s path=%s duration=%s", r.Header.Get("X-CodeBridge-Request-ID"), r.Method, r.URL.Path, time.Since(start).Round(time.Millisecond))
 	})
+}
+
+func adminToken() string {
+	return os.Getenv("CODEBRIDGE_ADMIN_TOKEN")
 }
 
 func envOrDefault(name, def string) string {
