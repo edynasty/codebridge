@@ -7,19 +7,28 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/edynasty/codebridge/internal/agentops"
+	"github.com/edynasty/codebridge/internal/protocol"
 )
 
 type Config struct {
-	ManagerURL          string            `json:"manager_url,omitempty"`
-	DeviceID            string            `json:"device_id,omitempty"`
-	DeviceName          string            `json:"device_name,omitempty"`
-	Workspaces          map[string]string `json:"workspaces,omitempty"`
-	WritableWorkspaces  []string          `json:"writable_workspaces,omitempty"`
-	CredentialFile      string            `json:"credential_file,omitempty"`
-	AllowSensitiveFiles bool              `json:"allow_sensitive_files,omitempty"`
-	AllowInsecureWS     bool              `json:"allow_insecure_ws,omitempty"`
-	EnableLSP           bool              `json:"enable_lsp,omitempty"`
-	CheckpointDir       string            `json:"checkpoint_dir,omitempty"`
+	ManagerURL          string                    `json:"manager_url,omitempty"`
+	DeviceID            string                    `json:"device_id,omitempty"`
+	DeviceName          string                    `json:"device_name,omitempty"`
+	AccessMode          string                    `json:"access_mode,omitempty"` // "full" or "workspaces"
+	Workspaces          map[string]string         `json:"workspaces,omitempty"`
+	WritableWorkspaces  []string                  `json:"writable_workspaces,omitempty"`
+	EnabledTools        []string                  `json:"enabled_tools,omitempty"`
+	DisabledTools       []string                  `json:"disabled_tools,omitempty"`
+	CustomTools         []protocol.CustomTool     `json:"custom_tools,omitempty"`
+	CredentialFile      string                    `json:"credential_file,omitempty"`
+	AllowSensitiveFiles bool                      `json:"allow_sensitive_files,omitempty"`
+	AllowInsecureWS     bool                      `json:"allow_insecure_ws,omitempty"`
+	EnableLSP           bool                      `json:"enable_lsp,omitempty"`
+	BashAllowlist       []string                  `json:"bash_allowlist,omitempty"`
+	Permissions         []agentops.PermissionRule `json:"permissions,omitempty"`
+	CheckpointDir       string                    `json:"checkpoint_dir,omitempty"`
 }
 
 func DefaultPath() string {

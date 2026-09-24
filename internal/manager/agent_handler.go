@@ -93,7 +93,7 @@ func (h *AgentHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ws.SetReadLimit(maxAgentPayloadBytes + 64*1024)
 
 	now := time.Now().UTC()
-	conn := h.Registry.Put(Device{ID: reg.DeviceID, Name: reg.DeviceName, AccountID: account, Version: reg.Version, Online: true, ConnectedAt: now, LastSeen: now, Workspaces: reg.Workspaces}, ws)
+	conn := h.Registry.Put(Device{ID: reg.DeviceID, Name: reg.DeviceName, AccountID: account, Version: reg.Version, Online: true, ConnectedAt: now, LastSeen: now, Workspaces: reg.Workspaces, ToolPolicy: reg.ToolPolicy}, ws)
 	defer h.Registry.Remove(reg.DeviceID, conn)
 	// Once the connection is in the registry a concurrent tool call may write
 	// to it under conn.mu, so the acknowledgment must take the same mutex.

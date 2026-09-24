@@ -41,6 +41,12 @@ type Service struct {
 	CheckpointDir string
 	// EnableLSP opts into local language-server usage for symbol tools.
 	EnableLSP bool
+	// BashAllowlist is retained for backward compatibility; permission rules
+	// are the authoritative surface now.
+	BashAllowlist []string
+
+	// onRulePersisted persists permission rules after an always-grant.
+	onRulePersisted func(rules []PermissionRule)
 
 	lspMu      sync.Mutex
 	lspClients map[string]*lspClient
@@ -66,16 +72,44 @@ type SearchMatch struct {
 	Text string `json:"text"`
 }
 
+// SetRulePersister installs the callback persisting permission rules after
+// an always-grant; the client wires it to its config file.
+func (s *Service) SetRulePersister(fn func(rules []PermissionRule)) {
+	s.onRulePersisted = fn
+}
+
 func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, error) {
 	root, ok := s.Roots[req.Workspace]
 	if !ok {
 		return nil, fmt.Errorf("unknown workspace %q", req.Workspace)
 	}
 	switch req.Tool {
-	case "list_directory":
+	case "list", "list_directory":
 		return s.listDirectory(root, stringArg(req.Args, "path", "."))
-	case "read_file":
-		return s.readFile(root, stringArg(req.Args, "path", ""), intArg(req.Args, "max_bytes", maxReadBytes))
+	case "read", "read_file":
+		maxBytes := intArg(req.Args, "max_bytes", maxReadBytes)
+		if maxBytes <= 0 {
+			maxBytes = maxReadBytes
+		}
+		return s.readFile(root, stringArg(req.Args, "path", ""), maxBytes)
+	case "bash":
+		return s.runBash(ctx, root, stringArg(req.Args, "command", ""))
+	case "edit":
+		return s.applyPatch(ctx, req.Workspace, root, []FileEdit{{
+			Path:    stringArg(req.Args, "path", ""),
+			OldText: stringArg(req.Args, "old_text", ""),
+			NewText: stringArg(req.Args, "new_text", ""),
+		}}, boolArg(req.Args, "preview", false), boolArg(req.Args, "confirm", false))
+	case "write":
+		return s.applyPatch(ctx, req.Workspace, root, []FileEdit{{
+			Path:    stringArg(req.Args, "path", ""),
+			NewText: stringArg(req.Args, "content", ""),
+		}}, boolArg(req.Args, "preview", false), boolArg(req.Args, "confirm", false))
+	case "permission_grant":
+		return s.permissionGrant(stringArg(req.Args, "request_id", ""), stringArg(req.Args, "decision", ""))
+
+	// Legacy aliases: no longer advertised by the manager but still routed so
+	// existing custom tool wrappers and boundary tests keep working.
 	case "find_files":
 		return s.findFiles(root, stringArg(req.Args, "pattern", ""))
 	case "search_code":

@@ -313,12 +313,23 @@ func buildRuntime(boot bootOptions, file clientconfig.Config, state *clientState
 			return nil, err
 		}
 	}
-	return assemble(boot, managerURL, deviceID, deviceName, roots, advertised, writable, allowSensitive, enableLSP, allowInsecureWS, state)
+	return assemble(boot, managerURL, deviceID, deviceName, roots, advertised, writable, allowSensitive, enableLSP, allowInsecureWS, state, cfg)
 }
 
-func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots map[string]string, advertised []protocol.Workspace, writable map[string]bool, allowSensitive, enableLSP, allowInsecureWS bool, state *clientState) (*runtime, error) {
+func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots map[string]string, advertised []protocol.Workspace, writable map[string]bool, allowSensitive, enableLSP, allowInsecureWS bool, state *clientState, cfg clientconfig.Config) (*runtime, error) {
 	if _, err := validateManagerURL(managerURL, allowInsecureWS); err != nil {
 		return nil, err
+	}
+	rules := cfg.Permissions
+	switch strings.TrimSpace(os.Getenv("CODEBRIDGE_BASH_PERMISSIONS")) {
+	case "full":
+		rules = append(rules, agentops.PermissionRule{Effect: "allow", Tool: "bash", Pattern: "*", Reason: "CODEBRIDGE_BASH_PERMISSIONS=full"})
+	case "deny":
+		rules = append(rules, agentops.PermissionRule{Effect: "deny", Tool: "bash", Pattern: "*", Reason: "CODEBRIDGE_BASH_PERMISSIONS=deny"})
+	}
+	agentops.SetPermissions(rules)
+	if len(rules) > 0 {
+		log.Printf("bash permission rules active: %d", len(rules))
 	}
 	service := &agentops.Service{
 		Roots:               roots,
@@ -327,7 +338,15 @@ func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots m
 		IndexDir:            boot.indexDir,
 		CheckpointDir:       boot.checkpointDir,
 		EnableLSP:           enableLSP,
+		BashAllowlist:       cfg.BashAllowlist,
 	}
+	service.SetRulePersister(func(rules []agentops.PermissionRule) {
+		next := loadConfigFile(state.configFile)
+		next.Permissions = rules
+		if err := clientconfig.Save(state.configFile, next); err != nil {
+			log.Printf("persist permission rules: %v", err)
+		}
+	})
 	if allowSensitive {
 		log.Printf("WARNING: sensitive workspace file protection is disabled for this client")
 	}
@@ -338,6 +357,16 @@ func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots m
 		}
 		sort.Strings(names)
 		log.Printf("write mode enabled for workspace(s): %s (git checkpoints active)", strings.Join(names, ", "))
+	}
+	policy := &protocol.ToolPolicy{
+		EnabledTools:  cfg.EnabledTools,
+		DisabledTools: cfg.DisabledTools,
+		CustomTools:   sanitizeCustomTools(cfg.CustomTools),
+	}
+	if len(policy.EnabledTools) == 0 && len(policy.DisabledTools) == 0 && len(policy.CustomTools) == 0 {
+		policy = nil
+	} else {
+		log.Printf("tool policy: %d enabled, %d disabled, %d custom", len(policy.EnabledTools), len(policy.DisabledTools), len(policy.CustomTools))
 	}
 	return &runtime{
 		credentialFile:  boot.credentialFile,
@@ -350,6 +379,7 @@ func assemble(boot bootOptions, managerURL, deviceID, deviceName string, roots m
 			DeviceName:       deviceName,
 			Version:          version,
 			Workspaces:       advertised,
+			ToolPolicy:       policy,
 		},
 		service: service,
 		credKey: clientcred.Key(managerURL, deviceID),
@@ -490,8 +520,14 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 			AllowInsecureWS:     cfg.AllowInsecureWS || boot.allowInsecurePinned,
 			DeviceID:            effectiveDeviceID(boot, cfg),
 			DeviceName:          effectiveDeviceName(boot, cfg),
+			AccessMode:          effectiveAccessMode(cfg),
 			Workspaces:          cfg.Workspaces,
 			WritableWorkspaces:  cfg.WritableWorkspaces,
+			EnabledTools:        cfg.EnabledTools,
+			DisabledTools:       cfg.DisabledTools,
+			BashAllowlist:       cfg.BashAllowlist,
+			Permissions:         cfg.Permissions,
+			CustomTools:         cfg.CustomTools,
 			AllowSensitiveFiles: cfg.AllowSensitiveFiles || boot.allowSensitivePinned,
 			EnableLSP:           cfg.EnableLSP || boot.enableLSPPinned,
 			EnrollmentCode:      "",
@@ -519,6 +555,15 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 		cfg.AllowSensitiveFiles = in.AllowSensitiveFiles
 		cfg.AllowInsecureWS = in.AllowInsecureWS
 		cfg.EnableLSP = in.EnableLSP
+		cfg.AccessMode = "workspaces"
+		if in.AccessMode == "full" {
+			cfg.AccessMode = "full"
+		}
+		cfg.EnabledTools = in.EnabledTools
+		cfg.DisabledTools = in.DisabledTools
+		cfg.BashAllowlist = in.BashAllowlist
+		cfg.Permissions = in.Permissions
+		cfg.CustomTools = sanitizeCustomTools(in.CustomTools)
 		if strings.TrimSpace(in.EnrollmentCode) != "" {
 			state.enrollCode.Store(strings.TrimSpace(in.EnrollmentCode))
 		}
@@ -586,6 +631,49 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 	return bound
 }
 
+func splitTrim(raw, sep string) []string {
+	var out []string
+	for _, part := range strings.Split(raw, sep) {
+		if part = strings.TrimSpace(part); part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
+}
+
+func disabledSet(names []string) map[string]bool {
+	out := map[string]bool{}
+	for _, name := range names {
+		if name = strings.TrimSpace(name); name != "" {
+			out[name] = true
+		}
+	}
+	return out
+}
+
+// sanitizeCustomTools drops wrappers whose name is empty or shadows a
+// built-in tool, and whose target tool is unknown; bad rows must never reach
+// the manager's tools/list.
+func sanitizeCustomTools(tools []protocol.CustomTool) []protocol.CustomTool {
+	builtins := map[string]bool{
+		"list_devices": true, "list_workspaces": true, "list_directory": true, "read_file": true,
+		"find_files": true, "search_code": true, "git_status": true, "git_diff": true, "project_info": true,
+		"find_symbol": true, "find_references": true, "read_symbol": true, "dependency_graph": true,
+		"apply_patch": true, "rollback_patch": true,
+	}
+	out := make([]protocol.CustomTool, 0, len(tools))
+	for _, tool := range tools {
+		if !builtins[tool.Tool] || builtins[tool.Name] || strings.TrimSpace(tool.Name) == "" {
+			continue
+		}
+		if len(tool.Name) > 64 {
+			continue
+		}
+		out = append(out, tool)
+	}
+	return out
+}
+
 func writableSet(names []string) map[string]bool {
 	out := map[string]bool{}
 	for _, name := range names {
@@ -594,6 +682,13 @@ func writableSet(names []string) map[string]bool {
 		}
 	}
 	return out
+}
+
+func effectiveAccessMode(cfg clientconfig.Config) string {
+	if cfg.AccessMode == "full" {
+		return "full"
+	}
+	return "workspaces"
 }
 
 func effectiveManagerURL(boot bootOptions, cfg clientconfig.Config) string {

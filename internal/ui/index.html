@@ -171,6 +171,31 @@
   #logs { margin: 0; padding: 12px 14px 14px; max-height: 280px; overflow: auto; color: var(--paper-dim); font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
   #logs .errline { color: var(--amber); }
 
+  .mode-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  @media (max-width: 640px) { .mode-row { grid-template-columns: 1fr; } }
+  .mode-card { border: 1px solid var(--line); border-radius: 3px; padding: 12px 14px; cursor: pointer; display: flex; gap: 10px; }
+  .mode-card:hover { border-color: var(--paper-faint); }
+  .mode-card input { margin-top: 4px; accent-color: var(--celadon); }
+  .mode-card b { font-weight: 600; display: block; }
+  .mode-card .desc { color: var(--paper-faint); font-size: 11.5px; }
+  .mode-card.selected { border-color: var(--celadon); background: rgba(95,184,166,.06); }
+
+  table.tools { width: 100%; border-collapse: collapse; }
+  table.tools td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line-soft); font-size: 12.5px; color: var(--paper-dim); }
+  table.tools td:first-child { white-space: nowrap; }
+  table.tools .off td { color: var(--paper-faint); text-decoration: line-through; }
+  table.tools input { accent-color: var(--celadon); }
+
+  table.custom { width: 100%; border-collapse: collapse; }
+  table.custom td { padding: 5px 4px 5px 0; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  table.custom input[type=text], table.custom select {
+    width: 100%; background: var(--ink); color: var(--paper);
+    border: 1px solid var(--line); border-radius: 3px; padding: 5px 8px;
+    font-family: var(--mono); font-size: 12px;
+  }
+  table.custom .del { background: none; border: none; color: var(--paper-faint); cursor: pointer; font-family: var(--mono); padding: 2px 6px; }
+  table.custom .del:hover { color: var(--red); }
+
   @media (prefers-reduced-motion: reduce) { .status-dot.on { animation: none; } }
   :focus-visible { outline: 1px solid var(--celadon); }
 </style>
@@ -201,6 +226,20 @@
 
   <main>
     <section>
+      <h2>访问模式</h2>
+      <div class="mode-row">
+        <label class="mode-card" id="mode-full">
+          <input type="radio" name="access_mode" value="full">
+          <span><b>完全访问</b><span class="desc">包含 host 工作区：AI 可浏览整个用户目录树（只读），系统目录自动跳过</span></span>
+        </label>
+        <label class="mode-card" id="mode-workspaces">
+          <input type="radio" name="access_mode" value="workspaces">
+          <span><b>工作空间模式</b><span class="desc">仅暴露下方明确列出的工作区，host 全盘工作区不注册（类似沙箱挂载）</span></span>
+        </label>
+      </div>
+    </section>
+
+    <section>
       <h2>工作区</h2>
       <table class="ws">
         <thead><tr><th style="width:28%">名称</th><th>本地路径（宿主机绝对路径）</th><th style="width:90px">可写</th><th style="width:40px"></th></tr></thead>
@@ -215,7 +254,7 @@
       <h2>连接</h2>
       <div class="field">
         <label for="f-manager">Manager 地址</label>
-        <input type="text" id="f-manager" placeholder="wss://codebridge.example.com/agent">
+        <input type="text" id="f-manager" placeholder="wss://你的服务器域名/agent">
         <div class="hint">公网部署必须使用 wss://。本地容器网络（compose 内 ws://manager:8080）需要打开下方豁免。</div>
       </div>
       <label class="check">
@@ -249,6 +288,41 @@
         <input type="checkbox" id="f-lsp">
         <span><b>启用语言服务器（LSP）</b><span class="desc">在本机运行 gopls / typescript-language-server / jdtls 提升符号工具精度，不可用时自动回退内置解析器</span></span>
       </label>
+    </section>
+
+    <section>
+      <h2>MCP 方法</h2>
+      <div class="bar" style="margin:0 0 10px;gap:8px">
+        <button class="ghost" data-preset="pi">pi 默认四件套</button>
+        <button class="ghost" data-preset="minimal">极简只读</button>
+        <button class="ghost" data-preset="all">全部方法</button>
+      </div>
+      <table class="tools"><tbody id="tools-body"></tbody></table>
+      <div class="hint" style="color:var(--paper-faint);font-size:11.5px;margin-top:6px">勾选的方法才会出现在 ChatGPT 的工具列表（默认 pi 风格核心集：read / grep / find / ls / bash + 设备发现）。</div>
+      <div class="bar" style="margin:12px 0 10px;gap:8px">
+        <button class="ghost" id="perm-full">bash 完全访问（allow bash *）</button>
+        <button class="ghost" id="perm-deny">禁用 bash（deny bash *）</button>
+      </div>
+      <table class="custom">
+        <thead><tr><th style="width:20%">动作</th><th style="width:20%">命令模式</th><th>说明</th><th style="width:40px"></th></tr></thead>
+        <tbody id="perm-body"></tbody>
+      </table>
+      <div class="bar" style="margin-top:10px">
+        <button class="ghost" id="perm-add">添加规则</button>
+        <span class="hint" style="color:var(--paper-faint);font-size:11.5px">未匹配规则的 bash 命令 = 需要授权（AI 调用时挂起，返回 request_id，由 permission_grant 批准）。模式：空或 * 全部；git 匹配首词；git push* 匹配前缀。</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>自定义方法</h2>
+      <table class="custom">
+        <thead><tr><th style="width:22%">方法名</th><th style="width:22%">封装工具</th><th>固定参数（JSON，如 device_id / workspace / pattern）</th><th style="width:40px"></th></tr></thead>
+        <tbody id="custom-body"></tbody>
+      </table>
+      <div class="bar" style="margin-top:10px">
+        <button class="ghost" id="custom-add">添加自定义方法</button>
+        <span class="hint" style="color:var(--paper-faint);font-size:11.5px">把常用调用封装成一个新方法名，ChatGPT 侧直接可见、无需每次传 device_id/workspace。</span>
+      </div>
     </section>
 
     <div class="bar">
@@ -309,6 +383,185 @@
     $('head-version').textContent = 'v' + (st.version || 'dev');
   }
 
+  var BUILTIN_TOOLS = [
+    ["read", "读文件（pi read）"], ["write", "写文件（pi write）"], ["edit", "精确替换（pi edit）"],
+    ["bash", "Shell 命令（pi bash，需授权）"], ["list", "列目录（pi ls）"],
+    ["list_devices", "设备发现"], ["list_workspaces", "工作区发现"],
+    ["permission_grant", "权限批准接口"]
+  ];
+
+  var PERMISSION_PRESETS = {
+    pi: ["list_devices", "list_workspaces", "list", "read", "write", "edit", "bash", "permission_grant"],
+    minimal: ["list_devices", "list_workspaces", "list", "read", "permission_grant"],
+    all: ["*"]
+  };
+
+  var enabledTools = {};
+  var customRows = [];
+  var permRows = [];
+
+
+
+  function renderPerm() {
+    var body = $("perm-body");
+    body.innerHTML = '';
+    permRows.forEach(function (row, i) {
+      var tr = document.createElement('tr');
+      var tdEffect = document.createElement('td');
+      var sel = document.createElement('select');
+      ['allow', 'deny', 'ask'].forEach(function (v) {
+        var opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        if (row.effect === v) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', function () { permRows[i].effect = sel.value; });
+      tdEffect.appendChild(sel);
+      var mk = function (value, ph) {
+        var td = document.createElement('td');
+        var input = document.createElement('input');
+        input.type = 'text'; input.value = value || ''; input.placeholder = ph || '';
+        td.appendChild(input);
+        return { td: td, input: input };
+      };
+      var pattern = mk(row.pattern, 'git 或 git push* 或 *');
+      var reason = mk(row.reason, '备注');
+      pattern.input.addEventListener('input', function () { permRows[i].pattern = pattern.input.value; });
+      reason.input.addEventListener('input', function () { permRows[i].reason = reason.input.value; });
+      var tdDel = document.createElement('td');
+      var del = document.createElement('button');
+      del.className = 'del'; del.textContent = '✕';
+      del.addEventListener('click', function () { permRows.splice(i, 1); renderPerm(); });
+      tdDel.appendChild(del);
+      tr.appendChild(tdEffect); tr.appendChild(pattern.td); tr.appendChild(reason.td); tr.appendChild(tdDel);
+      body.appendChild(tr);
+    });
+  }
+
+  $('perm-add').addEventListener('click', function () {
+    permRows.push({ effect: 'allow', tool: 'bash', pattern: '', reason: '' });
+    renderPerm();
+  });
+  $('perm-full').addEventListener('click', function () {
+    permRows = permRows.filter(function (r) { return !(r.tool === 'bash' && (r.pattern === '*' || r.pattern === '')); });
+    permRows.unshift({ effect: 'allow', tool: 'bash', pattern: '*', reason: '完全访问' });
+    renderPerm();
+  });
+  $('perm-deny').addEventListener('click', function () {
+    permRows = permRows.filter(function (r) { return !(r.tool === 'bash' && (r.pattern === '*' || r.pattern === '')); });
+    permRows.unshift({ effect: 'deny', tool: 'bash', pattern: '*', reason: '禁用 bash' });
+    renderPerm();
+  });
+
+  function renderTools() {
+    var body = $("tools-body");
+    body.innerHTML = '';
+    BUILTIN_TOOLS.forEach(function (t) {
+      var tr = document.createElement('tr');
+      var on = isToolEnabled(t[0]);
+      if (!on) tr.className = 'off';
+      var tdCheck = document.createElement('td');
+      tdCheck.style.width = '30px';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = on;
+      cb.addEventListener('change', function () {
+        enabledTools[t[0]] = cb.checked;
+        renderTools();
+      });
+      tdCheck.appendChild(cb);
+      var tdName = document.createElement('td');
+      tdName.textContent = t[0];
+      var tdDesc = document.createElement('td');
+      tdDesc.textContent = t[1];
+      tr.appendChild(tdCheck); tr.appendChild(tdName); tr.appendChild(tdDesc);
+      body.appendChild(tr);
+    });
+  }
+
+  function isToolEnabled(name) {
+    if (enabledTools["*"]) return true;
+    if (name in enabledTools) return !!enabledTools[name];
+    return PERMISSION_PRESETS.pi.indexOf(name) >= 0;
+  }
+
+  function selectedToolsList() {
+    var out = [];
+    if (enabledTools["*"]) return ["*"];
+    BUILTIN_TOOLS.forEach(function (t) {
+      if (isToolEnabled(t[0])) out.push(t[0]);
+    });
+    return out;
+  }
+
+  document.querySelectorAll('button[data-preset]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      enabledTools = {};
+      PRESETS[btn.dataset.preset].forEach(function (n) { enabledTools[n] = true; });
+      renderTools();
+    });
+  });
+
+  function renderCustom() {
+    var body = $("custom-body");
+    body.innerHTML = '';
+    customRows.forEach(function (row, i) {
+      var tr = document.createElement('tr');
+      var mk = function (value, placeholder) {
+        var td = document.createElement('td');
+        var input = document.createElement('input');
+        input.type = 'text'; input.value = value || ''; input.placeholder = placeholder || '';
+        td.appendChild(input);
+        return { td: td, input: input };
+      };
+      var name = mk(row.name, '如 search_rms');
+      var toolSel = document.createElement('td');
+      var sel = document.createElement('select');
+      BUILTIN_TOOLS.forEach(function (t) {
+        var opt = document.createElement('option');
+        opt.value = t[0]; opt.textContent = t[0];
+        if (row.tool === t[0]) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      toolSel.appendChild(sel);
+      var args = mk(row.args ? JSON.stringify(row.args) : '', '{"device_id":"…","workspace":"…"}');
+      var tdDel = document.createElement('td');
+      var del = document.createElement('button');
+      del.className = 'del'; del.textContent = '✕';
+      del.addEventListener('click', function () { customRows.splice(i, 1); renderCustom(); });
+      tdDel.appendChild(del);
+      tr.appendChild(name.td); tr.appendChild(toolSel); tr.appendChild(args.td); tr.appendChild(tdDel);
+      body.appendChild(tr);
+      name.input.addEventListener('input', function () { customRows[i].name = name.input.value; });
+      sel.addEventListener('change', function () { customRows[i].tool = sel.value; });
+      args.input.addEventListener('input', function () {
+        try { customRows[i].args = args.input.value.trim() ? JSON.parse(args.input.value) : {}; args.input.style.borderColor = ''; }
+        catch (e) { args.input.style.borderColor = 'var(--red)'; }
+      });
+    });
+  }
+
+  $('custom-add').addEventListener('click', function () {
+    customRows.push({ name: '', tool: 'search_code', args: {} });
+    renderCustom();
+  });
+
+  function currentAccessMode() {
+    var checked = document.querySelector('input[name="access_mode"]:checked');
+    return checked ? checked.value : 'workspaces';
+  }
+
+  function setAccessMode(mode) {
+    var input = document.querySelector('input[name="access_mode"][value="' + mode + '"]');
+    if (input) input.checked = true;
+    $('mode-full').className = 'mode-card' + (mode === 'full' ? ' selected' : '');
+    $('mode-workspaces').className = 'mode-card' + (mode === 'workspaces' ? ' selected' : '');
+  }
+
+  document.querySelectorAll('input[name="access_mode"]').forEach(function (input) {
+    input.addEventListener('change', function () { setAccessMode(currentAccessMode()); });
+  });
+
   var wsRows = [];
 
   function renderWorkspaces(rows) {
@@ -355,6 +608,23 @@
     $('f-devname').value = cfg.device_name || '';
     $('f-sensitive').checked = !!cfg.allow_sensitive_files;
     $('f-lsp').checked = !!cfg.enable_lsp;
+    enabledTools = {};
+    if ((cfg.enabled_tools || []).length === 0 && (cfg.disabled_tools || []).length === 0) {
+      PERMISSION_PRESETS.pi.forEach(function (n) { enabledTools[n] = true; });
+    } else {
+      (cfg.enabled_tools && cfg.enabled_tools.length ? cfg.enabled_tools : PERMISSION_PRESETS.pi).forEach(function (n) { enabledTools[n] = true; });
+      (cfg.disabled_tools || []).forEach(function (n) { if (!(n in enabledTools)) enabledTools[n] = false; });
+    }
+    renderTools();
+    customRows = (cfg.custom_tools || []).map(function (t) {
+      return { name: t.name, tool: t.tool, args: t.args || {} };
+    });
+    renderCustom();
+    permRows = (cfg.permissions || []).map(function (r) {
+      return { effect: r.effect, tool: r.tool || 'bash', pattern: r.pattern || '', reason: r.reason || '' };
+    });
+    renderPerm();
+    setAccessMode(cfg.access_mode === 'full' ? 'full' : 'workspaces');
     wsRows = [];
     for (var name in (cfg.workspaces || {})) {
       wsRows.push({ name: name, path: cfg.workspaces[name], writable: (cfg.writable_workspaces || []).indexOf(name) >= 0 });
@@ -367,15 +637,30 @@
     var seen = {};
     var workspaces = {};
     var writable = [];
+    var mode = currentAccessMode();
     wsRows.forEach(function (r) {
       var name = (r.name || '').trim();
       var path = (r.path || '').trim();
       if (!name || !path || seen[name]) return;
       seen[name] = true;
+      if (mode === 'workspaces' && name === 'host') return;
       workspaces[name] = path;
       if (r.writable) writable.push(name);
     });
+    var enabled = selectedToolsList();
+    var custom = [];
+    customRows.forEach(function (r) {
+      if (!r.name || !r.name.trim() || !r.tool) return;
+      custom.push({ name: r.name.trim(), tool: r.tool, args: r.args || {}, description: '' });
+    });
     return {
+      access_mode: mode,
+      enabled_tools: enabled,
+      disabled_tools: [],
+      permissions: permRows.map(function (r) {
+        return { effect: r.effect, tool: r.tool || 'bash', pattern: r.pattern, reason: r.reason };
+      }),
+      custom_tools: custom,
       manager_url: $('f-manager').value.trim(),
       allow_insecure_ws: $('f-insecure').checked,
       device_id: $('f-devid').value.trim(),

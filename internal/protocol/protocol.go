@@ -19,6 +19,29 @@ type Workspace struct {
 	Writable bool `json:"writable,omitempty"`
 }
 
+// CustomTool is one operator-defined MCP tool: a preset built-in tool call
+// with fixed arguments and a stable public name. It lets a ChatGPT caller use
+// a narrowed, self-describing method instead of raw device/workspace wiring.
+type CustomTool struct {
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
+	Tool        string         `json:"tool"`
+	Args        map[string]any `json:"args,omitempty"`
+}
+
+// ToolPolicy controls which MCP methods the caller sees. DisabledTools hides
+// built-in tools; CustomTools adds preset wrappers. The policy travels with
+// device registration and is applied by the Manager at tools/list time; the
+// agent also rejects disabled tools as defense in depth.
+type ToolPolicy struct {
+	// EnabledTools is the explicit allowlist of built-in tools exposed to
+	// this account; nil means the pi-style default core set. An entry "*"
+	// exposes every built-in tool.
+	EnabledTools  []string     `json:"enabled_tools,omitempty"`
+	DisabledTools []string     `json:"disabled_tools,omitempty"`
+	CustomTools   []CustomTool `json:"custom_tools,omitempty"`
+}
+
 type Envelope struct {
 	Type      string          `json:"type"`
 	RequestID string          `json:"request_id,omitempty"`
@@ -33,6 +56,7 @@ type RegisterRequest struct {
 	DeviceName       string      `json:"device_name"`
 	Version          string      `json:"version"`
 	Workspaces       []Workspace `json:"workspaces"`
+	ToolPolicy       *ToolPolicy `json:"tool_policy,omitempty"`
 }
 
 type RegisterResponse struct {

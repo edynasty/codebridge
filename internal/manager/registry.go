@@ -22,6 +22,9 @@ type Device struct {
 	ConnectedAt time.Time            `json:"connected_at"`
 	LastSeen    time.Time            `json:"last_seen"`
 	Workspaces  []protocol.Workspace `json:"workspaces"`
+	// ToolPolicy is the MCP method surface this device advertised at
+	// registration; the Manager applies it when building tools/list.
+	ToolPolicy *protocol.ToolPolicy `json:"tool_policy,omitempty"`
 }
 
 type pendingCall struct {

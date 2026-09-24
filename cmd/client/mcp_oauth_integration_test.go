@@ -176,7 +176,7 @@ func TestOAuthMCPToRealClientReadFileEndToEnd(t *testing.T) {
 	}
 	foundReadFile := false
 	for _, tool := range tools.Tools {
-		if tool.Name == "read_file" {
+		if tool.Name == "read" {
 			foundReadFile = true
 			break
 		}
@@ -186,7 +186,7 @@ func TestOAuthMCPToRealClientReadFileEndToEnd(t *testing.T) {
 	}
 
 	result, err := session.CallTool(ctx, &mcp.CallToolParams{
-		Name: "read_file",
+		Name: "read",
 		Arguments: map[string]any{
 			"device_id": "oauth-device",
 			"workspace": "demo",
@@ -227,7 +227,7 @@ func TestOAuthMCPToRealClientReadFileEndToEnd(t *testing.T) {
 		if err := json.Unmarshal([]byte(line), &event); err != nil {
 			t.Fatalf("decode audit event: %v", err)
 		}
-		if event.Event == "mcp.tool" && event.Tool == "read_file" {
+		if event.Event == "mcp.tool" && event.Tool == "read" {
 			sawToolAudit = true
 			if event.ActorID != "integration-user" || event.DeviceID != "oauth-device" || event.Workspace != "demo" {
 				t.Fatalf("unexpected MCP audit metadata: %#v", event)

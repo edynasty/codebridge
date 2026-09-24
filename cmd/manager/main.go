@@ -80,10 +80,32 @@ func main() {
 			log.Printf("OAuth subject account map: %d subject(s) bound to shared accounts; all other subjects are their own account", len(accountMap))
 		}
 	}
-	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "CodeBridge", Version: version}, nil)
-	toolService.Register(mcpServer)
-
-	mcpHandler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server { return mcpServer }, &mcp.StreamableHTTPOptions{
+	mgr.ServerVersion(version)
+	// Local static-token deployments serve the default account; OAuth
+	// deployments resolve the account in the auth middleware layer.
+	mgr.AccountFromRequest = func(r *http.Request) string {
+		if oauthCfg == nil {
+			return authstore.DefaultAccount
+		}
+		return ""
+	}
+	// Per-request server: the tool surface reflects the caller's account
+	// (per-device disabled/custom tool policy) instead of one static list.
+	// Local static-token deployments serve the default account; OAuth
+	// deployments resolve the caller account from the verified subject.
+	var oauthVerifier *oauthresource.Verifier
+	mgr.AccountFromRequest = func(r *http.Request) string {
+		if oauthVerifier == nil {
+			return authstore.DefaultAccount
+		}
+		token := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+		info, err := oauthVerifier.Verify(r.Context(), token, r)
+		if err != nil || info == nil {
+			return authstore.DefaultAccount
+		}
+		return toolService.Accounts.ForSubject(info.UserID)
+	}
+	mcpHandler := mcp.NewStreamableHTTPHandler(toolService.ServerForRequest, &mcp.StreamableHTTPOptions{
 		Stateless:    true,
 		JSONResponse: true,
 	})
@@ -100,6 +122,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("OAuth verifier: %v", err)
 		}
+		oauthVerifier = verifier
 		metadataURL := oauthCfg.PublicURL + "/.well-known/oauth-protected-resource"
 		metadata := &oauthex.ProtectedResourceMetadata{
 			Resource:               oauthCfg.Resource,

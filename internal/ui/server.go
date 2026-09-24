@@ -11,6 +11,9 @@ import (
 	"io"
 	"net"
 	"net/http"
+
+	"github.com/edynasty/codebridge/internal/agentops"
+	"github.com/edynasty/codebridge/internal/protocol"
 	"strings"
 	"sync"
 	"time"
@@ -24,15 +27,21 @@ const enrollOnlySentinel = "\x00enroll-only"
 
 // Config is the editable client configuration as shown and written by the UI.
 type Config struct {
-	ManagerURL          string            `json:"manager_url"`
-	AllowInsecureWS     bool              `json:"allow_insecure_ws"`
-	DeviceID            string            `json:"device_id"`
-	DeviceName          string            `json:"device_name"`
-	Workspaces          map[string]string `json:"workspaces"`
-	WritableWorkspaces  []string          `json:"writable_workspaces"`
-	AllowSensitiveFiles bool              `json:"allow_sensitive_files"`
-	EnableLSP           bool              `json:"enable_lsp"`
-	EnrollmentCode      string            `json:"enrollment_code,omitempty"`
+	ManagerURL          string                    `json:"manager_url"`
+	AllowInsecureWS     bool                      `json:"allow_insecure_ws"`
+	DeviceID            string                    `json:"device_id"`
+	DeviceName          string                    `json:"device_name"`
+	AccessMode          string                    `json:"access_mode"`
+	Workspaces          map[string]string         `json:"workspaces"`
+	WritableWorkspaces  []string                  `json:"writable_workspaces"`
+	EnabledTools        []string                  `json:"enabled_tools"`
+	DisabledTools       []string                  `json:"disabled_tools"`
+	BashAllowlist       []string                  `json:"bash_allowlist"`
+	Permissions         []agentops.PermissionRule `json:"permissions"`
+	CustomTools         []protocol.CustomTool     `json:"custom_tools"`
+	AllowSensitiveFiles bool                      `json:"allow_sensitive_files"`
+	EnableLSP           bool                      `json:"enable_lsp"`
+	EnrollmentCode      string                    `json:"enrollment_code,omitempty"`
 }
 
 // State is the read-only runtime snapshot for the status panel.

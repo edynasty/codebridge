@@ -165,7 +165,7 @@ func TestOAuthAccountScopingCrossTenant(t *testing.T) {
 	if deviceVisible(t, ctx, intruder, "list_workspaces", map[string]any{"device_id": "scoped-device"}) {
 		t.Fatal("intruder discovered workspaces of another account's device")
 	}
-	if deviceVisible(t, ctx, intruder, "read_file", map[string]any{
+	if deviceVisible(t, ctx, intruder, "read", map[string]any{
 		"device_id": "scoped-device",
 		"workspace": "demo",
 		"path":      "scoped.txt",
@@ -183,7 +183,7 @@ func TestOAuthAccountScopingCrossTenant(t *testing.T) {
 		t.Fatalf("mapped owner could not list devices: %#v", result.Content)
 	}
 	result, err = owner.CallTool(ctx, &mcp.CallToolParams{
-		Name: "read_file",
+		Name: "read",
 		Arguments: map[string]any{
 			"device_id": "scoped-device",
 			"workspace": "demo",

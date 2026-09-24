@@ -74,7 +74,7 @@ func TestManagerClientEnrollmentToolCallAndCredentialReconnect(t *testing.T) {
 
 	callCtx, callCancel := context.WithTimeout(context.Background(), 3*time.Second)
 	raw, err := registry.Call(callCtx, authstore.DefaultAccount, "test-device", protocol.AgentRequest{
-		Tool:      "read_file",
+		Tool:      "read",
 		Workspace: "demo",
 		Args:      map[string]any{"path": "hello.txt"},
 	})

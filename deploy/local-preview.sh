@@ -33,7 +33,8 @@ seed_client_config() {
         if [ $first -eq 1 ]; then first=0; else printf ',\n'; fi
         printf '    "%s": "%s"' "$1" "$2"
       }
-      # whole user-tree workspace (system trees are skipped by scan tools)
+      # host workspace = real home directory (~) in full-access mode;
+      # workspaces mode does not register it
       add_ws host /host
       for dir in "$PROJECTS_DIR"/*/; do
         [ -d "$dir" ] || continue
@@ -61,6 +62,7 @@ sync_host_env() {
   set_kv HOSTNAME_SLUG "$HOSTNAME_SLUG"
   set_kv HOST_USER "$HOST_USER"
   set_kv HOST_PROJECTS_DIR "$PROJECTS_DIR"
+  set_kv HOST_HOME_DIR "$HOME"
 }
 
 ensure_env() {
