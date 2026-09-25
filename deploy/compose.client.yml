@@ -76,9 +76,18 @@ services:
       # AND mount the workspace read-write.
       CODEBRIDGE_WRITABLE_WORKSPACES: ${CODEBRIDGE_WRITABLE_WORKSPACES:-}
       CODEBRIDGE_ENABLE_LSP: ${CODEBRIDGE_ENABLE_LSP:-false}
+      # omp (oh-my-pi) is the default subagent harness. Its provider table,
+      # settings and credentials live in an agent directory; the entrypoint
+      # seeds a writable copy from the read-only host mount below and rewrites
+      # the loopback provider URLs to host.docker.internal.
+      PI_CODING_AGENT_DIR: ${PI_CODING_AGENT_DIR:-/state/omp}
       # UI must bind 0.0.0.0 inside the container for the host port mapping to
       # reach it; the published port stays loopback-only on the host.
       CODEBRIDGE_UI_ADDR: ${CODEBRIDGE_UI_ADDR:-0.0.0.0:8190}
+    # The local model proxies omp points at (localhost:8080, 127.0.0.1:8787)
+    # run on the host, not in this container.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:${CODEBRIDGE_UI_PORT:-8190}:8190"
     volumes:
@@ -90,12 +99,16 @@ services:
       # (see shouldSkipDir).
       - ${HOST_HOME_DIR:-/Users/tangxingpeng}:/host
       - ${HOST_PROJECTS_DIR:-/Users/tangxingpeng/IdeaProjects}:/workspaces
-      # opencode ships inside the image. Subagents run with an isolated
+      # opencode and omp ship inside the image. Subagents run with an isolated
       # config (no user plugins/extensions): only the provider auth file is
       # mounted, so runs are deterministic and cannot hang on host-only
       # plugin infrastructure. Models/agents are chosen per call via the
       # agent tool's model/agent parameters.
       - ${HOST_OPENCODE_AUTH:-/Users/tangxingpeng/.local/share/opencode/auth.json}:/home/codebridge/.local/share/opencode/auth.json:ro
+      # omp's agent directory, read-only: the entrypoint copies models.yml,
+      # config.yml and agent.db into PI_CODING_AGENT_DIR once and rewrites the
+      # provider base URLs that point at the host loopback.
+      - ${HOST_OMP_AGENT_DIR:-/Users/tangxingpeng/.omp/agent}:/omp-seed:ro
 
 volumes:
   codebridge-data:

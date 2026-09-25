@@ -5,23 +5,35 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/codebridge-client ./cmd/client
 
-# git, ripgrep and bash back the bash/git tooling; opencode backs the
-# "agent" subagent tool. The download uses the standard https_proxy build-time environment
-# build-time proxy is needed.
-FROM alpine:3.20
+# bun runs omp (oh-my-pi). omp's native modules ship for glibc only, so the
+# runtime image is Debian rather than Alpine.
+FROM oven/bun:1.3.14-debian AS bun
+
+FROM debian:bookworm-slim
 ARG TARGETARCH
 ARG OPENCODE_VERSION=1.18.32
-ARG OPENCODE_DL=
-RUN apk add --no-cache git ripgrep bash curl ca-certificates tzdata libstdc++ libgcc \
-    && addgroup -S codebridge && adduser -S codebridge -G codebridge \
-    && mkdir -p /state /home/codebridge/.local/share/opencode /home/codebridge/.local/state \
-    && chown -R codebridge:codebridge /state /home/codebridge/.local \
-    && if [ "$TARGETARCH" = "arm64" ]; then OC_ARCH=arm64; else OC_ARCH=x64; fi \
-    && curl -fsSL --retry 3 "https://github.com/anomalyco/opencode/releases/download/v${OPENCODE_VERSION}/opencode-linux-${OC_ARCH}-musl.tar.gz" -o /tmp/opencode.tar.gz \
+ARG OMP_VERSION=18.3.1
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+
+# git, ripgrep and bash back the bash/git tooling; opencode and omp back the
+# "agent" subagent tool (omp is the default harness). Both downloads use the
+# standard build-time https_proxy environment.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ripgrep bash curl ca-certificates tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && adduser --system --group --home /home/codebridge --shell /bin/bash codebridge \
+    && mkdir -p /state /home/codebridge/.local/share/opencode /home/codebridge/.local/state /home/codebridge/.omp \
+    && chown -R codebridge:codebridge /state /home/codebridge \
+    && OC_ARCH=$(if [ "$TARGETARCH" = "arm64" ]; then echo arm64; else echo x64; fi) \
+    && curl -fsSL --retry 3 "https://github.com/anomalyco/opencode/releases/download/v${OPENCODE_VERSION}/opencode-linux-${OC_ARCH}.tar.gz" -o /tmp/opencode.tar.gz \
     && tar -xzf /tmp/opencode.tar.gz -C /tmp \
     && install -m 0755 /tmp/opencode /usr/local/bin/opencode \
-    && rm -rf /tmp/opencode*
+    && rm -rf /tmp/opencode* \
+    && BUN_INSTALL=/usr/local bun install -g "@oh-my-pi/pi-coding-agent@${OMP_VERSION}" \
+    && omp --version
+
+COPY deploy/client-entrypoint.sh /usr/local/bin/codebridge-entrypoint
 COPY --from=build /out/codebridge-client /usr/local/bin/codebridge-client
 USER codebridge
 WORKDIR /state
-ENTRYPOINT ["codebridge-client"]
+ENTRYPOINT ["/usr/local/bin/codebridge-entrypoint"]
