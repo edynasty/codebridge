@@ -501,12 +501,13 @@
     ["rollback_patch", "按 checkpoint_id 撤销一次写入"],
     ["bash", "Shell 命令（pi bash，需授权）"], ["list", "列目录（pi ls）"],
     ["list_devices", "设备发现"], ["list_workspaces", "工作区发现"],
+    ["agents_list", "列出本机子代理配置（agent 工具的前置发现）"],
     ["agent", "本地子代理（omp/opencode/codex，可配 agent/模型/思考强度，需授权）"],
     ["permission_grant", "权限批准接口"]
   ];
 
   var PERMISSION_PRESETS = {
-    pi: ["list_devices", "list_workspaces", "list", "read", "write", "edit", "bash", "agent", "permission_grant"],
+    pi: ["list_devices", "list_workspaces", "list", "read", "write", "edit", "bash", "agents_list", "agent", "permission_grant"],
     minimal: ["list_devices", "list_workspaces", "list", "read", "permission_grant"],
     all: ["*"]
   };
