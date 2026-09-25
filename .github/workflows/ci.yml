@@ -16,6 +16,8 @@ jobs:
       - run: go mod download
       - run: make fmt-check
       - run: go test ./...
+      - name: Build ChatGPT plugin package
+        run: go run ./tools/pluginpack --mcp-url https://codebridge.example.com/mcp --app-id plugin_asdk_app_ci123 --out /tmp/codebridge-plugin.zip
       - run: go vet ./...
       - run: make build
 

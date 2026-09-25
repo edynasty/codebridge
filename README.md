@@ -229,13 +229,28 @@ Do not expose a no-auth MCP endpoint to the public internet.
 
 ## Connect ChatGPT Web
 
-Deploy the Manager at a stable HTTPS origin and add:
+Deploy the Manager at a stable HTTPS origin and register the full MCP endpoint in ChatGPT developer mode:
 
 ```text
 https://codebridge.example.com/mcp
 ```
 
-as the remote MCP endpoint in ChatGPT's developer/plugin UI. With OAuth configured, ChatGPT can discover the protected-resource metadata and link the user's account before calling the read-only tools.
+With OAuth configured, ChatGPT discovers the protected-resource metadata and links the user's account before calling the read-only tools.
+
+A developer-mode MCP connection and an installed plugin package are separate layers. If you want a reusable CodeBridge plugin package, copy the registered connection's `plugin_asdk_app...` technical ID and generate the package:
+
+```bash
+make plugin-web \
+  MCP_URL=https://codebridge.example.com/mcp \
+  APP_ID=plugin_asdk_app_0123456789abcdef \
+  PLUGIN_OUT=dist/codebridge-plugin.zip
+```
+
+The generated package contains portable `plugin.json` / `mcp.json`, Codex compatibility files, and the ChatGPT `.app.json` mapping. The public endpoint and registered app ID are generated locally and are not committed to the repository.
+
+If `@CodeBridge` is visible but the current chat has no CodeBridge Tools, verify the MCP server with Doctor first, then check the registered MCP connection, generated `.app.json` mapping, plugin installation, and a fresh chat. Do not duplicate Tool registration in the Manager.
+
+See [docs/chatgpt-web.md](docs/chatgpt-web.md) for the complete registration, packaging, installation, and troubleshooting flow.
 
 ## HTTPS/WSS deployment
 
