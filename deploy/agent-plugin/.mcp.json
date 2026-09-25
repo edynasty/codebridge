@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "codebridge": {
+      "type": "http",
+      "url": "https://cb.edynasty.asia/mcp"
+    }
+  }
+}

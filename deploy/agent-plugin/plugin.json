@@ -1,13 +1,19 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "codebridge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Operate the user's own machines from ChatGPT: browse files, run permission-gated bash, and delegate tasks to local coding subagents.",
   "author": {
     "name": "edynasty"
   },
   "license": "MIT",
-  "keywords": ["code", "files", "bash", "subagent", "remote"],
+  "keywords": [
+    "code",
+    "files",
+    "bash",
+    "subagent",
+    "remote"
+  ],
   "extensions": {
     "com.openai": {
       "interface": {
@@ -16,7 +22,11 @@
         "longDescription": "Browse files, run permission-gated shell commands, and delegate self-contained tasks to local coding subagents (opencode) on the user's own hardware. Tools operate on logical workspaces; bash and subagents require explicit permission grants.",
         "developerName": "edynasty",
         "category": "Productivity",
-        "capabilities": ["Read", "Write", "Execute"],
+        "capabilities": [
+          "Read",
+          "Write",
+          "Execute"
+        ],
         "websiteURL": "https://cb.edynasty.asia",
         "privacyPolicyURL": "https://cb.edynasty.asia/.well-known/codebridge-legal.txt",
         "termsOfServiceURL": "https://cb.edynasty.asia/.well-known/codebridge-legal.txt",

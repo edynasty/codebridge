@@ -1,0 +1,8 @@
+{
+  "apps": {
+    "codebridge": {
+      "id": "REPLACE_WITH_REAL_CONNECTOR_ID",
+      "required": false
+    }
+  }
+}

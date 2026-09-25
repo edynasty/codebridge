@@ -1,0 +1,32 @@
+{
+  "name": "codebridge",
+  "version": "1.0.1",
+  "description": "Operate the user's own machines from ChatGPT and Codex: browse files, run permission-gated bash, and delegate tasks to local coding subagents.",
+  "author": {
+    "name": "edynasty"
+  },
+  "homepage": "https://cb.edynasty.asia",
+  "license": "MIT",
+  "keywords": ["code", "files", "bash", "subagent", "remote", "mcp"],
+  "skills": "./skills/",
+  "apps": "./.app.json",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "CodeBridge",
+    "shortDescription": "Your machines, from ChatGPT",
+    "longDescription": "Browse files, run permission-gated shell commands, and delegate self-contained tasks to local coding subagents (opencode) on the user's own hardware. Tools operate on logical workspaces; bash and subagents require explicit permission grants.",
+    "developerName": "edynasty",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write", "Execute"],
+    "websiteURL": "https://cb.edynasty.asia",
+    "privacyPolicyURL": "https://cb.edynasty.asia/.well-known/codebridge-legal.txt",
+    "termsOfServiceURL": "https://cb.edynasty.asia/.well-known/codebridge-legal.txt",
+    "defaultPrompt": [
+      "List my devices and workspaces",
+      "Show me what's in ~/Downloads using bash",
+      "Send the explore subagent to find where runBash is defined"
+    ],
+    "brandColor": "#4d58c4",
+    "logo": "./assets/logo.png"
+  }
+}
