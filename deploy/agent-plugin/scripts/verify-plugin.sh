@@ -49,12 +49,14 @@ for s in skills/*/SKILL.md; do
   head -1 "$s" | grep -q '^---$' && grep -q '^name:' "$s" && ok "skill front-matter: $s" || bad "skill front-matter: $s"
 done
 
-# Versions consistent at 1.0.1.
-for f in plugin.json .codex-plugin/plugin.json; do
-  python3 -c "
+# The two manifests must agree on the version (no hardcoded expectation, so a
+# release bump cannot leave the verifier behind).
+PLUGIN_VERSION="$(python3 -c "
 import json
-assert json.load(open('$f'))['version'] == '1.0.1'" && ok "$f version 1.0.1" || bad "$f version mismatch"
-done
+v = {f: json.load(open(f))['version'] for f in ('plugin.json', '.codex-plugin/plugin.json')}
+assert v['plugin.json'] == v['.codex-plugin/plugin.json'], v
+print(v['plugin.json'])" 2>/dev/null || true)"
+[ -n "$PLUGIN_VERSION" ] && ok "plugin version consistent ($PLUGIN_VERSION)" || bad "plugin.json/.codex-plugin version mismatch"
 
 # ── Live MCP verification ──────────────────────────────────────────────────
 if [ -z "$PW" ]; then
@@ -81,7 +83,7 @@ else
 
   INIT=$(curl -sf --max-time 30 -X POST "$MCP_BASE/mcp" -H "Authorization: Bearer $AT" \
     -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
-    -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"verify-plugin","version":"1.0.1"}}}')
+    -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"verify-plugin","version":"1.0.2"}}}')
   echo "$INIT" | grep -q serverInfo && ok "MCP initialize" || bad "MCP initialize"
 
   TOOLS=$(curl -sf --max-time 30 -X POST "$MCP_BASE/mcp" -H "Authorization: Bearer $AT" \

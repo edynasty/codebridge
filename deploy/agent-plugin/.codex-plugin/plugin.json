@@ -1,6 +1,6 @@
 {
   "name": "codebridge",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Operate the user's own machines from ChatGPT and Codex: browse files, run permission-gated bash, and delegate tasks to local coding subagents.",
   "author": {
     "name": "edynasty"

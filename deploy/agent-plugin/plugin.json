@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "codebridge",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Operate the user's own machines from ChatGPT: browse files, run permission-gated bash, and delegate tasks to local coding subagents.",
   "author": {
     "name": "edynasty"

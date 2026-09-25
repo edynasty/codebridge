@@ -1,3 +1,10 @@
+// Command pluginpack assembles the installable CodeBridge plugin package from
+// the checked-in package in deploy/agent-plugin, injecting the deployment's MCP
+// endpoint, app binding and version.
+//
+// The checked-in manifests stay the single source of truth for everything that
+// is not deployment-specific (interface text, branding, transports), so
+// regenerating a package can never silently revert the shipped metadata.
 package main
 
 import (
@@ -8,22 +15,35 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
-const defaultVersion = "0.1.0"
+const defaultPackageDir = "deploy/agent-plugin"
+
+// manifests are the files pluginpack regenerates; every other file in the
+// package directory is copied verbatim.
+var manifests = map[string]bool{
+	"plugin.json":               true,
+	"mcp.json":                  true,
+	".mcp.json":                 true,
+	".app.json":                 true,
+	".codex-plugin/plugin.json": true,
+}
 
 var appIDPattern = regexp.MustCompile(`^(asdk_app_|connector_|templated_apps_)[A-Za-z0-9][A-Za-z0-9_-]*$`)
 
 type options struct {
-	MCPURL  string
-	AppID   string
-	Out     string
-	Version string
+	MCPURL     string
+	AppID      string
+	Out        string
+	Version    string
+	PackageDir string
 }
 
 func main() {
@@ -31,7 +51,8 @@ func main() {
 	flag.StringVar(&opts.MCPURL, "mcp-url", "", "public CodeBridge MCP endpoint, for example https://codebridge.example.com/mcp")
 	flag.StringVar(&opts.AppID, "app-id", "", "optional ChatGPT registered MCP technical ID (plugin_asdk_app_... or asdk_app_...)")
 	flag.StringVar(&opts.Out, "out", "dist/codebridge-plugin", "output directory or .zip file")
-	flag.StringVar(&opts.Version, "version", defaultVersion, "plugin package version")
+	flag.StringVar(&opts.Version, "version", "", "plugin package version; defaults to the checked-in package version")
+	flag.StringVar(&opts.PackageDir, "package-dir", defaultPackageDir, "checked-in plugin package to build from")
 	flag.Parse()
 
 	files, err := buildFiles(opts)
@@ -50,110 +71,112 @@ func main() {
 	fmt.Printf("generated %s (ChatGPT + Codex package)\n", opts.Out)
 }
 
+// buildFiles returns the package as a path -> content map keyed by the path
+// inside the package root.
 func buildFiles(opts options) (map[string][]byte, error) {
-	mcpURL, oauthResource, err := validateMCPURL(opts.MCPURL)
+	mcpURL, err := validateMCPURL(opts.MCPURL)
 	if err != nil {
 		return nil, err
 	}
 	version := strings.TrimSpace(opts.Version)
-	if version == "" {
-		return nil, errors.New("version is required")
-	}
-
 	appID, err := normalizeAppID(opts.AppID)
 	if err != nil {
 		return nil, err
 	}
-
-	openAIExtension := map[string]any{
-		"interface": map[string]any{
-			"displayName":      "CodeBridge",
-			"shortDescription": "Read source code from your registered devices",
-			"longDescription":  "Connect ChatGPT or Codex to source-code workspaces exposed by your self-hosted CodeBridge Manager and local agents. CodeBridge provides bounded, read-only source inspection tools and does not expose arbitrary shell execution.",
-			"developerName":    "CodeBridge",
-			"category":         "Developer Tools",
-			"capabilities":     []string{"Read"},
-			"websiteURL":       "https://github.com/edynasty/codebridge",
-			"defaultPrompt": []string{
-				"List my connected devices and workspaces",
-				"Inspect one of my CodeBridge workspaces without modifying files",
-			},
-		},
+	dir := strings.TrimSpace(opts.PackageDir)
+	if dir == "" {
+		return nil, errors.New("--package-dir is required")
 	}
-	if appID != "" {
-		openAIExtension["apps"] = "./.app.json"
-	}
-
-	portablePlugin := map[string]any{
-		"$schema":     "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-		"name":        "codebridge",
-		"version":     version,
-		"description": "Securely inspect source-code workspaces on your own registered devices through CodeBridge.",
-		"author": map[string]any{
-			"name": "CodeBridge",
-			"url":  "https://github.com/edynasty/codebridge",
-		},
-		"homepage":   "https://github.com/edynasty/codebridge",
-		"repository": "https://github.com/edynasty/codebridge",
-		"license":    "MIT",
-		"keywords":   []string{"mcp", "developer-tools", "source-code", "self-hosted", "chatgpt"},
-		"extensions": map[string]any{
-			"com.openai": openAIExtension,
-		},
-	}
-
-	portableMCP := map[string]any{
-		"$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-		"mcpServers": map[string]any{
-			"codebridge": map[string]any{
-				"type": "streamable-http",
-				"url":  mcpURL,
-			},
-		},
-	}
-
-	compatPlugin := map[string]any{
-		"name":        "codebridge",
-		"version":     version,
-		"description": "Securely inspect source-code workspaces on your own registered devices through CodeBridge.",
-		"author": map[string]any{
-			"name": "CodeBridge",
-			"url":  "https://github.com/edynasty/codebridge",
-		},
-		"homepage":   "https://github.com/edynasty/codebridge",
-		"repository": "https://github.com/edynasty/codebridge",
-		"license":    "MIT",
-		"keywords":   []string{"mcp", "developer-tools", "source-code", "self-hosted", "chatgpt"},
-		"mcpServers": "./.mcp.json",
-		"interface":  openAIExtension["interface"],
-	}
-	if appID != "" {
-		compatPlugin["apps"] = "./.app.json"
-	}
-
-	legacyMCP := map[string]any{
-		"mcpServers": map[string]any{
-			"codebridge": map[string]any{
-				"type":           "http",
-				"url":            mcpURL,
-				"oauth_resource": oauthResource,
-			},
-		},
+	if version == "" {
+		// Default to the version the checked-in package already carries, so a
+		// rebuild never silently downgrades a released package.
+		doc, err := readManifest(dir, "plugin.json")
+		if err != nil {
+			return nil, err
+		}
+		version, _ = doc["version"].(string)
+		version = strings.TrimSpace(version)
+		if version == "" {
+			return nil, errors.New("version is required")
+		}
 	}
 
 	files := map[string][]byte{}
-	for name, value := range map[string]any{
-		"plugin.json":               portablePlugin,
-		"mcp.json":                  portableMCP,
-		".mcp.json":                 legacyMCP,
-		".codex-plugin/plugin.json": compatPlugin,
-	} {
-		b, err := marshalJSON(value)
+	err = filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
+		if entry.IsDir() {
+			return nil
+		}
+		if entry.Name() == ".DS_Store" || manifests[rel] {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		files[rel] = data
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// plugin.json and .codex-plugin/plugin.json carry the version; the app
+	// binding is added only when the caller supplied a registered app id, so a
+	// portable package never references a missing .app.json.
+	for _, name := range []string{"plugin.json", ".codex-plugin/plugin.json"} {
+		doc, err := readManifest(dir, name)
+		if err != nil {
+			return nil, err
+		}
+		doc["version"] = version
+		if appID == "" {
+			delete(doc, "apps")
+			if ext, ok := doc["extensions"].(map[string]any); ok {
+				if openai, ok := ext["com.openai"].(map[string]any); ok {
+					delete(openai, "apps")
+				}
+			}
+		} else {
+			if name == "plugin.json" {
+				openai, err := nestedObject(doc, "extensions", "com.openai")
+				if err != nil {
+					return nil, fmt.Errorf("%s: %w", name, err)
+				}
+				openai["apps"] = "./.app.json"
+			} else {
+				doc["apps"] = "./.app.json"
+			}
+		}
+		if files[name], err = marshalJSON(doc); err != nil {
 			return nil, fmt.Errorf("marshal %s: %w", name, err)
 		}
-		files[name] = b
 	}
+
+	// Both MCP manifests keep the transport their spec requires; only the
+	// endpoint is deployment-specific.
+	for _, name := range []string{"mcp.json", ".mcp.json"} {
+		doc, err := readManifest(dir, name)
+		if err != nil {
+			return nil, err
+		}
+		server, err := nestedObject(doc, "mcpServers", "codebridge")
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
+		}
+		server["url"] = mcpURL
+		if files[name], err = marshalJSON(doc); err != nil {
+			return nil, fmt.Errorf("marshal %s: %w", name, err)
+		}
+	}
+
 	if appID != "" {
 		b, err := marshalJSON(map[string]any{
 			"apps": map[string]any{
@@ -168,24 +191,54 @@ func buildFiles(opts options) (map[string][]byte, error) {
 	return files, nil
 }
 
-func validateMCPURL(raw string) (string, string, error) {
+func readManifest(dir, name string) (map[string]any, error) {
+	raw, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(name)))
+	if err != nil {
+		return nil, err
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
+	}
+	return doc, nil
+}
+
+func nestedObject(doc map[string]any, keys ...string) (map[string]any, error) {
+	current := doc
+	for i, key := range keys {
+		value, ok := current[key]
+		if !ok {
+			nested := map[string]any{}
+			current[key] = nested
+			current = nested
+			continue
+		}
+		next, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("%s must be an object", strings.Join(keys[:i+1], "."))
+		}
+		current = next
+	}
+	return current, nil
+}
+
+func validateMCPURL(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return "", "", errors.New("--mcp-url is required")
+		return "", errors.New("--mcp-url is required")
 	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
-		return "", "", errors.New("--mcp-url must be an absolute HTTPS URL without credentials, query, or fragment")
+		return "", errors.New("--mcp-url must be an absolute HTTPS URL without credentials, query, or fragment")
 	}
 	if u.Scheme != "https" {
-		return "", "", errors.New("--mcp-url must use https")
+		return "", errors.New("--mcp-url must use https")
 	}
 	if !strings.HasSuffix(strings.TrimRight(u.Path, "/"), "/mcp") {
-		return "", "", errors.New("--mcp-url must point to the CodeBridge /mcp endpoint")
+		return "", errors.New("--mcp-url must point to the CodeBridge /mcp endpoint")
 	}
 	u.Path = strings.TrimRight(u.Path, "/")
-	origin := (&url.URL{Scheme: u.Scheme, Host: u.Host}).String()
-	return u.String(), origin, nil
+	return u.String(), nil
 }
 
 func normalizeAppID(raw string) (string, error) {
@@ -231,21 +284,28 @@ func writeFiles(out string, files map[string][]byte) error {
 }
 
 func writeZip(path string, files map[string][]byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil && filepath.Dir(path) != "." {
-		return err
+	if dir := filepath.Dir(path); dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
 	}
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	// Deterministic archives: the tracked plugin_*.json manifests lead, then
+	// everything else in lexical order.
+	sort.Slice(names, func(i, j int) bool {
+		return zipOrder(names[i]) < zipOrder(names[j])
+	})
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
-	for _, name := range []string{"plugin.json", "mcp.json", ".mcp.json", ".app.json", ".codex-plugin/plugin.json"} {
-		data, ok := files[name]
-		if !ok {
-			continue
-		}
+	for _, name := range names {
 		w, err := zw.Create(name)
 		if err != nil {
 			return err
 		}
-		if _, err := io.Copy(w, bytes.NewReader(data)); err != nil {
+		if _, err := io.Copy(w, bytes.NewReader(files[name])); err != nil {
 			return err
 		}
 	}
@@ -253,4 +313,13 @@ func writeZip(path string, files map[string][]byte) error {
 		return err
 	}
 	return os.WriteFile(path, buf.Bytes(), 0o644)
+}
+
+// zipOrder keeps the manifest files first so the archive lists the same way the
+// package directory does.
+func zipOrder(name string) string {
+	if manifests[name] {
+		return "0" + name
+	}
+	return "1" + name
 }

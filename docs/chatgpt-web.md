@@ -77,7 +77,9 @@ A direct developer-mode MCP connection is useful for protocol testing. For a reu
 
 ## Build a ChatGPT + Codex plugin package
 
-CodeBridge includes `tools/pluginpack`. It generates the current portable Agent Plugins files plus the Codex compatibility files from one MCP endpoint.
+CodeBridge includes `tools/pluginpack`. It assembles the installable package from the checked-in package in `deploy/agent-plugin`, injecting the deployment's MCP endpoint, the ChatGPT app binding, and the version.
+
+The checked-in package stays the source of truth for everything that is not deployment-specific: interface text, branding, both MCP manifest transports, the skills, the assets, and the verifier script. That is why `deploy/agent-plugin/plugin.json` is edited directly when the plugin's description changes, and why a rebuild cannot silently revert it.
 
 After registering the MCP server in ChatGPT and obtaining its `plugin_asdk_app...` technical ID, run:
 
@@ -88,17 +90,29 @@ make plugin-web \
   PLUGIN_OUT=dist/codebridge-plugin.zip
 ```
 
-The ZIP contains:
+The ZIP contains the package with the manifests rewritten:
 
 ```text
-plugin.json
-mcp.json
-.mcp.json
-.app.json
-.codex-plugin/plugin.json
+plugin.json                 version, extensions.com.openai.apps
+mcp.json                    deployment MCP URL (streamable-http)
+.mcp.json                   deployment MCP URL (http, Codex)
+.app.json                   registered ChatGPT app id
+.codex-plugin/plugin.json   version, apps, mcpServers
+README.md
+assets/logo.png
+scripts/verify-plugin.sh
+skills/codebridge-ops/SKILL.md
+skills/codebridge-subagent/SKILL.md
 ```
 
-The generator deliberately keeps the public MCP URL and account/workspace-specific ChatGPT app ID out of the repository. It also normalizes the developer-mode `plugin_asdk_app_...` identifier to the `asdk_app_...` form required inside `.app.json`.
+The generator deliberately keeps the public MCP URL and account/workspace-specific ChatGPT app ID out of the repository. It also normalizes the developer-mode `plugin_asdk_app_...` identifier to the `asdk_app_...` form required inside `.app.json`. `--version` defaults to the version already in `deploy/agent-plugin/plugin.json`, so a rebuild without an explicit version cannot downgrade a released package.
+
+Both layers must be redeployed together, because they carry different text:
+
+- the **Manager image** carries the tool descriptions and input schemas the ChatGPT Tool namespace shows;
+- the **installed plugin package** carries the interface text, the skills, and the app binding.
+
+So after changing either, rebuild the Manager image and the plugin package, then reinstall the package and start a new chat.
 
 For a portable/Codex package without a registered ChatGPT app mapping:
 
