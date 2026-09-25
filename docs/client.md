@@ -284,7 +284,7 @@ The discovery, symbol, and git helper tools of earlier releases are no longer ad
 }
 ```
 
-`name` must be at most 64 characters and must not shadow a built-in tool name; `tool` must be a built-in tool name. Caller-supplied arguments override the preset ones, except `device_id` and `workspace`, which stay pinned.
+`name` must be at most 64 characters and must not shadow a built-in tool name; `tool` must be a built-in tool name. Caller-supplied arguments override the preset ones, except `device_id` and `workspace`, which stay pinned. A wrapper advertises the output schema of the built-in tool it forwards to, so its structured results are described exactly like that tool's.
 
 `enable_lsp` opts into locally installed language servers (`gopls`, `typescript-language-server --stdio`, `jdtls`) on the agent machine. Only the legacy symbol tools consult them, and the Manager no longer advertises those tools, so the setting has no effect on the current tool surface.
 

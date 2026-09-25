@@ -178,6 +178,10 @@ func (t *ToolService) forwardProgress(ctx context.Context, req *mcp.CallToolRequ
 	} else if err := json.Unmarshal(raw, &out); err != nil {
 		out = string(raw)
 	}
+	out, err = toolOutputPayload(tool, stringArg(args, "path", ""), out)
+	if err != nil {
+		return nil, nil, err
+	}
 	return textResult(out)
 }
 

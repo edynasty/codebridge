@@ -85,6 +85,10 @@ func TestNormalizeBaseURLRejectsPath(t *testing.T) {
 	}
 }
 
+// objectOutputSchema stands in for the object output schema the real manager
+// declares on every tool.
+var objectOutputSchema = map[string]any{"type": "object"}
+
 func serverURL(r *http.Request) string {
 	return "http://" + r.Host
 }
@@ -92,20 +96,20 @@ func serverURL(r *http.Request) string {
 func TestAuthenticatedMCPSmoke(t *testing.T) {
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "doctor-test", Version: "test"}, nil)
 
-	mcp.AddTool(mcpServer, &mcp.Tool{Name: "list_devices"}, func(context.Context, *mcp.CallToolRequest, struct{}) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(mcpServer, &mcp.Tool{Name: "list_devices", OutputSchema: objectOutputSchema}, func(context.Context, *mcp.CallToolRequest, struct{}) (*mcp.CallToolResult, any, error) {
 		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: `[{"id":"mac-1"}]`}},
+			Content: []mcp.Content{&mcp.TextContent{Text: `{"devices":[{"id":"mac-1"}],"count":1}`}},
 		}, nil, nil
 	})
 	type deviceInput struct {
 		DeviceID string `json:"device_id"`
 	}
-	mcp.AddTool(mcpServer, &mcp.Tool{Name: "list_workspaces"}, func(_ context.Context, _ *mcp.CallToolRequest, in deviceInput) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(mcpServer, &mcp.Tool{Name: "list_workspaces", OutputSchema: objectOutputSchema}, func(_ context.Context, _ *mcp.CallToolRequest, in deviceInput) (*mcp.CallToolResult, any, error) {
 		if in.DeviceID != "mac-1" {
 			t.Fatalf("unexpected device id %q", in.DeviceID)
 		}
 		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: `[{"name":"demo"}]`}},
+			Content: []mcp.Content{&mcp.TextContent{Text: `{"workspaces":[{"name":"demo"}],"count":1}`}},
 		}, nil, nil
 	})
 	type listInput struct {
@@ -113,12 +117,12 @@ func TestAuthenticatedMCPSmoke(t *testing.T) {
 		Workspace string `json:"workspace"`
 		Path      string `json:"path"`
 	}
-	mcp.AddTool(mcpServer, &mcp.Tool{Name: "list"}, func(_ context.Context, _ *mcp.CallToolRequest, in listInput) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(mcpServer, &mcp.Tool{Name: "list", OutputSchema: objectOutputSchema}, func(_ context.Context, _ *mcp.CallToolRequest, in listInput) (*mcp.CallToolResult, any, error) {
 		if in.DeviceID != "mac-1" || in.Workspace != "demo" || in.Path != "." {
 			t.Fatalf("unexpected list input: %#v", in)
 		}
 		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: `[{"name":"go.mod","path":"go.mod","type":"file","size":12},{"name":"internal","path":"internal","type":"dir","size":96}]`}},
+			Content: []mcp.Content{&mcp.TextContent{Text: `{"path":".","count":2,"entries":[{"name":"go.mod","path":"go.mod","type":"file","size":12},{"name":"internal","path":"internal","type":"dir","size":96}]}`}},
 		}, nil, nil
 	})
 
@@ -292,4 +296,23 @@ func writeAuthorizationServerMetadata(w http.ResponseWriter, r *http.Request, sc
 		"scopes_supported":                      scopes,
 		"token_endpoint_auth_methods_supported": []string{"none"},
 	})
+}
+
+// The output-schema check must be able to fail: a tool without a schema, or
+// with a non-object one, is exactly what ChatGPT reports as a missing output
+// schema.
+func TestCheckToolOutputSchemasRejectsMissingAndNonObjectSchemas(t *testing.T) {
+	objects := []*mcp.Tool{
+		{Name: "read", OutputSchema: objectOutputSchema},
+		{Name: "list", OutputSchema: map[string]any{"type": "object", "properties": map[string]any{"entries": map[string]any{"type": "array"}}}},
+	}
+	if err := checkToolOutputSchemas(objects); err != nil {
+		t.Fatalf("object schemas were rejected: %v", err)
+	}
+	if err := checkToolOutputSchemas([]*mcp.Tool{{Name: "read"}}); err == nil {
+		t.Fatal("a tool without an output schema was accepted")
+	}
+	if err := checkToolOutputSchemas([]*mcp.Tool{{Name: "list", OutputSchema: map[string]any{"type": "array"}}}); err == nil {
+		t.Fatal("a non-object output schema was accepted")
+	}
 }

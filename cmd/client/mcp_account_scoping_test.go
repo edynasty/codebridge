@@ -229,11 +229,17 @@ func deviceListEmpty(t *testing.T, result *mcp.CallToolResult) bool {
 	if !ok {
 		t.Fatalf("unexpected content type %T", result.Content[0])
 	}
-	var devices []manager.Device
-	if err := json.Unmarshal([]byte(textContent.Text), &devices); err != nil {
+	var listed struct {
+		Devices []manager.Device `json:"devices"`
+		Count   int              `json:"count"`
+	}
+	if err := json.Unmarshal([]byte(textContent.Text), &listed); err != nil {
 		t.Fatalf("decode device list: %v: %s", err, textContent.Text)
 	}
-	return len(devices) == 0
+	if listed.Count != len(listed.Devices) {
+		t.Fatalf("device list count %d does not match %d devices", listed.Count, len(listed.Devices))
+	}
+	return len(listed.Devices) == 0
 }
 
 func deviceVisible(t *testing.T, ctx context.Context, session *mcp.ClientSession, tool string, args map[string]any) bool {

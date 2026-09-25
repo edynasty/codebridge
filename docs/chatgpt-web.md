@@ -135,6 +135,14 @@ Use the generated ZIP with the ChatGPT plugin-creator/local plugin workflow for 
 5. Call `list_workspaces` with one returned device ID.
 6. Only after those metadata calls succeed, test `list` or `read`.
 
+If ChatGPT reports that a tool is missing an output schema, the running Manager predates the schema declarations. Every tool now advertises an object `outputSchema` and returns `structuredContent` that conforms to it, so verify the deployment rather than the plugin package:
+
+```bash
+codebridge-doctor --url https://codebridge.example.com
+```
+
+The Doctor's authenticated smoke check fails when any advertised tool lacks a schema, or declares a non-object one, and its `list` round trip decodes the enveloped result. Rebuild and redeploy the Manager image if it reports a missing output schema.
+
 If you update the MCP registration or package mapping, rebuild/reinstall the package rather than assuming an existing chat will hot-reload it.
 
 ## Diagnosing “plugin is visible but tools are missing”

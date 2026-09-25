@@ -7,7 +7,7 @@ import (
 
 func TestReadOnlyToolDeclaresOAuthSecurityScheme(t *testing.T) {
 	svc := &ToolService{OAuthScopes: []string{"codebridge.read"}}
-	tool := svc.readOnlyTool("read_file", "read")
+	tool := svc.readOnlyTool("read", "read")
 	raw, err := json.Marshal(tool)
 	if err != nil {
 		t.Fatal(err)
@@ -36,7 +36,7 @@ func TestReadOnlyToolDeclaresOAuthSecurityScheme(t *testing.T) {
 
 func TestReadOnlyToolOmitsSecuritySchemeWithoutOAuth(t *testing.T) {
 	svc := &ToolService{}
-	tool := svc.readOnlyTool("read_file", "read")
+	tool := svc.readOnlyTool("read", "read")
 	if tool.Meta != nil {
 		if _, exists := tool.Meta["securitySchemes"]; exists {
 			t.Fatal("OAuth metadata present when OAuth is disabled")

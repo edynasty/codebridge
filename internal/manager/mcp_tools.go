@@ -22,19 +22,27 @@ type ToolService struct {
 }
 
 func (t *ToolService) readOnlyTool(name, description string) *mcp.Tool {
-	return t.annotatedTool(name, description, true, false)
+	return t.annotatedTool(name, description, true, false, name)
 }
 
 // writeTool declares a mutating tool. Write tools are only routed to
 // workspaces the local client explicitly advertised as writable.
 func (t *ToolService) writeTool(name, description string) *mcp.Tool {
-	return t.annotatedTool(name, description, false, true)
+	return t.annotatedTool(name, description, false, true, name)
 }
 
-func (t *ToolService) annotatedTool(name, description string, readOnly, destructive bool) *mcp.Tool {
+// annotatedTool builds a tool descriptor. outputSource names the built-in tool
+// whose output schema this tool returns: it is the tool's own name, except for
+// custom wrappers, which report the output of the built-in they forward to.
+func (t *ToolService) annotatedTool(name, description string, readOnly, destructive bool, outputSource string) *mcp.Tool {
+	outputSchema, ok := toolOutputSchemas[outputSource]
+	if !ok {
+		panic("missing output schema for tool: " + outputSource)
+	}
 	tool := &mcp.Tool{
-		Name:        name,
-		Description: description,
+		Name:         name,
+		Description:  description,
+		OutputSchema: outputSchema,
 		Annotations: &mcp.ToolAnnotations{
 			ReadOnlyHint:    readOnly,
 			DestructiveHint: boolPtr(destructive),
@@ -73,14 +81,7 @@ func textResult(v any) (*mcp.CallToolResult, any, error) {
 // surface for a specific workflow.
 
 type DeviceInput struct {
-	DeviceID  string `json:"device_id" jsonschema:"ID of the connected device"`
-	Workspace string `json:"workspace" jsonschema:"Workspace name exposed by the local agent"`
-}
-
-type PathInput struct {
-	DeviceID  string `json:"device_id" jsonschema:"ID of the connected device"`
-	Workspace string `json:"workspace" jsonschema:"Workspace name exposed by the local agent"`
-	Path      string `json:"path" jsonschema:"Workspace-relative path"`
+	DeviceID string `json:"device_id" jsonschema:"ID of the connected device"`
 }
 
 type ReadInput struct {
@@ -138,10 +139,6 @@ type BashInput struct {
 	Command   string `json:"command" jsonschema:"Shell command to run in the workspace root"`
 }
 
-type AgentsListInput struct {
-	DeviceID string `json:"device_id" jsonschema:"ID of the connected device"`
-}
-
 type AgentInput struct {
 	DeviceID       string `json:"device_id" jsonschema:"ID of the connected device"`
 	Workspace      string `json:"workspace" jsonschema:"Workspace the subagent works in"`
@@ -168,7 +165,8 @@ var toolTable = map[string]func(t *ToolService, server *mcp.Server){
 		mcp.AddTool(server, t.readOnlyTool("list_devices", "List local CodeBridge devices currently connected to this manager."), func(ctx context.Context, req *mcp.CallToolRequest, in struct{}) (*mcp.CallToolResult, any, error) {
 			account := t.accountFor(req)
 			return t.invoke(req, "list_devices", "", "", func() (*mcp.CallToolResult, any, error) {
-				return textResult(t.Registry.ListAccount(account))
+				devices := t.Registry.ListAccount(account)
+				return textResult(map[string]any{"devices": devices, "count": len(devices)})
 			})
 		})
 	},
@@ -181,7 +179,7 @@ var toolTable = map[string]func(t *ToolService, server *mcp.Server){
 				if err != nil {
 					return nil, nil, err
 				}
-				return textResult(v)
+				return textResult(map[string]any{"workspaces": v, "count": len(v)})
 			})
 		})
 	},
@@ -276,7 +274,7 @@ var toolTable = map[string]func(t *ToolService, server *mcp.Server){
 	},
 
 	"agents_list": func(t *ToolService, server *mcp.Server) {
-		mcp.AddTool(server, t.readOnlyTool("agents_list", "List the subagent profiles available on a device, with each profile's description, harness, model, reasoning effort and timeout. Call this before the agent tool to pick the right profile for the task."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentsListInput) (*mcp.CallToolResult, any, error) {
+		mcp.AddTool(server, t.readOnlyTool("agents_list", "List the subagent profiles available on a device, with each profile's description, harness, model, reasoning effort and timeout. Call this before the agent tool to pick the right profile for the task."), func(ctx context.Context, req *mcp.CallToolRequest, in DeviceInput) (*mcp.CallToolResult, any, error) {
 			account := t.accountFor(req)
 			return t.invoke(req, "agents_list", in.DeviceID, "", func() (*mcp.CallToolResult, any, error) {
 				return t.forward(ctx, account, in.DeviceID, "__catalog__", "agents_list", nil)

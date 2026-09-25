@@ -47,6 +47,8 @@ ChatGPT Web / MCP client
 
 Read-only tools are declared `readOnlyHint=true` and `openWorldHint=false`. The mutating tools — `edit`, `write`, `apply_patch`, `rollback_patch`, `bash`, and `agent` — are declared `readOnlyHint=false`/`destructiveHint=true`. When OAuth is enabled, each tool also advertises the `codebridge.read` OAuth scope (or your configured scope).
 
+Every tool declares a JSON Schema `outputSchema` and returns the matching result in `structuredContent`, alongside the same JSON serialized into a text block for clients that predate structured output. All output schemas are object-rooted, as the specification requires of `structuredContent`, so tools that naturally produce a list return it inside an object envelope (`{"devices": [...], "count": n}`). The manager validates every payload against its schema before answering, so a client response that does not fit fails the call rather than emitting undocumented output.
+
 Every workspace-scoped tool call targets one device and workspace: pass `device_id` (from `list_devices`) and `workspace` (the logical name from `list_workspaces`). Paths are always **workspace-relative**; absolute paths and `..` traversal are rejected, and symlink escapes are contained inside the workspace root.
 
 The local client still routes a few pre-`bash` helper names from older versions, but the manager neither advertises them nor accepts them as custom-tool presets, so they are not part of the public surface.
@@ -55,7 +57,7 @@ The local client still routes a few pre-`bash` helper names from older versions,
 
 #### `list_devices`
 
-No arguments. Lists the devices connected to the manager in your account, with `id`, `name`, `account_id`, `version`, `online`, `connected_at`, `last_seen`, and the `workspaces` each device advertises.
+No arguments. Returns `{"devices": [...], "count": n}`. Each device carries `id`, `name`, `account_id`, `version`, `online`, `connected_at`, `last_seen`, the `workspaces` it advertises, and the `tool_policy` it registered with.
 
 #### `list_workspaces`
 
@@ -63,7 +65,7 @@ No arguments. Lists the devices connected to the manager in your account, with `
 { "device_id": "mbp-m1" }
 ```
 
-Lists one device's logical workspaces: `name`, plus `"writable": true` when the local client opted that workspace into write mode. Only writable workspaces accept `edit`, `write`, `apply_patch`, and `rollback_patch`.
+Returns `{"workspaces": [...], "count": n}`. Each workspace carries `name`, plus `"writable": true` when the local client opted that workspace into write mode. Only writable workspaces accept `edit`, `write`, `apply_patch`, and `rollback_patch`.
 
 #### `agents_list`
 
@@ -71,7 +73,7 @@ Lists one device's logical workspaces: `name`, plus `"writable": true` when the 
 { "device_id": "mbp-m1" }
 ```
 
-Lists the local coding-agent profiles available on a device as `{"agents": [...]}`: `name`, `description`, `client`, `agent`, `model`, `thinking`, `timeout_seconds`, and `tab`. Call this before `agent` and pass the chosen `name` as `agent`.
+Returns `{"agents": [...]}`: `name`, `description`, `client`, `agent`, `model`, `thinking`, `timeout_seconds`, and `tab`. Call this before `agent` and pass the chosen `name` as `agent`.
 
 ### Files
 
@@ -81,7 +83,7 @@ Lists the local coding-agent profiles available on a device as `{"agents": [...]
 { "device_id": "mbp-m1", "workspace": "pms", "path": "src/main/java" }
 ```
 
-Directory listing like `ls`: `name`, `path`, `type` (`file`, `dir`, or `symlink`), and `size`. `path` is optional and defaults to the workspace root. Sensitive entries are omitted; a directory with more than 1000 entries is rejected, so narrow the path.
+Directory listing like `ls`. Returns `{"path": "src/main/java", "entries": [...], "count": n}`, where each entry carries `name`, `path`, `type` (`file`, `dir`, or `symlink`), and `size`. `path` is optional and defaults to the workspace root, and the result echoes the directory that was listed. Sensitive entries are omitted; a directory with more than 1000 entries is rejected, so narrow the path.
 
 #### `read`
 

@@ -149,7 +149,9 @@ func (t *ToolService) registerCustom(server *mcp.Server, custom protocol.CustomT
 	if desc == "" {
 		desc = fmt.Sprintf("Custom CodeBridge method wrapping %s.", custom.Tool)
 	}
-	tool := t.readOnlyTool(custom.Name, desc)
+	// A wrapper reports the output of the built-in it forwards to, and
+	// readOnlyTool would look up the schema under the wrapper's own name.
+	tool := t.annotatedTool(custom.Name, desc, true, false, custom.Tool)
 	mcp.AddTool(server, tool, func(ctx context.Context, req *mcp.CallToolRequest, in map[string]any) (*mcp.CallToolResult, any, error) {
 		account := t.accountFor(req)
 		args := map[string]any{}

@@ -69,11 +69,17 @@ func TestStreamableHTTPWithOfficialMCPClient(t *testing.T) {
 	if !ok {
 		t.Fatalf("unexpected content type %T", result.Content[0])
 	}
-	var devices []Device
-	if err := json.Unmarshal([]byte(textContent.Text), &devices); err != nil {
+	var listed struct {
+		Devices []Device `json:"devices"`
+		Count   int      `json:"count"`
+	}
+	if err := json.Unmarshal([]byte(textContent.Text), &listed); err != nil {
 		t.Fatal(err)
 	}
-	if len(devices) != 0 {
-		t.Fatalf("expected empty device list, got %#v", devices)
+	if len(listed.Devices) != 0 || listed.Count != 0 {
+		t.Fatalf("expected empty device list, got %#v", listed)
+	}
+	if result.StructuredContent == nil {
+		t.Fatal("list_devices returned no structuredContent")
 	}
 }

@@ -185,6 +185,24 @@ func Run(ctx context.Context, opts Options) ([]Result, bool) {
 	return results, allOK
 }
 
+// checkToolOutputSchemas verifies that every advertised tool declares an
+// object output schema. ChatGPT reads those schemas when it builds the Tool
+// namespace; a tool without one only offers free-form text to the model, and a
+// non-object schema cannot describe structuredContent, which the MCP
+// specification requires to be a JSON object.
+func checkToolOutputSchemas(tools []*mcp.Tool) error {
+	for _, tool := range tools {
+		schema, ok := tool.OutputSchema.(map[string]any)
+		if !ok {
+			return fmt.Errorf("tool %q does not declare an output schema", tool.Name)
+		}
+		if schema["type"] != "object" {
+			return fmt.Errorf("tool %q declares a %v output schema, want object", tool.Name, schema["type"])
+		}
+	}
+	return nil
+}
+
 func authenticatedMCPSmoke(ctx context.Context, base string, opts Options) []Result {
 	results := []Result{}
 	add := func(name string, ok bool, detail string) {
@@ -221,6 +239,10 @@ func authenticatedMCPSmoke(ctx context.Context, base string, opts Options) []Res
 		add("mcp_authenticated", false, "list tools: "+err.Error())
 		return results
 	}
+	if err := checkToolOutputSchemas(tools.Tools); err != nil {
+		add("mcp_authenticated", false, err.Error())
+		return results
+	}
 	hasListDevices := false
 	for _, tool := range tools.Tools {
 		if tool.Name == "list_devices" {
@@ -242,13 +264,17 @@ func authenticatedMCPSmoke(ctx context.Context, base string, opts Options) []Res
 		add("mcp_authenticated", false, "list_devices returned a tool error")
 		return results
 	}
-	var devices []struct {
-		ID string `json:"id"`
+	var listed struct {
+		Devices []struct {
+			ID string `json:"id"`
+		} `json:"devices"`
+		Count int `json:"count"`
 	}
-	if err := decodeToolJSON(deviceResult, &devices); err != nil {
+	if err := decodeToolJSON(deviceResult, &listed); err != nil {
 		add("mcp_authenticated", false, "decode list_devices: "+err.Error())
 		return results
 	}
+	devices := listed.Devices
 	add("mcp_authenticated", true, fmt.Sprintf("tools=%d devices=%d", len(tools.Tools), len(devices)))
 
 	deviceID := strings.TrimSpace(opts.DeviceID)
@@ -279,14 +305,18 @@ func authenticatedMCPSmoke(ctx context.Context, base string, opts Options) []Res
 		add("mcp_device", false, "list_workspaces returned a tool error")
 		return results
 	}
-	var workspaces []struct {
-		Name string `json:"name"`
-		Path string `json:"path,omitempty"`
+	var listedWorkspaces struct {
+		Workspaces []struct {
+			Name string `json:"name"`
+			Path string `json:"path,omitempty"`
+		} `json:"workspaces"`
+		Count int `json:"count"`
 	}
-	if err := decodeToolJSON(workspaceResult, &workspaces); err != nil {
+	if err := decodeToolJSON(workspaceResult, &listedWorkspaces); err != nil {
 		add("mcp_device", false, "decode list_workspaces: "+err.Error())
 		return results
 	}
+	workspaces := listedWorkspaces.Workspaces
 	for _, workspace := range workspaces {
 		if workspace.Path != "" {
 			add("mcp_device", false, "workspace response exposed a physical path")
@@ -327,23 +357,27 @@ func authenticatedMCPSmoke(ctx context.Context, base string, opts Options) []Res
 		add("mcp_workspace", false, "list returned a tool error")
 		return results
 	}
-	var entries []struct {
-		Name string `json:"name"`
-		Path string `json:"path"`
-		Type string `json:"type"`
-		Size int64  `json:"size,omitempty"`
+	var listing struct {
+		Path    string `json:"path"`
+		Entries []struct {
+			Name string `json:"name"`
+			Path string `json:"path"`
+			Type string `json:"type"`
+			Size int64  `json:"size,omitempty"`
+		} `json:"entries"`
+		Count int `json:"count"`
 	}
-	if err := decodeToolJSON(entriesResult, &entries); err != nil {
+	if err := decodeToolJSON(entriesResult, &listing); err != nil {
 		add("mcp_workspace", false, "decode list: "+err.Error())
 		return results
 	}
-	for _, entry := range entries {
+	for _, entry := range listing.Entries {
 		if strings.TrimSpace(entry.Name) == "" || strings.TrimSpace(entry.Type) == "" {
 			add("mcp_workspace", false, "list returned an entry without a name or type")
 			return results
 		}
 	}
-	add("mcp_workspace", true, fmt.Sprintf("workspace=%s entries=%d", workspaceName, len(entries)))
+	add("mcp_workspace", true, fmt.Sprintf("workspace=%s entries=%d", workspaceName, len(listing.Entries)))
 	return results
 }
 
