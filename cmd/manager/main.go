@@ -10,11 +10,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/edynasty/codebridge/internal/auditlog"
+	"github.com/edynasty/codebridge/internal/authserver"
 	"github.com/edynasty/codebridge/internal/authstore"
 	mgr "github.com/edynasty/codebridge/internal/manager"
 	"github.com/edynasty/codebridge/internal/mcpcallstore"
@@ -22,6 +24,7 @@ import (
 	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var version = "dev"
@@ -56,6 +59,55 @@ func main() {
 	if err != nil {
 		log.Fatalf("open auth state: %v", err)
 	}
+	// Embedded authorization server (OAuth 2.1 + PKCE + CIMD/DCR) for
+	// ChatGPT connector auth without an external IdP. Enabled by setting
+	// CODEBRIDGE_AS_USERS ("user:bcryptHash,..."). The issuer is the public
+	// URL and the JWKS is self-published, so the standard verifier handles
+	// our tokens like any external IdP's.
+	// Authorization server users: CODEBRIDGE_AS_ADMIN_PASSWORD (plaintext,
+	// hashed at boot; the easy path) or CODEBRIDGE_AS_USERS (pre-hashed
+	// bcrypt "user:hash,..." for multi-user).
+	asAdminPassword := strings.TrimSpace(os.Getenv("CODEBRIDGE_AS_ADMIN_PASSWORD"))
+	asUsersRaw := strings.TrimSpace(os.Getenv("CODEBRIDGE_AS_USERS"))
+	if asAdminPassword != "" && asUsersRaw == "" {
+		// admin account via plaintext env, hashed at boot
+		hash, hashErr := bcrypt.GenerateFromPassword([]byte(asAdminPassword), bcrypt.DefaultCost)
+		if hashErr != nil {
+			log.Fatalf("hash CODEBRIDGE_AS_ADMIN_PASSWORD: %v", hashErr)
+		}
+		asUsersRaw = "admin:" + string(hash)
+	}
+	var embeddedAS *authserver.Server
+	if asAdminPassword != "" || asUsersRaw != "" {
+		publicURL := strings.TrimRight(strings.TrimSpace(os.Getenv("CODEBRIDGE_PUBLIC_URL")), "/")
+		if !strings.HasPrefix(publicURL, "https://") {
+			log.Fatalf("CODEBRIDGE_AS_USERS requires CODEBRIDGE_PUBLIC_URL over HTTPS")
+		}
+		users := map[string]string{}
+		for _, pair := range strings.Split(asUsersRaw, ",") {
+			parts := strings.SplitN(strings.TrimSpace(pair), ":", 2)
+			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+				log.Fatalf("CODEBRIDGE_AS_USERS entries must be user:bcryptHash")
+			}
+			users[parts[0]] = parts[1]
+		}
+		stateDir := filepath.Dir(strings.TrimSpace(os.Getenv("CODEBRIDGE_STATE_FILE")))
+		if stateDir == "." || stateDir == "" {
+			stateDir = "/data"
+		}
+		embeddedAS, err = authserver.New(authserver.Config{
+			Issuer:    publicURL,
+			Resource:  publicURL,
+			Users:     users,
+			KeyPath:   filepath.Join(stateDir, "as-key.pem"),
+			StorePath: filepath.Join(stateDir, "as-store.json"),
+		})
+		if err != nil {
+			log.Fatalf("embedded authorization server: %v", err)
+		}
+		log.Printf("embedded authorization server enabled: issuer=%s users=%d (CIMD + DCR + PKCE)", publicURL, len(users))
+	}
+
 	oauthCfg, err := loadOAuthConfig()
 	if err != nil {
 		log.Fatalf("OAuth configuration: %v", err)
@@ -142,6 +194,16 @@ func main() {
 	log.Printf("agent gRPC listening on %s (HTTP/2 keepalive)", grpcLis.Addr())
 
 	mux := http.NewServeMux()
+
+	// Embedded AS endpoints (mounted before OAuth config so the standard
+	// OAuth path can point its issuer/JWKS at ourselves).
+	if embeddedAS != nil {
+		mux.HandleFunc("/.well-known/oauth-authorization-server", embeddedAS.Metadata())
+		mux.HandleFunc("/jwks.json", embeddedAS.JWKS())
+		mux.HandleFunc("/authorize", embeddedAS.Authorize())
+		mux.HandleFunc("/token", embeddedAS.Token())
+		mux.HandleFunc("/register", embeddedAS.Register())
+	}
 	publicURL := strings.TrimSpace(os.Getenv("CODEBRIDGE_PUBLIC_URL"))
 	contactEmail := envOrDefault("CODEBRIDGE_CONTACT_EMAIL", "admin@"+strings.TrimSuffix(strings.TrimPrefix(publicURL, "https://"), "/"))
 	adminHandler := &mgr.AdminHandler{Auth: deviceAuth, Registry: registry, AdminToken: adminToken(), Audit: audit, AuditTail: mgr.NewAuditTailer(auditLogPath), CallStore: callStore}
@@ -232,6 +294,15 @@ func loadOAuthConfig() (*oauthConfig, error) {
 	resource := strings.TrimSpace(os.Getenv("CODEBRIDGE_OAUTH_RESOURCE"))
 	scope := strings.TrimSpace(env("CODEBRIDGE_OAUTH_SCOPE", "codebridge.read"))
 	allowedRaw := strings.TrimSpace(os.Getenv("CODEBRIDGE_OAUTH_ALLOWED_SUBJECTS"))
+
+	// Embedded AS mode: CODEBRIDGE_AS_ADMIN_PASSWORD or CODEBRIDGE_AS_USERS
+	// implies issuer=public URL and a self-published JWKS unless an external
+	// IdP is configured explicitly.
+	asEnabled := strings.TrimSpace(os.Getenv("CODEBRIDGE_AS_ADMIN_PASSWORD")) != "" || strings.TrimSpace(os.Getenv("CODEBRIDGE_AS_USERS")) != ""
+	if asEnabled && issuer == "" && jwksURL == "" {
+		issuer = publicURL
+		jwksURL = publicURL + "/jwks.json"
+	}
 
 	enabled := publicURL != "" || issuer != "" || jwksURL != "" || resource != "" || allowedRaw != ""
 	if !enabled {

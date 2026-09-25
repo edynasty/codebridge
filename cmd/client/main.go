@@ -424,8 +424,14 @@ func runGRPCSession(ctx context.Context, rt *runtime, state *clientState, onCred
 	if err != nil {
 		return err
 	}
-	regPayload, _ := json.Marshal(rt.reg)
-	if err := stream.Send(&pb.Envelope{Type: "register", DeviceId: rt.reg.DeviceID, Payload: regPayload}); err != nil {
+	// Rebuild the registration payload on every (re)connect: credentials and
+	// enrollment codes issued mid-session must be picked up instead of the
+	// stale values captured in rt.reg at boot.
+	reg := rt.reg
+	reg.EnrollmentCode = state.EnrollmentCode()
+	reg.DeviceCredential = state.Credential()
+	regPayload, _ := json.Marshal(reg)
+	if err := stream.Send(&pb.Envelope{Type: "register", DeviceId: reg.DeviceID, Payload: regPayload}); err != nil {
 		return err
 	}
 	ack, err := stream.Recv()
