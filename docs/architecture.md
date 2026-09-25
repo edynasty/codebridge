@@ -74,7 +74,9 @@ The admin API remains deployment-wide (admin token + loopback placement) and sho
 3. `list_devices` and `list_workspaces` are answered by the Manager from the caller's account.
 4. File and shell tool calls are routed to the selected online device, but only if that device belongs to the caller's account.
 5. The local agent validates the workspace and relative path, performs the bounded operation, and returns the result.
-6. The Manager relays the result to the MCP client without writing it to a database or source cache.
+6. The Manager reshapes the result to the tool's declared output schema and validates it, then relays it to the MCP client as `structuredContent` (mirrored into a text block) without writing it to a database or source cache.
+
+Tools describe their results rather than leaving them implicit: every tool advertises a JSON Schema `outputSchema`, and the Manager refuses to answer with a payload that does not conform to it. Tools whose clients return a bare list are declared with an object envelope (`{"devices": [...], "count": n}`), because `structuredContent` must be a JSON object.
 
 ## v0.2 security invariants
 
