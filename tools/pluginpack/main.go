@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-const defaultVersion = "0.3.1"
+const defaultVersion = "0.1.0"
 
 var appIDPattern = regexp.MustCompile(`^(asdk_app_|connector_|templated_apps_)[A-Za-z0-9][A-Za-z0-9_-]*$`)
 
