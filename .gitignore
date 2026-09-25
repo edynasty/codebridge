@@ -13,6 +13,6 @@ deploy/client-state/
 deploy/.env
 
 # stray local binary from a smoke run
-client
+/client
 bin/client
 /manager
