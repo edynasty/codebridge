@@ -119,7 +119,7 @@ Use the generated ZIP with the ChatGPT plugin-creator/local plugin workflow for 
 3. Verify the CodeBridge Tool namespace is present.
 4. Call `list_devices`.
 5. Call `list_workspaces` with one returned device ID.
-6. Only after those metadata calls succeed, test `project_info`, `read_file`, or `search_code`.
+6. Only after those metadata calls succeed, test `list` or `read`.
 
 If you update the MCP registration or package mapping, rebuild/reinstall the package rather than assuming an existing chat will hot-reload it.
 
@@ -149,6 +149,8 @@ Do not “fix” this symptom by adding duplicate MCP Tool registrations or weak
 ```text
 @CodeBridge search the pms workspace for AuthorizationServerConfigurerAdapter and show the matching files and line numbers.
 ```
+
+Searching is not a built-in tool any more: the agent has to run it through `bash` (for example `rg AuthorizationServerConfigurerAdapter`), which is permission-gated. The first such call returns a permission request id that has to be resolved with `permission_grant` (decision `once`, `always`, or `deny`) before the command runs, so this prompt cannot succeed until that approval happens.
 
 ## Development bearer fallback
 

@@ -1,6 +1,6 @@
 # Deployment doctor
 
-`codebridge-doctor` performs metadata-only deployment checks. It never reads a workspace or calls source-code MCP tools.
+`codebridge-doctor` performs metadata-only deployment checks. It never reads file contents or calls source-content MCP tools.
 
 ## Public production check
 
@@ -59,7 +59,9 @@ CODEBRIDGE_ACCESS_TOKEN='eyJ...' codebridge-doctor \
   --workspace pms
 ```
 
-This additionally calls `list_workspaces` and the read-only `project_info` tool. `project_info` crosses the real Manager → WebSocket Client path but only returns project markers such as `pom.xml`, `go.mod`, or `package.json`; it does not return file contents.
+This additionally calls `list_workspaces` and then the read-only `list` tool on the workspace root (`path: "."`). `list` crosses the real Manager → WebSocket Client path but only returns directory entries (`name`, `path`, `type`, `size`); it never returns file contents.
+
+The smoke reports three checks: `mcp_authenticated` (handshake, tool listing, `list_devices`), `mcp_device` (`list_workspaces` for the requested device), and `mcp_workspace` (the `list` round trip for the requested workspace). Passing `--workspace` without `--device-id` fails `mcp_workspace` with `--workspace requires --device-id`.
 
 A successful run separates two classes of failure:
 
@@ -134,7 +136,7 @@ The doctor does not:
 
 - obtain an OAuth token for you;
 - perform the interactive ChatGPT OAuth linking flow;
-- call `read_file`, `search_code`, or any other source-content tool;
+- call `read` or any other source-content tool;
 - reveal device credentials;
 - expose workspace paths.
 

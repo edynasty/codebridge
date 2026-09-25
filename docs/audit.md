@@ -28,7 +28,7 @@ Depending on the event, CodeBridge records only metadata such as:
 Example:
 
 ```json
-{"time":"2026-09-23T04:30:00Z","event":"mcp.tool","request_id":"...","actor_id":"user-123","tool":"read_file","device_id":"mbp-m1","workspace":"pms","success":true,"duration_ms":18}
+{"time":"2026-09-23T04:30:00Z","event":"mcp.tool","request_id":"...","actor_id":"user-123","tool":"read","device_id":"mbp-m1","workspace":"pms","success":true,"duration_ms":18}
 ```
 
 ## Explicitly not recorded

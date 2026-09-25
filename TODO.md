@@ -26,21 +26,23 @@ Engineering quality/CI/security delivery backlog: [docs/development-todo.md](doc
 - [x] Add real Manager↔Client WebSocket integration test covering enrollment, tool execution, one-time codes, and credential reconnect.
 - [x] Add official MCP SDK Streamable HTTP integration coverage for tool discovery and invocation.
 - [x] Add OAuth JWT → MCP → Manager → WebSocket Client end-to-end integration coverage, including OAuth subject audit metadata.
-- [x] Block common sensitive workspace content by default across read/search/discovery/git status/git diff, with explicit local opt-in.
+- [x] Block common sensitive workspace content by default across the file tools (`list`, `read`), with explicit local opt-in.
 - [x] Add tenant/account scoping to every Manager lookup.
 - [ ] Run an external-provider OAuth + interactive ChatGPT linking flow against a current RFC 8707-compatible provider.
 
 ## P1 - coding intelligence
 
-- [x] `find_symbol`
-- [x] `find_references`
-- [x] `read_symbol`
+Legacy Client helpers only: the Manager no longer advertises the symbol or dependency-graph tools listed here, so none of them are callable over MCP. The Client keeps routing them for older custom-tool wrappers.
+
+- [x] `find_symbol` (legacy client alias; not advertised over MCP)
+- [x] `find_references` (legacy client alias; not advertised over MCP)
+- [x] `read_symbol` (legacy client alias; not advertised over MCP)
 - [x] LSP adapters for Java/TypeScript/Go (opt-in via `CODEBRIDGE_ENABLE_LSP`; falls back to a portable CGO-free parser instead of tree-sitter).
 - [x] tree-sitter fallback (implemented as the built-in portable parser; see note above).
 - [x] repository dependency graph (Maven multi-module, npm, Go).
 - [x] optional local index/cache stored only on the agent machine.
 
-Note: implementation complete with smoke verification; dedicated regression/integration tests for these tools are still tracked in docs/development-todo.md.
+Note: implementation complete with smoke verification; dedicated regression/integration tests for these helpers are still tracked in docs/development-todo.md.
 
 ## P2 - controlled write mode
 

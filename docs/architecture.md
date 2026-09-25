@@ -18,7 +18,7 @@ ChatGPT / MCP client
 +------------------------------+
 | Local agent                  |
 | allow-listed workspace roots |
-| read/search/git-read only    |
+| read-only tools by default   |
 +---------------+--------------+
                 |
                 v
@@ -72,8 +72,8 @@ The admin API remains deployment-wide (admin token + loopback placement) and sho
 1. The local agent opens an outbound WebSocket to `/agent` and authenticates using a saved device credential, or uses a one-time enrollment code on first registration.
 2. ChatGPT discovers tools from `/mcp` using MCP Streamable HTTP.
 3. `list_devices` and `list_workspaces` are answered by the Manager from the caller's account.
-4. Filesystem/search/git-read calls are routed to the selected online device, but only if that device belongs to the caller's account.
-5. The local agent validates the workspace and relative path, performs the bounded read-only operation, and returns the result.
+4. File and shell tool calls are routed to the selected online device, but only if that device belongs to the caller's account.
+5. The local agent validates the workspace and relative path, performs the bounded operation, and returns the result.
 6. The Manager relays the result to the MCP client without writing it to a database or source cache.
 
 ## v0.2 security invariants

@@ -12,7 +12,7 @@ Todo IDs are stable references for implementation, commits, reviews, and test ev
 - [ ] Run `codebridge-doctor --url ...` and pass authorization-server metadata checks.
 - [ ] Obtain a real user access token for the exact CodeBridge resource.
 - [ ] Pass authenticated Doctor `list_devices`.
-- [ ] Pass authenticated Doctor `project_info` through a live Agent.
+- [ ] Pass authenticated Doctor `mcp_workspace` (`list` round trip) through a live Agent.
 - [ ] Link the same MCP endpoint in ChatGPT.
 - [ ] Verify first authenticated `list_devices` Tool call from ChatGPT.
 - [ ] Verify one safe source-reading flow from ChatGPT.
@@ -46,18 +46,18 @@ Todo IDs are stable references for implementation, commits, reviews, and test ev
 ### SEC-001 Filesystem security regression matrix
 
 - [ ] Add table-driven cases for absolute path, `..`, symlink escape, sensitive symlink alias, broken symlink, and sensitive workspace root.
-- [ ] Add filename edge cases for spaces, Unicode, quoted Git paths, and rename output.
+- [ ] Add filename edge cases for spaces and Unicode names (the quoted-Git-path and rename-output cases went away with the removed git tools; `git` now runs through `bash`, which returns raw output).
 - [ ] Add nested sensitive directory cases.
 - [ ] Add tests for path replacement/race resistance around direct reads.
 - [ ] Add Windows-specific path cases where behavior differs.
 - [ ] Verify every file-returning Tool uses the same policy boundary.
 
-**Done when:** all current file/discovery/search/git surfaces share a tested containment + sensitivity policy.
+**Done when:** all current file surfaces (`list`, `read`, `edit`, `write`, `apply_patch`, `rollback_patch`) share a tested containment + sensitivity policy.
 
 ### SEC-002 Secret leakage regression suite
 
 - [ ] Seed test workspaces with recognizable fake secrets.
-- [ ] Assert fake secrets never appear in default `read_file`, discovery, search, git status, or git diff output.
+- [ ] Assert fake secrets never appear in default `list` or `read` output (`bash` output is deliberately unfiltered — the permission gate, not output filtering, is the control).
 - [ ] Assert physical workspace roots never appear in success or error responses.
 - [ ] Assert audit JSONL never contains fake source content, tokens, enrollment codes, credentials, search queries, or physical paths.
 - [ ] Assert local sensitive-file opt-in restores only the intentionally documented behavior.
@@ -100,7 +100,7 @@ Todo IDs are stable references for implementation, commits, reviews, and test ev
 - [ ] Check authorization-server metadata.
 - [ ] Check public Admin blocking.
 - [ ] Optionally accept an environment-provided real access token.
-- [ ] Optionally verify one device/workspace via metadata-only `project_info`.
+- [ ] Optionally verify one device/workspace via a metadata-only `list` round trip.
 - [ ] Return machine-readable non-zero status on failure.
 
 **Done when:** a deployment can be acceptance-tested without manually assembling curl commands.
@@ -117,16 +117,18 @@ Todo IDs are stable references for implementation, commits, reviews, and test ev
 
 ## P1 — coding intelligence
 
-### MCP-101 `find_symbol`
+The symbol and dependency-graph helpers below are legacy Client aliases, not advertised MCP tools: the Manager registers no symbol or graph tool, and `customToolsForAccount` drops any custom-tool preset whose target is not a builtin, so none of them are reachable over MCP. The Client still routes them for older custom-tool wrappers, so the remaining items here are legacy-only maintenance.
+
+### MCP-101 `find_symbol` (legacy client alias; not advertised over MCP)
 
 - [x] Define language-neutral input/output schema.
 - [x] Return logical paths only.
 - [x] Bound result count and runtime.
 - [x] Apply sensitive-file policy.
 - [ ] Add Java/TypeScript/Go fixtures.
-- [ ] Add MCP integration test.
+- [ ] Add client-dispatcher integration test (the alias is not advertised by the Manager, so it cannot be exercised over MCP).
 
-### MCP-102 `find_references`
+### MCP-102 `find_references` (legacy client alias; not advertised over MCP)
 
 - [x] Define stable symbol identity/input.
 - [x] Prefer LSP when available.
@@ -134,7 +136,7 @@ Todo IDs are stable references for implementation, commits, reviews, and test ev
 - [x] Apply sensitive-file policy.
 - [ ] Add false-positive/false-negative fixtures.
 
-### MCP-103 `read_symbol`
+### MCP-103 `read_symbol` (legacy client alias; not advertised over MCP)
 
 - [x] Return the smallest useful symbol range.
 - [x] Bound bytes/lines.
@@ -170,7 +172,7 @@ Todo IDs are stable references for implementation, commits, reviews, and test ev
 - [x] Invalidate safely on repository changes (mtime+size keys).
 - [x] Document how to delete/rebuild the index (delete files under the index dir; rebuilt on next scan).
 
-### MCP-104 repository dependency graph
+### MCP-104 repository dependency graph (legacy client alias; not advertised over MCP)
 
 - [x] Define graph schema.
 - [x] Support Maven first (multi-module).
