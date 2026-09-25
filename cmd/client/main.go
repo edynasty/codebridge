@@ -538,21 +538,14 @@ func intArgAny(m map[string]any, key string, def int) int {
 	return def
 }
 
-// validateManagerHost accepts host[:port] (or a legacy ws(s):// URL,
-// stripped to its host part) for the gRPC manager endpoint.
+// validateManagerHost requires a plain host[:port] gRPC endpoint.
 func validateManagerHost(raw string) error {
 	host := strings.TrimSpace(raw)
 	if host == "" {
 		return fmt.Errorf("manager host is required")
 	}
-	if i := strings.Index(raw, "://"); i >= 0 {
-		host = strings.TrimSpace(raw[i+3:])
-	}
-	if i := strings.Index(host, "/"); i >= 0 {
-		host = host[:i]
-	}
-	if host == "" {
-		return fmt.Errorf("manager host is required")
+	if strings.Contains(host, "://") || strings.Contains(host, "/") {
+		return fmt.Errorf("manager host must be host[:port], not a URL")
 	}
 	return nil
 }

@@ -97,15 +97,6 @@ func Load(path string, required bool) (Config, error) {
 	if err := json.Unmarshal(b, &cfg); err != nil {
 		return cfg, fmt.Errorf("decode client config: %w", err)
 	}
-	// Legacy WebSocket-era configs wrote manager_url; migrate it once.
-	if cfg.ManagerHost == "" {
-		var legacy struct {
-			ManagerURL string `json:"manager_url"`
-		}
-		if json.Unmarshal(b, &legacy) == nil && strings.TrimSpace(legacy.ManagerURL) != "" {
-			cfg.ManagerHost = legacy.ManagerURL
-		}
-	}
 	cfg.ManagerHost = normalizeManagerHost(cfg.ManagerHost)
 	cfg.DeviceID = strings.TrimSpace(cfg.DeviceID)
 	cfg.DeviceName = strings.TrimSpace(cfg.DeviceName)
@@ -150,21 +141,10 @@ func Save(path string, cfg Config) error {
 	return os.Rename(tmp, path)
 }
 
-// normalizeManagerHost accepts "host", "host:port", or legacy
-// "ws(s)://host[:port]/path" values and returns "host" or "host:port".
-// The bare host keeps the default gRPC port applied at dial time.
+// normalizeManagerHost trims a "host[:port]" value; the bare host keeps the
+// default gRPC port applied at dial time.
 func normalizeManagerHost(v string) string {
-	v = strings.TrimSpace(v)
-	if v == "" {
-		return ""
-	}
-	if i := strings.Index(v, "://"); i >= 0 {
-		v = v[i+3:]
-	}
-	if i := strings.IndexAny(v, "/"); i >= 0 {
-		v = v[:i]
-	}
-	return v
+	return strings.TrimSpace(v)
 }
 
 func expandHome(path string) string {

@@ -46,7 +46,7 @@ func TestLoadConfig(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "client.json")
 	content := []byte(`{
-	  "manager_url": " wss://codebridge.example.com/agent ",
+	  "manager_host": " codebridge.example.com:8081 ",
 	  "device_id": " mac-1 ",
 	  "device_name": " Mac ",
 	  "workspaces": {
@@ -61,7 +61,7 @@ func TestLoadConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.ManagerHost != "codebridge.example.com" || cfg.DeviceID != "mac-1" || cfg.DeviceName != "Mac" {
+	if cfg.ManagerHost != "codebridge.example.com:8081" || cfg.DeviceID != "mac-1" || cfg.DeviceName != "Mac" {
 		t.Fatalf("unexpected config: %#v", cfg)
 	}
 	if cfg.Workspaces["pms"] != "/tmp/pms" {

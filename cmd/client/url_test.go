@@ -8,14 +8,13 @@ func TestValidateManagerHost(t *testing.T) {
 		"manager:8081",
 		"codebridge.example.com",
 		"codebridge.example.com:443",
-		"ws://manager:8080/agent", // legacy form, stripped to host
 	}
 	for _, raw := range good {
 		if err := validateManagerHost(raw); err != nil {
 			t.Errorf("validateManagerHost(%q) = %v, want nil", raw, err)
 		}
 	}
-	for _, raw := range []string{"", "   ", "://", "https://"} {
+	for _, raw := range []string{"", "   ", "://", "https://", "ws://manager:8080/agent"} {
 		if err := validateManagerHost(raw); err == nil {
 			t.Errorf("validateManagerHost(%q) accepted", raw)
 		}
