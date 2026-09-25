@@ -5,12 +5,14 @@ bin/
 .vscode/
 *.log
 dist/
+
+# Local docker preview state (client credential, checkpoints, index)
 deploy/.env
 deploy/client-state/
 
-# Local docker preview state (client credential, checkpoints, index)
-deploy/client-state/
-deploy/.env
+# Local agent tooling state (omo session data, playwright-mcp logs)
+.omo/
+.playwright-mcp/
 
 # stray local binary from a smoke run
 /client
