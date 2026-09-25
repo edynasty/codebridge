@@ -631,6 +631,7 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 			Permissions:         cfg.Permissions,
 			CustomTools:         cfg.CustomTools,
 			SubagentProfiles:    subagentProfilesToDTO(cfg.SubagentProfiles),
+			SubagentTabs:        subagentTabsToDTO(cfg.SubagentTabs),
 			AllowSensitiveFiles: cfg.AllowSensitiveFiles || boot.allowSensitivePinned,
 			EnableLSP:           cfg.EnableLSP || boot.enableLSPPinned,
 			EnrollmentCode:      "",
@@ -667,6 +668,7 @@ func startUI(addr string, state *clientState, boot bootOptions, rt *runtime, rel
 		cfg.Permissions = in.Permissions
 		cfg.CustomTools = sanitizeCustomTools(in.CustomTools)
 		cfg.SubagentProfiles = subagentProfilesFromDTO(in.SubagentProfiles)
+		cfg.SubagentTabs = subagentTabsFromDTO(in.SubagentTabs)
 		if strings.TrimSpace(in.EnrollmentCode) != "" {
 			state.enrollCode.Store(strings.TrimSpace(in.EnrollmentCode))
 		}
@@ -749,8 +751,24 @@ func subagentProfilesToDTO(in []clientconfig.SubagentProfile) []agentops.Subagen
 	for _, p := range in {
 		out = append(out, agentops.SubagentProfileConfig{
 			Name: p.Name, Description: p.Description, Client: p.Client, Agent: p.Agent, Model: p.Model,
-			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs,
+			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs, Tab: p.Tab,
 		})
+	}
+	return out
+}
+
+func subagentTabsToDTO(in []clientconfig.SubagentTab) []agentops.SubagentTabConfig {
+	out := make([]agentops.SubagentTabConfig, 0, len(in))
+	for _, tab := range in {
+		out = append(out, agentops.SubagentTabConfig{Name: tab.Name, Client: tab.Client, Locked: tab.Locked})
+	}
+	return out
+}
+
+func subagentTabsFromDTO(in []agentops.SubagentTabConfig) []clientconfig.SubagentTab {
+	out := make([]clientconfig.SubagentTab, 0, len(in))
+	for _, tab := range in {
+		out = append(out, clientconfig.SubagentTab{Name: tab.Name, Client: tab.Client, Locked: tab.Locked})
 	}
 	return out
 }
@@ -760,7 +778,7 @@ func subagentProfilesFromDTO(in []agentops.SubagentProfileConfig) []clientconfig
 	for _, p := range in {
 		out = append(out, clientconfig.SubagentProfile{
 			Name: p.Name, Description: p.Description, Client: p.Client, Agent: p.Agent, Model: p.Model,
-			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs,
+			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs, Tab: p.Tab,
 		})
 	}
 	return out
@@ -777,7 +795,7 @@ func subagentProfilesFrom(cfg clientconfig.Config) []agentops.SubagentProfile {
 		seen[name] = true
 		out = append(out, agentops.SubagentProfile{
 			Name: name, Description: p.Description, Client: p.Client, Agent: p.Agent, Model: p.Model,
-			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs,
+			Thinking: p.Thinking, TimeoutSec: p.TimeoutSec, ExtraArgs: p.ExtraArgs, Tab: p.Tab,
 		})
 	}
 	return out

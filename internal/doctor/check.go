@@ -131,7 +131,7 @@ func Run(ctx context.Context, opts Options) ([]Result, bool) {
 	}
 
 	if strings.TrimSpace(opts.Workspace) != "" && strings.TrimSpace(opts.DeviceID) == "" {
-		add("mcp_project_info", false, "--workspace requires --device-id")
+		add("mcp_workspace", false, "--workspace requires --device-id")
 	}
 
 	if strings.TrimSpace(opts.AdminURL) != "" {
@@ -307,34 +307,43 @@ func authenticatedMCPSmoke(ctx context.Context, base string, opts Options) []Res
 		}
 	}
 	if !foundWorkspace {
-		add("mcp_project_info", false, fmt.Sprintf("workspace %q is not advertised by device %q", workspaceName, deviceID))
+		add("mcp_workspace", false, fmt.Sprintf("workspace %q is not advertised by device %q", workspaceName, deviceID))
 		return results
 	}
 
-	projectResult, err := session.CallTool(smokeCtx, &mcp.CallToolParams{
-		Name: "project_info",
+	entriesResult, err := session.CallTool(smokeCtx, &mcp.CallToolParams{
+		Name: "list",
 		Arguments: map[string]any{
 			"device_id": deviceID,
 			"workspace": workspaceName,
+			"path":      ".",
 		},
 	})
 	if err != nil {
-		add("mcp_project_info", false, "project_info: "+err.Error())
+		add("mcp_workspace", false, "list: "+err.Error())
 		return results
 	}
-	if projectResult.IsError {
-		add("mcp_project_info", false, "project_info returned a tool error")
+	if entriesResult.IsError {
+		add("mcp_workspace", false, "list returned a tool error")
 		return results
 	}
-	var projectInfo struct {
-		Markers []string `json:"markers"`
-		HasGit  bool     `json:"has_git"`
+	var entries []struct {
+		Name string `json:"name"`
+		Path string `json:"path"`
+		Type string `json:"type"`
+		Size int64  `json:"size,omitempty"`
 	}
-	if err := decodeToolJSON(projectResult, &projectInfo); err != nil {
-		add("mcp_project_info", false, "decode project_info: "+err.Error())
+	if err := decodeToolJSON(entriesResult, &entries); err != nil {
+		add("mcp_workspace", false, "decode list: "+err.Error())
 		return results
 	}
-	add("mcp_project_info", true, fmt.Sprintf("workspace=%s markers=%d has_git=%t", workspaceName, len(projectInfo.Markers), projectInfo.HasGit))
+	for _, entry := range entries {
+		if strings.TrimSpace(entry.Name) == "" || strings.TrimSpace(entry.Type) == "" {
+			add("mcp_workspace", false, "list returned an entry without a name or type")
+			return results
+		}
+	}
+	add("mcp_workspace", true, fmt.Sprintf("workspace=%s entries=%d", workspaceName, len(entries)))
 	return results
 }
 

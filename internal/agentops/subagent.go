@@ -84,6 +84,19 @@ type SubagentProfileConfig struct {
 	Thinking    string   `json:"thinking,omitempty"`
 	TimeoutSec  int      `json:"timeout_seconds,omitempty"`
 	ExtraArgs   []string `json:"extra_args,omitempty"`
+	// Tab names the configuration-UI tab this profile belongs to. Tabs are a
+	// UI grouping only: the harness a profile runs on is always Client.
+	Tab string `json:"tab,omitempty"`
+}
+
+// SubagentTabConfig is one configuration-UI tab: a display name bound to one
+// harness. Several tabs may share a harness, so an operator can keep separate
+// model/effort sets for the same tool.
+type SubagentTabConfig struct {
+	Name   string `json:"name"`
+	Client string `json:"client"`
+	// Locked freezes the tab's harness binding in the UI.
+	Locked bool `json:"locked,omitempty"`
 }
 
 // SubagentProfiles is the profile table the client injects at boot; the
@@ -101,6 +114,8 @@ type SubagentProfile struct {
 	Thinking    string
 	TimeoutSec  int
 	ExtraArgs   []string
+	// Tab is the configuration-UI grouping this profile was edited under.
+	Tab string
 }
 
 // AgentCatalogEntry is one entry of the agents_list answer.
@@ -112,6 +127,9 @@ type AgentCatalogEntry struct {
 	Model       string `json:"model,omitempty"`
 	Thinking    string `json:"thinking,omitempty"`
 	Timeout     int    `json:"timeout_seconds,omitempty"`
+	// Tab is the configuration-UI grouping the profile was defined under; it
+	// does not affect how the subagent runs.
+	Tab string `json:"tab,omitempty"`
 }
 
 // AgentCatalog returns the configured subagent profiles for AI clients. The
@@ -124,6 +142,7 @@ func AgentCatalog() []AgentCatalogEntry {
 			Name: p.Name, Description: p.Description,
 			Client: orDefault(p.Client, DefaultSubagentClient), Agent: p.Agent,
 			Model: p.Model, Thinking: p.Thinking, Timeout: p.TimeoutSec,
+			Tab: p.Tab,
 		})
 	}
 	return out

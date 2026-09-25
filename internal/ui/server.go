@@ -40,6 +40,7 @@ type Config struct {
 	Permissions         []agentops.PermissionRule        `json:"permissions"`
 	CustomTools         []protocol.CustomTool            `json:"custom_tools"`
 	SubagentProfiles    []agentops.SubagentProfileConfig `json:"subagent_profiles"`
+	SubagentTabs        []agentops.SubagentTabConfig     `json:"subagent_tabs"`
 	AllowSensitiveFiles bool                             `json:"allow_sensitive_files"`
 	EnableLSP           bool                             `json:"enable_lsp"`
 	EnrollmentCode      string                           `json:"enrollment_code,omitempty"`

@@ -20,7 +20,7 @@ func main() {
 	adminToken := flag.String("admin-token", os.Getenv("CODEBRIDGE_ADMIN_TOKEN"), "admin bearer token; prefer environment variable")
 	accessToken := strings.TrimSpace(os.Getenv("CODEBRIDGE_ACCESS_TOKEN"))
 	deviceID := flag.String("device-id", "", "optional enrolled device ID to validate")
-	workspace := flag.String("workspace", "", "optional logical workspace for a live project_info MCP round-trip; requires --device-id")
+	workspace := flag.String("workspace", "", "optional logical workspace for a live workspace-scoped MCP round-trip; requires --device-id")
 	timeout := flag.Duration("timeout", 10*time.Second, "per-request timeout")
 	noOAuth := flag.Bool("no-oauth", false, "do not require OAuth protected-resource metadata/challenge")
 	noAdminBlock := flag.Bool("no-admin-block-check", false, "skip checking that public /admin is blocked")

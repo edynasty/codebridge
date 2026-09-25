@@ -410,18 +410,20 @@
     </section>
 
     <section class="card">
-      <div class="card-h"><b>子代理配置</b><span class="hint">agent 工具按名称选择</span></div>
+      <div class="card-h"><b>子代理配置</b><span class="hint">按 harness 分 tab，agent 工具按名称选择</span></div>
       <div class="card-b">
+        <div class="bar" id="subagent-tabs" style="margin-bottom:12px"></div>
         <table class="grid">
-          <thead><tr><th style="width:16%">名称（即 agent）</th><th style="width:12%">客户端</th><th style="width:22%">说明（给 AI 看）</th><th style="width:14%">模型</th><th style="width:10%">思考</th><th style="width:8%">超时(s)</th><th>额外参数（空格分隔）</th><th style="width:36px"></th></tr></thead>
+          <thead><tr><th style="width:18%">名称（即 agent）</th><th style="width:24%">说明（给 AI 看）</th><th style="width:16%">模型</th><th style="width:11%">思考</th><th style="width:9%">超时(s)</th><th>额外参数（空格分隔）</th><th style="width:36px"></th></tr></thead>
           <tbody id="subagent-body"></tbody>
         </table>
         <div class="bar" style="margin-top:12px">
-          <button class="ghost" id="subagent-add">添加子代理配置</button>
+          <button class="ghost" id="subagent-add">添加配置</button>
+          <button class="ghost" id="tab-add">新增 tab</button>
+          <button class="ghost" id="tab-lock">锁定绑定</button>
+          <button class="ghost" id="tab-remove">删除 tab</button>
         </div>
-        <div class="hint" style="color:var(--text-4);font-size:11.5px;margin-top:10px;line-height:1.5">
-          配置名称即 ChatGPT 在 <span style="font-family:var(--mono)">agent</span> 工具里传的 <span style="font-family:var(--mono)">agent</span> 参数：命中配置即套用整行参数，说明文案会通过 <span style="font-family:var(--mono)">agents_list</span> 展示给 AI。客户端默认 <span style="font-family:var(--mono)">omp</span>（本机需能执行 <span style="font-family:var(--mono)">omp -p</span>）；选 opencode/codex 时名称同时作为其 agent/profile 名，omp 无此 CLI 开关，只吃模型与思考强度。超时留空 = 永不超时（跑到子代理自然结束）。额外参数原样追加在命令中（无头模式示例 <span style="font-family:var(--mono)">--print-logs=false --log-level WARN</span>）。预置的 omo catalog（explore/librarian/general/build/oracle/metis/momus 等）对应本机 opencode 的同名 agent，切到 omp 时按需改回 opencode。
-        </div>
+        <div class="hint" id="subagent-hint" style="color:var(--text-4);font-size:11.5px;margin-top:10px;line-height:1.5"></div>
       </div>
     </section>
 
@@ -512,7 +514,44 @@
   var enabledTools = {};
   var customRows = [];
   var permRows = [];
-  var subagentRows = [];
+
+  // Subagent configuration is grouped into tabs. A tab is bound to exactly one
+  // harness (omp/opencode/codex); several tabs may share a harness so separate
+  // model/effort sets can coexist. Locking a tab freezes that binding.
+  var SUBAGENT_CLIENTS = ['omp', 'opencode', 'codex'];
+  var subagentTabs = [];
+  var activeTab = 0;
+
+  function newSubagentTab(name, client, locked) {
+    return { name: name, client: client, locked: !!locked, rows: [] };
+  }
+
+  function activeSubagentTab() { return subagentTabs[activeTab] || subagentTabs[0]; }
+
+  function findSubagentTab(name) {
+    for (var i = 0; i < subagentTabs.length; i++) {
+      if (subagentTabs[i].name === name) return subagentTabs[i];
+    }
+    return null;
+  }
+
+  function firstSubagentTabForClient(client) {
+    for (var i = 0; i < subagentTabs.length; i++) {
+      if (subagentTabs[i].client === client) return subagentTabs[i];
+    }
+    return null;
+  }
+
+  // tabNameForClient picks a free tab name for a harness so a profile whose
+  // saved tab disappeared keeps its original harness instead of silently
+  // inheriting another tab's.
+  function tabNameForClient(client) {
+    if (!findSubagentTab(client)) return client;
+    for (var n = 2; n < 100; n++) {
+      if (!findSubagentTab(client + '-' + n)) return client + '-' + n;
+    }
+    return client + '-' + Date.now();
+  }
 
 
 
@@ -657,30 +696,86 @@
     });
   }
 
+  // Each harness has its own flags; show a plausible example for the active one.
+  var EXTRA_PLACEHOLDER = {
+    omp: '--no-skills --no-extensions',
+    opencode: '--print-logs=false --log-level WARN',
+    codex: '--skip-git-repo-check'
+  };
+
+  function renderSubagentTabs() {
+    var bar = $("subagent-tabs");
+    bar.innerHTML = '';
+    subagentTabs.forEach(function (tab, i) {
+      var btn = document.createElement('button');
+      btn.className = 'ghost' + (i === activeTab ? ' on' : '');
+      btn.textContent = tab.name + ' · ' + tab.client + (tab.locked ? ' 🔒' : '');
+      btn.title = tab.locked ? '该 tab 的 harness 绑定已锁定' : '点击切换到该 tab';
+      btn.addEventListener('click', function () {
+        activeTab = i;
+        renderSubagentTabs(); renderSubagents();
+      });
+      bar.appendChild(btn);
+    });
+    var tab = activeSubagentTab();
+    if (!tab) return;
+    var wrap = document.createElement('span');
+    wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-left:6px;font-size:11.5px;color:var(--text-4)';
+    wrap.textContent = '绑定 harness';
+    var sel = document.createElement('select');
+    SUBAGENT_CLIENTS.forEach(function (c) {
+      var opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      if (tab.client === c) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.disabled = !!tab.locked;
+    sel.addEventListener('change', function () {
+      tab.client = sel.value;
+      renderSubagentTabs(); renderSubagents();
+    });
+    wrap.appendChild(sel);
+    bar.appendChild(wrap);
+    $('tab-lock').textContent = tab.locked ? '解锁绑定' : '锁定绑定';
+  }
+
+  function renderSubagentHint() {
+    var tab = activeSubagentTab();
+    var hint = $("subagent-hint");
+    if (!tab) { hint.innerHTML = ''; return; }
+    var parts = ['本 tab 的配置都以 <span style="font-family:var(--mono)">' + tab.client + '</span> 运行'];
+    if (tab.client === 'omp') {
+      parts.push('omp 没有 agent 的 CLI 开关，只吃模型与思考强度；模型写成 <span style="font-family:var(--mono)">provider/model:强度</span> 可直接套用本机 role（如 <span style="font-family:var(--mono)">local/deepseek-v4-1-flash:max</span>）');
+    } else if (tab.client === 'opencode') {
+      parts.push('名称同时作为 opencode 的 agent 名（<span style="font-family:var(--mono)">--agent</span>）');
+    } else {
+      parts.push('名称同时作为 codex 的 profile 名（<span style="font-family:var(--mono)">--profile</span>）');
+    }
+    parts.push('配置名称即 ChatGPT 在 <span style="font-family:var(--mono)">agent</span> 工具里传的 <span style="font-family:var(--mono)">agent</span> 参数，说明文案通过 <span style="font-family:var(--mono)">agents_list</span> 展示给 AI');
+    parts.push('超时留空 = 永不超时；额外参数原样追加在命令中（示例 <span style="font-family:var(--mono)">' + (EXTRA_PLACEHOLDER[tab.client] || '') + '</span>）');
+    hint.innerHTML = parts.join('。') + '。';
+  }
+
   function renderSubagents() {
+    renderSubagentTabs();
+    renderSubagentHint();
     var body = $("subagent-body");
     body.innerHTML = '';
-    subagentRows.forEach(function (row, i) {
+    var tab = activeSubagentTab();
+    if (!tab) return;
+    var rows = tab.rows;
+    rows.forEach(function (row, i) {
       var tr = document.createElement('tr');
-      function cellInput(value, ph, w) {
+      function cellInput(value, ph) {
         var td = document.createElement('td');
         var input = document.createElement('input');
         input.type = 'text'; input.value = value || ''; input.placeholder = ph || '';
         td.appendChild(input);
         return { td: td, input: input };
       }
-      var name = cellInput(row.name, '如 ultrabrain');
-      var clientTd = document.createElement('td');
-      var clientSel = document.createElement('select');
-      ['omp', 'opencode', 'codex'].forEach(function (c) {
-        var opt = document.createElement('option');
-        opt.value = c; opt.textContent = c;
-        if ((row.client || 'omp') === c) opt.selected = true;
-        clientSel.appendChild(opt);
-      });
-      clientTd.appendChild(clientSel);
+      var name = cellInput(row.name, '如 omp-deep');
       var desc = cellInput(row.description, '给 AI 的用途说明');
-      var model = cellInput(row.model, 'provider/model');
+      var model = cellInput(row.model, 'provider/model 或 provider/model:强度');
       var thinkTd = document.createElement('td');
       var thinkSel = document.createElement('select');
       ['', 'off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'].forEach(function (t) {
@@ -691,26 +786,112 @@
       });
       thinkTd.appendChild(thinkSel);
       var timeout = cellInput(row.timeout, '留空=永不超时');
-      var extra = cellInput(row.extra, '--print-logs=false --log-level WARN');
+      var extra = cellInput(row.extra, EXTRA_PLACEHOLDER[tab.client] || '');
       var tdDel = document.createElement('td');
       var del = document.createElement('button');
       del.className = 'del'; del.textContent = '✕';
-      del.addEventListener('click', function () { subagentRows.splice(i, 1); renderSubagents(); });
+      del.addEventListener('click', function () { rows.splice(i, 1); renderSubagents(); });
       tdDel.appendChild(del);
-      [name.td, clientTd, desc.td, model.td, thinkTd, timeout.td, extra.td, tdDel].forEach(function (td) { tr.appendChild(td); });
+      [name.td, desc.td, model.td, thinkTd, timeout.td, extra.td, tdDel].forEach(function (td) { tr.appendChild(td); });
       body.appendChild(tr);
-      name.input.addEventListener('input', function () { subagentRows[i].name = name.input.value; });
-      clientSel.addEventListener('change', function () { subagentRows[i].client = clientSel.value; });
-      desc.input.addEventListener('input', function () { subagentRows[i].description = desc.input.value; });
-      model.input.addEventListener('input', function () { subagentRows[i].model = model.input.value; });
-      thinkSel.addEventListener('change', function () { subagentRows[i].thinking = thinkSel.value; });
-      timeout.input.addEventListener('input', function () { subagentRows[i].timeout = timeout.input.value; });
-      extra.input.addEventListener('input', function () { subagentRows[i].extra = extra.input.value; });
+      name.input.addEventListener('input', function () { rows[i].name = name.input.value; });
+      desc.input.addEventListener('input', function () { rows[i].description = desc.input.value; });
+      model.input.addEventListener('input', function () { rows[i].model = model.input.value; });
+      thinkSel.addEventListener('change', function () { rows[i].thinking = thinkSel.value; });
+      timeout.input.addEventListener('input', function () { rows[i].timeout = timeout.input.value; });
+      extra.input.addEventListener('input', function () { rows[i].extra = extra.input.value; });
     });
   }
 
+  // collectSubagentProfiles flattens every tab into the wire list, stamping
+  // each profile with its tab's harness and tab name.
+  function collectSubagentProfiles() {
+    var out = [];
+    subagentTabs.forEach(function (tab) {
+      tab.rows.forEach(function (r) {
+        if (!(r.name || '').trim()) return;
+        out.push({
+          name: r.name.trim(), client: tab.client, tab: tab.name,
+          description: (r.description || '').trim(),
+          model: (r.model || '').trim(), thinking: r.thinking || '',
+          timeout_seconds: parseInt(r.timeout, 10) > 0 ? parseInt(r.timeout, 10) : 0,
+          extra_args: (r.extra || '').split(/\s+/).filter(Boolean)
+        });
+      });
+    });
+    return out;
+  }
+
+  // loadSubagentTabs restores tabs, then routes every saved profile to its
+  // tab by name, falling back to the first tab of the same harness, and only
+  // then creating one. A profile never changes harness on load.
+  function loadSubagentTabs(cfg) {
+    subagentTabs = (cfg.subagent_tabs || []).filter(function (t) {
+      return t && (t.name || '').trim() && SUBAGENT_CLIENTS.indexOf(t.client) >= 0;
+    }).map(function (t) {
+      return newSubagentTab(t.name.trim(), t.client, t.locked);
+    });
+    if (!subagentTabs.length) {
+      subagentTabs = SUBAGENT_CLIENTS.map(function (c) { return newSubagentTab(c, c, false); });
+    }
+    (cfg.subagent_profiles || []).forEach(function (p) {
+      var client = SUBAGENT_CLIENTS.indexOf(p.client) >= 0 ? p.client : 'omp';
+      var tab = (p.tab && findSubagentTab(p.tab)) || firstSubagentTabForClient(client);
+      if (!tab) {
+        tab = newSubagentTab(tabNameForClient(client), client, false);
+        subagentTabs.push(tab);
+      }
+      tab.rows.push({
+        name: p.name || '', description: p.description || '', model: p.model || '',
+        thinking: p.thinking || '', timeout: p.timeout_seconds ? String(p.timeout_seconds) : '',
+        extra: (p.extra_args || []).join(' ')
+      });
+    });
+    activeTab = 0;
+  }
+
   $('subagent-add').addEventListener('click', function () {
-    subagentRows.push({ name: '', client: 'omp', description: '', model: '', thinking: '', timeout: '', extra: '' });
+    var tab = activeSubagentTab();
+    if (!tab) return;
+    tab.rows.push({ name: '', description: '', model: '', thinking: '', timeout: '', extra: '' });
+    renderSubagents();
+  });
+
+  // Empty input in either dialog keeps the suggested value, so accepting the
+  // prefill is enough; cancelling aborts.
+  function dialogValue(answer, fallback) {
+    if (answer === null || answer === undefined) return null;
+    var trimmed = String(answer).trim();
+    return trimmed || fallback;
+  }
+
+  $('tab-add').addEventListener('click', function () {
+    var suggested = tabNameForClient('omp');
+    var name = dialogValue(prompt('新 tab 名称（同一 harness 可建多个 tab）', suggested), suggested);
+    if (!name) return;
+    if (findSubagentTab(name)) { alert('tab 名称已存在：' + name); return; }
+    var client = dialogValue(prompt('绑定 harness：omp / opencode / codex', 'omp'), 'omp');
+    if (!client) return;
+    if (SUBAGENT_CLIENTS.indexOf(client) < 0) { alert('harness 必须是 omp、opencode 或 codex'); return; }
+    subagentTabs.push(newSubagentTab(name, client, false));
+    activeTab = subagentTabs.length - 1;
+    renderSubagents();
+  });
+
+  $('tab-lock').addEventListener('click', function () {
+    var tab = activeSubagentTab();
+    if (!tab) return;
+    tab.locked = !tab.locked;
+    renderSubagents();
+  });
+
+  $('tab-remove').addEventListener('click', function () {
+    var tab = activeSubagentTab();
+    if (!tab) return;
+    if (subagentTabs.length <= 1) { alert('至少保留一个 tab'); return; }
+    if (tab.rows.length && !confirm('删除 tab「' + tab.name + '」及其 ' + tab.rows.length + ' 条配置？')) return;
+    subagentTabs.splice(activeTab, 1);
+    activeTab = 0;
     renderSubagents();
   });
 
@@ -795,9 +976,7 @@
       return { name: t.name, tool: t.tool, args: t.args || {} };
     });
     renderCustom();
-    subagentRows = (cfg.subagent_profiles || []).map(function (p) {
-      return { name: p.name || '', client: p.client || 'omp', description: p.description || '', model: p.model || '', thinking: p.thinking || '', timeout: p.timeout_seconds ? String(p.timeout_seconds) : '', extra: (p.extra_args || []).join(' ') };
-    });
+    loadSubagentTabs(cfg);
     renderSubagents();
     permRows = (cfg.permissions || []).map(function (r) {
       return { effect: r.effect, tool: r.tool || 'bash', pattern: r.pattern || '', reason: r.reason || '' };
@@ -839,13 +1018,9 @@
       permissions: permRows.map(function (r) {
         return { effect: r.effect, tool: r.tool || 'bash', pattern: r.pattern, reason: r.reason };
       }),
-      subagent_profiles: subagentRows.filter(function (r) { return (r.name || '').trim(); }).map(function (r) {
-        return {
-          name: r.name.trim(), client: r.client || 'omp', description: (r.description || '').trim(),
-          model: (r.model || '').trim(), thinking: r.thinking || '',
-          timeout_seconds: parseInt(r.timeout, 10) > 0 ? parseInt(r.timeout, 10) : 0,
-          extra_args: (r.extra || '').split(/\s+/).filter(Boolean)
-        };
+      subagent_profiles: collectSubagentProfiles(),
+      subagent_tabs: subagentTabs.map(function (t) {
+        return { name: t.name, client: t.client, locked: !!t.locked };
       }),
       custom_tools: custom,
       manager_host: $('f-manager').value.trim(),

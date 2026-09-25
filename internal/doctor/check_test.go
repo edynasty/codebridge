@@ -108,16 +108,17 @@ func TestAuthenticatedMCPSmoke(t *testing.T) {
 			Content: []mcp.Content{&mcp.TextContent{Text: `[{"name":"demo"}]`}},
 		}, nil, nil
 	})
-	type projectInput struct {
+	type listInput struct {
 		DeviceID  string `json:"device_id"`
 		Workspace string `json:"workspace"`
+		Path      string `json:"path"`
 	}
-	mcp.AddTool(mcpServer, &mcp.Tool{Name: "project_info"}, func(_ context.Context, _ *mcp.CallToolRequest, in projectInput) (*mcp.CallToolResult, any, error) {
-		if in.DeviceID != "mac-1" || in.Workspace != "demo" {
-			t.Fatalf("unexpected project_info input: %#v", in)
+	mcp.AddTool(mcpServer, &mcp.Tool{Name: "list"}, func(_ context.Context, _ *mcp.CallToolRequest, in listInput) (*mcp.CallToolResult, any, error) {
+		if in.DeviceID != "mac-1" || in.Workspace != "demo" || in.Path != "." {
+			t.Fatalf("unexpected list input: %#v", in)
 		}
 		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: `{"markers":["go.mod"],"has_git":true}`}},
+			Content: []mcp.Content{&mcp.TextContent{Text: `[{"name":"go.mod","path":"go.mod","type":"file","size":12},{"name":"internal","path":"internal","type":"dir","size":96}]`}},
 		}, nil, nil
 	})
 
@@ -169,7 +170,7 @@ func TestAuthenticatedMCPSmoke(t *testing.T) {
 	want := map[string]bool{
 		"mcp_authenticated": false,
 		"mcp_device":        false,
-		"mcp_project_info":  false,
+		"mcp_workspace":     false,
 	}
 	for _, result := range results {
 		if _, exists := want[result.Name]; exists && result.OK {

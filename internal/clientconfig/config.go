@@ -25,6 +25,17 @@ type SubagentProfile struct {
 	Thinking    string   `json:"thinking,omitempty"` // off|minimal|low|medium|high|xhigh|max
 	TimeoutSec  int      `json:"timeout_seconds,omitempty"`
 	ExtraArgs   []string `json:"extra_args,omitempty"` // appended verbatim before the task
+	// Tab is the configuration-UI grouping this profile was defined under.
+	Tab string `json:"tab,omitempty"`
+}
+
+// SubagentTab is one configuration-UI tab: a display name bound to one
+// harness. Tabs group profiles for editing only; the harness a profile runs on
+// is always SubagentProfile.Client.
+type SubagentTab struct {
+	Name   string `json:"name"`
+	Client string `json:"client"` // omp | opencode | codex
+	Locked bool   `json:"locked,omitempty"`
 }
 
 type Config struct {
@@ -38,6 +49,7 @@ type Config struct {
 	DisabledTools       []string                  `json:"disabled_tools,omitempty"`
 	CustomTools         []protocol.CustomTool     `json:"custom_tools,omitempty"`
 	SubagentProfiles    []SubagentProfile         `json:"subagent_profiles,omitempty"`
+	SubagentTabs        []SubagentTab             `json:"subagent_tabs,omitempty"`
 	CredentialFile      string                    `json:"credential_file,omitempty"`
 	AllowSensitiveFiles bool                      `json:"allow_sensitive_files,omitempty"`
 	EnableLSP           bool                      `json:"enable_lsp,omitempty"`
