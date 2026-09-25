@@ -426,10 +426,16 @@ func runGRPCSession(ctx context.Context, rt *runtime, state *clientState, onCred
 	}
 	// Rebuild the registration payload on every (re)connect: credentials and
 	// enrollment codes issued mid-session must be picked up instead of the
-	// stale values captured in rt.reg at boot.
+	// stale values captured in rt.reg at boot. An empty state must not erase
+	// a value the caller put in rt.reg, which is how tests and embedders
+	// hand over a one-time enrollment code.
 	reg := rt.reg
-	reg.EnrollmentCode = state.EnrollmentCode()
-	reg.DeviceCredential = state.Credential()
+	if code := state.EnrollmentCode(); code != "" {
+		reg.EnrollmentCode = code
+	}
+	if credential := state.Credential(); credential != "" {
+		reg.DeviceCredential = credential
+	}
 	regPayload, _ := json.Marshal(reg)
 	if err := stream.Send(&pb.Envelope{Type: "register", DeviceId: reg.DeviceID, Payload: regPayload}); err != nil {
 		return err
