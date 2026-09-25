@@ -14,7 +14,7 @@ func TestBuildFilesWithChatGPTApp(t *testing.T) {
 		MCPURL:  "https://codebridge.example.com/mcp",
 		AppID:   "plugin_asdk_app_abc123",
 		Out:     "unused",
-		Version: "0.3.1",
+		Version: "0.1.0",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -57,7 +57,7 @@ func TestBuildFilesWithChatGPTApp(t *testing.T) {
 }
 
 func TestBuildFilesWithoutAppOmitsChatGPTMapping(t *testing.T) {
-	files, err := buildFiles(options{MCPURL: "https://codebridge.example.com/mcp", Version: "0.3.1"})
+	files, err := buildFiles(options{MCPURL: "https://codebridge.example.com/mcp", Version: "0.1.0"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestBuildFilesWithoutAppOmitsChatGPTMapping(t *testing.T) {
 }
 
 func TestMCPManifestsUseExpectedTransports(t *testing.T) {
-	files, err := buildFiles(options{MCPURL: "https://codebridge.example.com/mcp", Version: "0.3.1"})
+	files, err := buildFiles(options{MCPURL: "https://codebridge.example.com/mcp", Version: "0.1.0"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestRejectsUnsafeOrWrongMCPURL(t *testing.T) {
 }
 
 func TestWriteZipContainsExpectedFiles(t *testing.T) {
-	files, err := buildFiles(options{MCPURL: "https://codebridge.example.com/mcp", AppID: "plugin_asdk_app_zip123", Version: "0.3.1"})
+	files, err := buildFiles(options{MCPURL: "https://codebridge.example.com/mcp", AppID: "plugin_asdk_app_zip123", Version: "0.1.0"})
 	if err != nil {
 		t.Fatal(err)
 	}
