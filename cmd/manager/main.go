@@ -213,6 +213,10 @@ func main() {
 	manifestHandler := adminHandler.ServePluginManifest(publicURL, publicURL, contactEmail)
 	mux.Handle("/.well-known/ai-plugin.json", manifestHandler)
 	mux.Handle("/.well-known/codebridge/ai-plugin.json", manifestHandler)
+	// Plugin package assets: brand logo and legal notice at the exact URLs
+	// the manifest references.
+	mux.HandleFunc("/.well-known/codebridge-logo.png", mgr.ServeEmbeddedAsset(mgr.EmbeddedLogoPNG(), "image/png"))
+	mux.HandleFunc("/.well-known/codebridge-legal.txt", mgr.ServeEmbeddedAsset(mgr.EmbeddedLegalTXT(), "text/plain; charset=utf-8"))
 	var protectedMCP http.Handler = mcpHandler
 	if oauthCfg != nil {
 		verifier, err := oauthresource.New(oauthresource.Config{

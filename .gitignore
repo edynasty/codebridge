@@ -15,4 +15,4 @@ deploy/.env
 # stray local binary from a smoke run
 client
 bin/client
-manager
+/manager

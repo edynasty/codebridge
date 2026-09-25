@@ -1,0 +1,10 @@
+CodeBridge — Personal MCP Bridge
+
+This service connects AI clients (such as ChatGPT) to the operator's own
+machines. Use is restricted to the operator and explicitly authorized
+accounts. Tool calls execute on the operator's hardware with the operator's
+credentials; the operator is solely responsible for all activity performed
+through this service.
+
+No warranty is provided. The service is provided "as is", without warranty
+of any kind, express or implied.
