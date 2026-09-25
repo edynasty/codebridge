@@ -17,7 +17,10 @@ import (
 	"syscall"
 	"time"
 
+	"crypto/tls"
 	"google.golang.org/grpc"
+
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
@@ -395,8 +398,16 @@ func assemble(boot bootOptions, managerHost, deviceID, deviceName string, roots 
 // runGRPCSession is the gRPC counterpart of runSession: one bidi stream,
 // HTTP/2 keepalive, exponential backoff reconnects handled by the caller.
 func runGRPCSession(ctx context.Context, rt *runtime, state *clientState, onCredential func(string) error) error {
+	// TLS is used whenever the target is a public name (host with a dot);
+	// loopback/LAN targets stay plaintext for local deployments.
+	var creds grpc.DialOption
+	if isPublicGRPCHost(rt.grpcTarget) {
+		creds = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{ServerName: hostOfTarget(rt.grpcTarget)}))
+	} else {
+		creds = grpc.WithTransportCredentials(insecure.NewCredentials())
+	}
 	conn, err := grpc.NewClient(rt.grpcTarget,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		creds,
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time:                15 * time.Second,
 			Timeout:             10 * time.Second,
@@ -548,6 +559,29 @@ func validateManagerHost(raw string) error {
 		return fmt.Errorf("manager host must be host[:port], not a URL")
 	}
 	return nil
+}
+
+// isPublicGRPCHost reports whether the target is a public name (contains a
+// dot and is not a private IP), in which case the gRPC connection uses
+// TLS with public CA verification.
+func isPublicGRPCHost(target string) bool {
+	host := target
+	if i := strings.LastIndex(host, ":"); i > strings.LastIndex(host, "]") {
+		host = host[:i]
+	}
+	host = strings.Trim(host, "[]")
+	if net.ParseIP(host) != nil {
+		return false
+	}
+	return strings.Contains(host, ".") && !strings.HasSuffix(host, ".local") && !strings.HasSuffix(host, ".internal")
+}
+
+func hostOfTarget(target string) string {
+	host := target
+	if i := strings.LastIndex(host, ":"); i > strings.LastIndex(host, "]") {
+		host = host[:i]
+	}
+	return strings.Trim(host, "[]")
 }
 
 func envBool(name string, def bool) bool {
