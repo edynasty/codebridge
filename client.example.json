@@ -1,10 +1,72 @@
 {
-  "manager_url": "wss://codebridge.example.com/agent",
+  "manager_host": "codebridge.example.com:8081",
   "device_id": "mbp-m1",
   "device_name": "MacBook Pro",
-  "allow_sensitive_files": false,
+  "access_mode": "workspaces",
   "workspaces": {
     "pms": "/Users/me/code/pms",
     "portal": "/Users/me/code/portal"
-  }
+  },
+  "writable_workspaces": ["pms"],
+  "enabled_tools": [
+    "list_devices",
+    "list_workspaces",
+    "list",
+    "read",
+    "write",
+    "edit",
+    "apply_patch",
+    "rollback_patch",
+    "bash",
+    "agents_list",
+    "agent",
+    "permission_grant"
+  ],
+  "disabled_tools": [],
+  "custom_tools": [
+    {
+      "name": "pms_file",
+      "description": "Read one file from the pms workspace",
+      "tool": "read",
+      "args": {
+        "device_id": "mbp-m1",
+        "workspace": "pms"
+      }
+    }
+  ],
+  "subagent_profiles": [
+    {
+      "name": "explore",
+      "description": "Read-only codebase exploration",
+      "client": "omp",
+      "model": "provider/model",
+      "thinking": "low",
+      "timeout_seconds": 300
+    }
+  ],
+  "permissions": [
+    {
+      "effect": "allow",
+      "tool": "bash",
+      "pattern": "git status*",
+      "reason": "read-only git"
+    },
+    {
+      "effect": "allow",
+      "tool": "bash",
+      "pattern": "git",
+      "reason": "read-only git"
+    },
+    {
+      "effect": "allow",
+      "tool": "agent",
+      "pattern": "omp",
+      "reason": "local subagent harness"
+    }
+  ],
+  "credential_file": "~/.config/codebridge/credentials.json",
+  "allow_sensitive_files": false,
+  "enable_lsp": false,
+  "bash_allowlist": [],
+  "checkpoint_dir": "/Users/me/.cache/codebridge"
 }
