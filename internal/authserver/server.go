@@ -232,10 +232,37 @@ func (s *Server) validateAuthorizeRequest(form url.Values) (*authorizeRequest, e
 	if err != nil {
 		return nil, err
 	}
-	if !containsExact(allowed, req.RedirectURI) {
+	if !redirectAllowed(allowed, req.RedirectURI) {
 		return nil, fmt.Errorf("redirect_uri is not allowed for this client")
 	}
 	return req, nil
+}
+
+// redirectAllowed matches the request redirect URI against the client's
+// permitted list. Loopback redirects (RFC 8252) match on host+path with any
+// port, because native clients such as Codex bind an ephemeral local port.
+func redirectAllowed(allowed []string, want string) bool {
+	wu, err := url.Parse(want)
+	if err != nil {
+		return false
+	}
+	for _, a := range allowed {
+		if a == want {
+			return true
+		}
+		au, err := url.Parse(a)
+		if err != nil {
+			continue
+		}
+		isLoopback := func(u *url.URL) bool {
+			h := u.Hostname()
+			return h == "127.0.0.1" || h == "localhost" || h == "::1"
+		}
+		if isLoopback(au) && isLoopback(wu) && au.Path == wu.Path {
+			return true
+		}
+	}
+	return false
 }
 
 type authorizeRequest struct {
@@ -267,15 +294,6 @@ func (s *Server) allowedRedirectURIs(clientID string) ([]string, error) {
 		return dcr.RedirectURIs, nil
 	}
 	return nil, fmt.Errorf("unknown client_id")
-}
-
-func containsExact(list []string, want string) bool {
-	for _, v := range list {
-		if v == want {
-			return true
-		}
-	}
-	return false
 }
 
 func randomToken(n int) string {

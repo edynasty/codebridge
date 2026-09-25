@@ -221,7 +221,34 @@ type cimdDocument struct {
 	RedirectURIs []string `json:"redirect_uris"`
 }
 
-// fetchCIMD retrieves and sanity-checks a Client ID Metadata Document.
+// builtinCIMD carries the published Client ID Metadata Documents of the
+// [OI] hosts this deployment serves. They are pinned so authorization
+// works even where the network cannot reach chatgpt.com (mainland China);
+// fetchCIMD still tries the live document first and falls back to these.
+var builtinCIMD = map[string]cimdDocument{
+	"https://chatgpt.com/oauth/client.json": {
+		ClientID:   "https://chatgpt.com/oauth/client.json",
+		ClientName: "ChatGPT",
+		RedirectURIs: []string{
+			"https://chatgpt.com/connector_platform_oauth_redirect",
+			"https://chatgpt.com/aip/connector/callback",
+			"https://chatgpt.com/backend-api/codex/connect",
+		},
+	},
+	"https://chatgpt.com/oauth/codex/client.json": {
+		ClientID:   "https://chatgpt.com/oauth/codex/client.json",
+		ClientName: "Codex",
+		RedirectURIs: []string{
+			"http://127.0.0.1/callback",
+			"http://localhost/callback",
+			"http://127.0.0.1:57917/callback",
+		},
+	},
+}
+
+// fetchCIMD retrieves and sanity-checks a Client ID Metadata Document. The
+// live document is preferred; when it is unreachable (blocked networks are
+// common for personal deployments) the pinned builtin copy applies.
 func (s *Server) fetchCIMD(clientID string) (*cimdDocument, error) {
 	if !strings.HasPrefix(clientID, "https://") || !strings.Contains(strings.TrimPrefix(clientID, "https://"), "/") {
 		return nil, fmt.Errorf("client_id is not an HTTPS metadata URL")
@@ -229,10 +256,16 @@ func (s *Server) fetchCIMD(clientID string) (*cimdDocument, error) {
 	client := &http.Client{Timeout: cimdFetchTimeout}
 	resp, err := client.Get(clientID)
 	if err != nil {
+		if doc, ok := builtinCIMD[clientID]; ok {
+			return &doc, nil
+		}
 		return nil, fmt.Errorf("fetch client metadata: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		if doc, ok := builtinCIMD[clientID]; ok {
+			return &doc, nil
+		}
 		return nil, fmt.Errorf("client metadata returned %d", resp.StatusCode)
 	}
 	var doc cimdDocument
