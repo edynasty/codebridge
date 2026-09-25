@@ -32,7 +32,7 @@ ChatGPT Web / MCP client
 - File reads are capped at 256 KiB per call.
 - Git commands are fixed read-only commands (`status`, `diff`). Sensitive paths are filtered from status and diff output by default.
 - Common sensitive workspace content such as `.env`, private keys, cloud credentials, `.git` internals, and Terraform state/variables is blocked by default across read/search/discovery tools. Disabling this requires an explicit local Client opt-in. Sensitive paths are **never writable**, even with that opt-in.
-- `apply_patch` is all-or-nothing, requires `preview` then `confirm`, always creates a git checkpoint before writing, rejects binary content and sensitive paths, and can be undone with `rollback_patch`. It never runs shell commands and never pushes.
+- `apply_patch` is all-or-nothing, requires `preview` then `confirm`, always creates a local checkpoint before writing, rejects binary content and sensitive paths, and can be undone with `rollback_patch`. It never runs shell commands and never pushes.
 - The manager does not persist source code or tool responses.
 - Device enrollment uses short-lived **one-time enrollment codes**.
 - Each enrolled device receives a random **per-device credential**. The manager persists only its SHA-256 digest; the client persists the credential locally with file mode `0600`.
@@ -150,7 +150,7 @@ Module/dependency graph parsed from `pom.xml` (multi-module Maven), `package.jso
 
 ### Write mode (opt-in)
 
-Write tools only work on workspaces the **local client** explicitly advertised as writable (`CODEBRIDGE_WRITABLE_WORKSPACES` / `writable_workspaces` JSON). A remote MCP caller can never enable this. The workspace must be a git repository; sensitive paths (`.env`, private keys, …) are never writable; binary content is rejected.
+Write tools only work on workspaces the **local client** explicitly advertised as writable (`CODEBRIDGE_WRITABLE_WORKSPACES` / `writable_workspaces` JSON). A remote MCP caller can never enable this. Any workspace directory works (no git repository required); sensitive paths (`.env`, private keys, …) are never writable; binary content is rejected.
 
 #### `apply_patch`
 
@@ -168,7 +168,7 @@ All-or-nothing edits. Each edit is one of:
 - **create** (`new_text` only): the file must not exist;
 - **delete** (`old_text` only): `old_text` must equal the full file content.
 
-Always call with `preview: true` first — the response contains a unified diff, the per-file plan, and nothing is written. Then send the same patch with `confirm: true` to apply. Every apply snapshots the affected files as git blobs first and returns a `checkpoint_id`. Bounds: 20 files, 512 KiB per file, 2 MiB total.
+Always call with `preview: true` first — the response contains a unified diff, the per-file plan, and nothing is written. Then send the same patch with `confirm: true` to apply. Every apply snapshots the affected files into the local content-addressed checkpoint store first and returns a `checkpoint_id`. Bounds: 20 files, 512 KiB per file, 2 MiB total.
 
 #### `rollback_patch`
 

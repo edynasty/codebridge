@@ -200,10 +200,10 @@ Account scoping (MGR-001) is complete. P2 write mode is implemented with local o
 - [x] Bound patch size/files changed (20 files, 512 KiB/file, 2 MiB total).
 - [x] Reject binary writes initially.
 
-### AGT-201 Git checkpoint
+### AGT-201 Local checkpoint
 
-- [x] Verify repository state before write (workspace must be a git repository).
-- [x] Create recoverable local checkpoint (git blob snapshots + local metadata store, 20 retained).
+- [x] Verify the workspace root is writable by policy before write (no git repository required).
+- [x] Create recoverable local checkpoint (content-addressed blob snapshots in the client state dir + local metadata store, 20 retained, unreferenced blobs pruned).
 - [x] Refuse unsafe/ambiguous dirty-state cases unless policy explicitly permits them (per-file snapshots make dirty worktrees safe; partial-write failure auto-rolls back).
 - [x] Never push automatically.
 

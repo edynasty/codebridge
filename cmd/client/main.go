@@ -357,7 +357,7 @@ func assemble(boot bootOptions, managerHost, deviceID, deviceName string, roots 
 			names = append(names, name)
 		}
 		sort.Strings(names)
-		log.Printf("write mode enabled for workspace(s): %s (git checkpoints active)", strings.Join(names, ", "))
+		log.Printf("write mode enabled for workspace(s): %s (local checkpoints active)", strings.Join(names, ", "))
 	}
 	policy := &protocol.ToolPolicy{
 		EnabledTools:  cfg.EnabledTools,

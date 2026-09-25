@@ -99,13 +99,13 @@ func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, 
 	case "bash":
 		return s.runBash(ctx, root, stringArg(req.Args, "command", ""))
 	case "edit":
-		return s.applyPatch(ctx, req.Workspace, root, []FileEdit{{
+		return s.applyPatch(req.Workspace, root, []FileEdit{{
 			Path:    stringArg(req.Args, "path", ""),
 			OldText: stringArg(req.Args, "old_text", ""),
 			NewText: stringArg(req.Args, "new_text", ""),
 		}}, boolArg(req.Args, "preview", false), boolArg(req.Args, "confirm", false))
 	case "write":
-		return s.applyPatch(ctx, req.Workspace, root, []FileEdit{{
+		return s.applyPatch(req.Workspace, root, []FileEdit{{
 			Path:    stringArg(req.Args, "path", ""),
 			NewText: stringArg(req.Args, "content", ""),
 		}}, boolArg(req.Args, "preview", false), boolArg(req.Args, "confirm", false))
@@ -144,9 +144,9 @@ func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, 
 	case "dependency_graph":
 		return s.dependencyGraph(ctx, root)
 	case "apply_patch":
-		return s.applyPatch(ctx, req.Workspace, root, parseFileEdits(req.Args["edits"]), boolArg(req.Args, "preview", false), boolArg(req.Args, "confirm", false))
+		return s.applyPatch(req.Workspace, root, parseFileEdits(req.Args["edits"]), boolArg(req.Args, "preview", false), boolArg(req.Args, "confirm", false))
 	case "rollback_patch":
-		return s.rollbackPatch(ctx, req.Workspace, root, stringArg(req.Args, "checkpoint_id", ""))
+		return s.rollbackPatch(req.Workspace, root, stringArg(req.Args, "checkpoint_id", ""))
 	default:
 		return nil, fmt.Errorf("unsupported tool %q", req.Tool)
 	}

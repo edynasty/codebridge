@@ -47,7 +47,7 @@ Note: implementation complete with smoke verification; dedicated regression/inte
 - [x] Explicit per-workspace write opt-in (`CODEBRIDGE_WRITABLE_WORKSPACES` / `writable_workspaces` JSON).
 - [x] `apply_patch` only; arbitrary shell remains disabled.
 - [x] Mandatory confirmation metadata for modifying tools (preview → confirm flow).
-- [x] Git checkpoint before writes (git blob snapshots, locally retained, bounded).
+- [x] Local checkpoint before writes (content-addressed blob snapshots in the client state dir, retained and pruned; no git repository required).
 - [x] Diff preview and rollback (`rollback_patch` by checkpoint ID).
 
 Note: implementation complete with smoke verification; dedicated regression/integration tests are still tracked in docs/development-todo.md.

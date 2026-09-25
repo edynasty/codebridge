@@ -1,8 +1,8 @@
 package agentops
 
 import (
-	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -58,7 +58,9 @@ type RollbackResult struct {
 }
 
 type checkpointFile struct {
-	Path    string `json:"path"`
+	Path string `json:"path"`
+	// Blob names the pre-patch content in the local blob store
+	// (<state dir>/checkpoints/blobs/<sha256>); empty when the file was absent.
 	Blob    string `json:"blob,omitempty"`
 	Absent  bool   `json:"absent,omitempty"`
 	Mode    uint32 `json:"mode,omitempty"`
@@ -78,7 +80,7 @@ type checkpointStore struct {
 
 var writeMu sync.Mutex
 
-func (s *Service) applyPatch(ctx context.Context, workspace, root string, edits []FileEdit, preview, confirm bool) (ApplyPatchResult, error) {
+func (s *Service) applyPatch(workspace, root string, edits []FileEdit, preview, confirm bool) (ApplyPatchResult, error) {
 	if !s.Writable[workspace] {
 		return ApplyPatchResult{}, errors.New("workspace is not write-enabled; writing requires explicit local opt-in on the client")
 	}
@@ -90,9 +92,6 @@ func (s *Service) applyPatch(ctx context.Context, workspace, root string, edits 
 	}
 	if !preview && !confirm {
 		return ApplyPatchResult{}, errors.New("confirmation required: call with preview=true first, then repeat with confirm=true")
-	}
-	if _, err := gitOutput(ctx, root, "rev-parse", "--git-dir"); err != nil {
-		return ApplyPatchResult{}, errors.New("workspace must be a git repository for write mode")
 	}
 
 	rootReal, err := s.resolveWorkspaceRoot(root)
@@ -219,7 +218,7 @@ func (s *Service) applyPatch(ctx context.Context, workspace, root string, edits 
 	writeMu.Lock()
 	defer writeMu.Unlock()
 
-	cp, err := s.createCheckpoint(ctx, workspace, root, planned)
+	cp, err := s.createCheckpoint(workspace, planned)
 	if err != nil {
 		return ApplyPatchResult{}, err
 	}
@@ -255,7 +254,7 @@ func (s *Service) applyPatch(ctx context.Context, workspace, root string, edits 
 			}
 		}()
 		if writeErr != nil {
-			s.restorePartial(ctx, root, rootHandle, applied, cp)
+			s.restorePartial(root, rootHandle, applied, cp)
 			return ApplyPatchResult{}, fmt.Errorf("patch failed while writing %q; rolled back to checkpoint %s", p.rel, cp.ID)
 		}
 		applied = append(applied, p)
@@ -285,7 +284,7 @@ func ensureParentDir(rootReal, rel string) error {
 	return os.MkdirAll(filepath.Join(rootReal, filepath.FromSlash(parent)), 0o755)
 }
 
-func (s *Service) rollbackPatch(ctx context.Context, workspace, root, checkpointID string) (RollbackResult, error) {
+func (s *Service) rollbackPatch(workspace, root, checkpointID string) (RollbackResult, error) {
 	if !s.Writable[workspace] {
 		return RollbackResult{}, errors.New("workspace is not write-enabled; writing requires explicit local opt-in on the client")
 	}
@@ -322,7 +321,7 @@ func (s *Service) rollbackPatch(ctx context.Context, workspace, root, checkpoint
 			result.RemovedFiles = append(result.RemovedFiles, f.Path)
 			continue
 		}
-		content, err := gitOutput(ctx, root, "cat-file", "blob", f.Blob)
+		content, err := s.loadBlob(f.Blob)
 		if err != nil {
 			return result, fmt.Errorf("rollback %q failed: checkpoint blob is unavailable", f.Path)
 		}
@@ -333,7 +332,7 @@ func (s *Service) rollbackPatch(ctx context.Context, workspace, root, checkpoint
 		if err := rootHandle.MkdirAll(filepath.Dir(filepath.FromSlash(f.Path)), 0o755); err != nil {
 			return result, safePathError("rollback mkdir", f.Path, err)
 		}
-		if err := rootHandle.WriteFile(f.Path, []byte(content), mode); err != nil {
+		if err := rootHandle.WriteFile(f.Path, content, mode); err != nil {
 			return result, safePathError("rollback write", f.Path, err)
 		}
 		result.RestoredFiles = append(result.RestoredFiles, f.Path)
@@ -352,24 +351,31 @@ type plannedEdit struct {
 	mode       fs.FileMode
 }
 
-// createCheckpoint snapshots every affected file as a git blob before the
-// patch is applied, so rollback restores the exact pre-patch content.
-func (s *Service) createCheckpoint(ctx context.Context, workspace, root string, planned []plannedEdit) (checkpoint, error) {
+// createCheckpoint snapshots every affected file into the local
+// content-addressed blob store before the patch is applied, so rollback
+// restores the exact pre-patch content. Any directory works; write mode no
+// longer requires a git repository.
+func (s *Service) createCheckpoint(workspace string, planned []plannedEdit) (checkpoint, error) {
 	cp := checkpoint{ID: newCheckpointID(), Workspace: workspace, CreatedAt: time.Now().UTC()}
 	for _, p := range planned {
 		entry := checkpointFile{Path: p.rel}
 		info, err := os.Lstat(p.abs)
-		if err == nil {
+		switch {
+		case err == nil:
 			entry.Existed = true
 			entry.Mode = uint32(info.Mode().Perm())
-			blob, blobErr := gitOutput(ctx, root, "hash-object", "-w", "--", p.abs)
-			if blobErr != nil {
-				return cp, fmt.Errorf("checkpoint %q failed", p.rel)
+			content, readErr := os.ReadFile(p.abs)
+			if readErr != nil {
+				return cp, safePathError("checkpoint read", p.rel, readErr)
 			}
-			entry.Blob = strings.TrimSpace(blob)
-		} else if errors.Is(err, fs.ErrNotExist) {
+			blob, blobErr := s.storeBlob(content)
+			if blobErr != nil {
+				return cp, fmt.Errorf("checkpoint %q failed: %w", p.rel, blobErr)
+			}
+			entry.Blob = blob
+		case errors.Is(err, fs.ErrNotExist):
 			entry.Absent = true
-		} else {
+		default:
 			return cp, safePathError("checkpoint stat", p.rel, err)
 		}
 		cp.Files = append(cp.Files, entry)
@@ -380,7 +386,7 @@ func (s *Service) createCheckpoint(ctx context.Context, workspace, root string, 
 	return cp, nil
 }
 
-func (s *Service) restorePartial(ctx context.Context, root string, rootHandle *os.Root, applied []plannedEdit, cp checkpoint) {
+func (s *Service) restorePartial(root string, rootHandle *os.Root, applied []plannedEdit, cp checkpoint) {
 	for _, p := range applied {
 		for _, f := range cp.Files {
 			if f.Path != p.rel {
@@ -390,23 +396,95 @@ func (s *Service) restorePartial(ctx context.Context, root string, rootHandle *o
 				_ = rootHandle.Remove(p.rel)
 				continue
 			}
-			if content, err := gitOutput(ctx, root, "cat-file", "blob", f.Blob); err == nil {
+			if content, err := s.loadBlob(f.Blob); err == nil {
 				mode := fs.FileMode(f.Mode)
 				if mode == 0 {
 					mode = 0o644
 				}
-				_ = rootHandle.WriteFile(p.rel, []byte(content), mode)
+				_ = rootHandle.WriteFile(p.rel, content, mode)
 			}
 		}
 	}
 }
 
-func (s *Service) checkpointStorePath() string {
-	dir := s.CheckpointDir
-	if dir == "" {
-		dir = DefaultClientStateDir()
+func (s *Service) checkpointDir() string {
+	if s.CheckpointDir != "" {
+		return s.CheckpointDir
 	}
-	return filepath.Join(dir, checkpointStoreFile)
+	return DefaultClientStateDir()
+}
+
+func (s *Service) checkpointStorePath() string {
+	return filepath.Join(s.checkpointDir(), checkpointStoreFile)
+}
+
+// blobDir holds content-addressed pre-write snapshots. Blobs are pruned when
+// the checkpoint referencing them falls out of the retention window.
+func (s *Service) blobDir() string {
+	return filepath.Join(s.checkpointDir(), "blobs")
+}
+
+// storeBlob writes content under its SHA-256 and returns the blob name.
+func (s *Service) storeBlob(content []byte) (string, error) {
+	sum := sha256.Sum256(content)
+	name := hex.EncodeToString(sum[:])
+	dir := s.blobDir()
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", err
+	}
+	path := filepath.Join(dir, name)
+	if _, err := os.Stat(path); err == nil {
+		return name, nil
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, content, 0o600); err != nil {
+		return "", err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return "", err
+	}
+	return name, nil
+}
+
+func (s *Service) loadBlob(name string) ([]byte, error) {
+	if !isBlobName(name) {
+		return nil, errors.New("invalid checkpoint blob name")
+	}
+	return os.ReadFile(filepath.Join(s.blobDir(), name))
+}
+
+func isBlobName(name string) bool {
+	if len(name) != sha256.Size*2 {
+		return false
+	}
+	for i := range name {
+		if c := name[i]; (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+// pruneBlobs deletes snapshots no longer referenced by a retained checkpoint.
+func (s *Service) pruneBlobs(store checkpointStore) {
+	keep := map[string]bool{}
+	for _, cp := range store.Checkpoints {
+		for _, f := range cp.Files {
+			if f.Blob != "" {
+				keep[f.Blob] = true
+			}
+		}
+	}
+	entries, err := os.ReadDir(s.blobDir())
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		if keep[entry.Name()] {
+			continue
+		}
+		_ = os.Remove(filepath.Join(s.blobDir(), entry.Name()))
+	}
 }
 
 func (s *Service) loadCheckpointStore() (checkpointStore, error) {
@@ -433,6 +511,7 @@ func (s *Service) appendCheckpoint(cp checkpoint) error {
 	if len(store.Checkpoints) > maxCheckpointsKept {
 		store.Checkpoints = store.Checkpoints[len(store.Checkpoints)-maxCheckpointsKept:]
 	}
+	s.pruneBlobs(store)
 	b, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
 		return err

@@ -83,11 +83,13 @@ services:
       - "127.0.0.1:${CODEBRIDGE_UI_PORT:-8190}:8190"
     volumes:
       - ./client-state:/state
-      # Whole home tree, read-only: the "host" workspace in full-access mode
-      # is the real host home directory (~). Scan tools skip bulky system
-      # trees (see shouldSkipDir) and sensitive paths stay policy-blocked.
-      - ${HOST_HOME_DIR:-/Users/tangxingpeng}:/host:ro
-      - ${HOST_PROJECTS_DIR:-/Users/tangxingpeng/IdeaProjects}:/workspaces:ro
+      # Whole home tree, read-write: the "host" workspace in full-access mode is
+      # the real host home directory (~). Writes are still gated by the client's
+      # per-workspace "writable" opt-in, sensitive paths (.env, keys, tfstate,
+      # .git internals) stay blocked, and scan tools skip bulky system trees
+      # (see shouldSkipDir).
+      - ${HOST_HOME_DIR:-/Users/tangxingpeng}:/host
+      - ${HOST_PROJECTS_DIR:-/Users/tangxingpeng/IdeaProjects}:/workspaces
       # opencode ships inside the image. Subagents run with an isolated
       # config (no user plugins/extensions): only the provider auth file is
       # mounted, so runs are deterministic and cannot hang on host-only
