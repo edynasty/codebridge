@@ -3,7 +3,9 @@
   "name": "codebridge",
   "version": "1.0.0",
   "description": "Operate the user's own machines from ChatGPT: browse files, run permission-gated bash, and delegate tasks to local coding subagents.",
-  "author": "edynasty",
+  "author": {
+    "name": "edynasty"
+  },
   "license": "MIT",
   "keywords": ["code", "files", "bash", "subagent", "remote"],
   "extensions": {
