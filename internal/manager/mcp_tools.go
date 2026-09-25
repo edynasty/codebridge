@@ -146,7 +146,7 @@ type AgentInput struct {
 	DeviceID       string `json:"device_id" jsonschema:"ID of the connected device"`
 	Workspace      string `json:"workspace" jsonschema:"Workspace the subagent works in"`
 	Task           string `json:"task" jsonschema:"Self-contained task description for the subagent"`
-	Client         string `json:"client,omitempty" jsonschema:"Subagent harness: opencode (default) or codex"`
+	Client         string `json:"client,omitempty" jsonschema:"Subagent harness: omp (default), opencode or codex"`
 	Agent          string `json:"agent,omitempty" jsonschema:"opencode agent name, codex profile, or a subagent profile configured on the client"`
 	Model          string `json:"model,omitempty" jsonschema:"Model override, provider/model format"`
 	Thinking       string `json:"thinking,omitempty" jsonschema:"Reasoning effort: off, minimal, low, medium, high, xhigh, max"`
@@ -285,7 +285,7 @@ var toolTable = map[string]func(t *ToolService, server *mcp.Server){
 	},
 
 	"agent": func(t *ToolService, server *mcp.Server) {
-		mcp.AddTool(server, t.writeTool("agent", "Delegate a self-contained task to a local coding-agent subagent that works autonomously inside one workspace and returns its final output. Usage: call agents_list first, pick a profile, pass its name as the agent parameter, and write a complete task description (the subagent shares no conversation context with you). The client must allow the harness with a permission rule (allow agent opencode / allow agent codex); the first call otherwise returns a permission request id to resolve with permission_grant."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentInput) (*mcp.CallToolResult, any, error) {
+		mcp.AddTool(server, t.writeTool("agent", "Delegate a self-contained task to a local coding-agent subagent that works autonomously inside one workspace and returns its final output. Usage: call agents_list first, pick a profile, pass its name as the agent parameter, and write a complete task description (the subagent shares no conversation context with you). The client must allow the harness with a permission rule (allow agent omp / allow agent opencode / allow agent codex); the first call otherwise returns a permission request id to resolve with permission_grant."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentInput) (*mcp.CallToolResult, any, error) {
 			account := t.accountFor(req)
 			return t.invokeArgs(req, "agent", in.DeviceID, in.Workspace, map[string]any{
 				"task": in.Task, "client": in.Client, "agent": in.Agent,

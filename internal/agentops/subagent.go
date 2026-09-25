@@ -17,6 +17,26 @@ const (
 	subagentMaxConcurrent = 2
 )
 
+// Subagent harnesses. omp (oh-my-pi) is the default; opencode and codex stay
+// selectable for callers that pin them.
+const (
+	SubagentClientOMP      = "omp"
+	SubagentClientOpencode = "opencode"
+	SubagentClientCodex    = "codex"
+)
+
+// DefaultSubagentClient is used when neither the call nor the profile names a
+// harness.
+const DefaultSubagentClient = SubagentClientOMP
+
+func supportedSubagentClient(client string) bool {
+	switch client {
+	case SubagentClientOMP, SubagentClientOpencode, SubagentClientCodex:
+		return true
+	}
+	return false
+}
+
 var subagentInflight atomic.Int32
 
 // subagentPermit is a tiny semaphore honoring subagentMaxConcurrent.
@@ -50,9 +70,9 @@ type SubagentResult struct {
 }
 
 // runSubagent spawns a local coding-agent subagent inside the workspace root
-// and returns its output. Supported clients: opencode (opencode run) and
-// codex (codex exec). Gated by the same permission rules as bash: the
-// operator must allow the client binary first.
+// and returns its output. Supported clients: omp (default, `omp -p`),
+// opencode (`opencode run`) and codex (`codex exec`). Gated by the same
+// permission rules as bash: the operator must allow the client binary first.
 // SubagentProfileConfig is the exported wire form of a profile (used by the
 // UI config API); it mirrors clientconfig.SubagentProfile.
 type SubagentProfileConfig struct {
@@ -94,12 +114,15 @@ type AgentCatalogEntry struct {
 	Timeout     int    `json:"timeout_seconds,omitempty"`
 }
 
-// AgentCatalog returns the configured subagent profiles for AI clients.
+// AgentCatalog returns the configured subagent profiles for AI clients. The
+// harness is reported as the effective one, so a profile without an explicit
+// client shows the default it will actually run on.
 func AgentCatalog() []AgentCatalogEntry {
 	out := make([]AgentCatalogEntry, 0, len(SubagentProfiles))
 	for _, p := range SubagentProfiles {
 		out = append(out, AgentCatalogEntry{
-			Name: p.Name, Description: p.Description, Client: p.Client, Agent: p.Agent,
+			Name: p.Name, Description: p.Description,
+			Client: orDefault(p.Client, DefaultSubagentClient), Agent: p.Agent,
 			Model: p.Model, Thinking: p.Thinking, Timeout: p.TimeoutSec,
 		})
 	}
@@ -115,7 +138,7 @@ func resolveSubagentCall(client, agent, model, thinking string, timeoutSeconds i
 	for _, p := range SubagentProfiles {
 		if p.Name != "" && p.Name == strings.TrimSpace(agent) {
 			if client == "" || client == p.Client {
-				client = orDefault(p.Client, "opencode")
+				client = orDefault(p.Client, DefaultSubagentClient)
 				// The profile name doubles as the agent selector when the
 				// profile does not pin a separate agent explicitly.
 				agent = orDefault(p.Agent, p.Name)
@@ -133,7 +156,7 @@ func resolveSubagentCall(client, agent, model, thinking string, timeoutSeconds i
 		}
 	}
 	if client == "" {
-		client = "opencode"
+		client = DefaultSubagentClient
 	}
 	return client, agent, model, thinking, timeoutSeconds, nil
 }
@@ -158,12 +181,10 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 	client, agent, model, thinking, timeoutSeconds, extraArgs = resolveSubagentCall(client, agent, model, thinking, timeoutSeconds)
 	client = strings.TrimSpace(client)
 	if client == "" {
-		client = "opencode"
+		client = DefaultSubagentClient
 	}
-	switch client {
-	case "opencode", "codex":
-	default:
-		return nil, fmt.Errorf("unsupported subagent client %q (use opencode or codex)", client)
+	if !supportedSubagentClient(client) {
+		return nil, fmt.Errorf("unsupported subagent client %q (use omp, opencode or codex)", client)
 	}
 	if agent != "" && !validIdentifierish(agent) {
 		return nil, fmt.Errorf("invalid agent name %q", agent)
@@ -216,35 +237,7 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 	}
 	defer cancel()
 
-	var args []string
-	switch client {
-	case "opencode":
-		args = []string{"run", "--format", "json", "--auto", "--dir", rootReal}
-		if agent != "" {
-			args = append(args, "--agent", agent)
-		}
-		if model != "" {
-			args = append(args, "--model", model)
-		}
-		if thinking != "" && thinking != "off" {
-			args = append(args, "--variant", thinking)
-		}
-		args = append(args, extraArgs...)
-		args = append(args, "--", task)
-	case "codex":
-		args = []string{"exec"}
-		if agent != "" {
-			args = append(args, "--profile", agent)
-		}
-		if model != "" {
-			args = append(args, "--model", model)
-		}
-		if thinking != "" && thinking != "off" {
-			args = append(args, "-c", "model_reasoning_effort="+thinking)
-		}
-		args = append(args, extraArgs...)
-		args = append(args, task)
-	}
+	args := subagentArgs(client, rootReal, agent, model, thinking, extraArgs, task)
 
 	started := time.Now()
 	cmd := exec.CommandContext(runCtx, client, args...)
@@ -294,15 +287,132 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 		result.Status = "completed"
 		result.Output = truncateTail(buf.String(), 4000)
 	}
-	// opencode --format json emits JSONL events; keep the raw tail but lead
-	// with the final assistant message, which is what the caller wants.
-	if client == "opencode" {
+	// JSONL harnesses: lead with the final assistant message, which is what
+	// the caller wants; the raw event tail stays available behind it.
+	switch client {
+	case SubagentClientOpencode:
 		if final := lastAssistantMessage(result.Output); final != "" {
+			result.Output = final + "\n\n--- raw events tail ---\n" + truncateTail(result.Output, 1200)
+		}
+	case SubagentClientOMP:
+		if final := lastOMPMessage(result.Output); final != "" {
 			result.Output = final + "\n\n--- raw events tail ---\n" + truncateTail(result.Output, 1200)
 		}
 	}
 	result.Events = countJSONLines(result.Output)
 	return result, nil
+}
+
+// lastOMPMessage scans omp JSONL event lines for the last assistant text.
+// omp emits {"type":"message_end","message":{"role":"assistant","content":
+// [{"type":"text","text":"..."}]}} per turn and a final
+// {"type":"agent_end","messages":[...]} for the whole run.
+func lastOMPMessage(out string) string {
+	final := ""
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || line[0] != '{' {
+			continue
+		}
+		var ev struct {
+			Type     string            `json:"type"`
+			Message  json.RawMessage   `json:"message"`
+			Messages []json.RawMessage `json:"messages"`
+		}
+		if json.Unmarshal([]byte(line), &ev) != nil {
+			continue
+		}
+		switch ev.Type {
+		case "message_end", "turn_end":
+			if text := assistantMessageText(ev.Message); text != "" {
+				final = text
+			}
+		case "agent_end":
+			for _, raw := range ev.Messages {
+				if text := assistantMessageText(raw); text != "" {
+					final = text
+				}
+			}
+		}
+	}
+	return final
+}
+
+// assistantMessageText returns the joined text parts of one assistant message
+// and an empty string for every other role or malformed payload.
+func assistantMessageText(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var msg struct {
+		Role    string `json:"role"`
+		Content []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+	}
+	if json.Unmarshal(raw, &msg) != nil || msg.Role != "assistant" {
+		return ""
+	}
+	parts := make([]string, 0, len(msg.Content))
+	for _, part := range msg.Content {
+		if part.Type == "text" && strings.TrimSpace(part.Text) != "" {
+			parts = append(parts, part.Text)
+		}
+	}
+	return strings.Join(parts, "\n")
+}
+
+// subagentArgs builds the headless command line for one harness. The agent
+// name only reaches harnesses that have a CLI selector for it (opencode
+// --agent, codex --profile); omp picks its working agent from its own
+// configuration, so the value is not passed there.
+func subagentArgs(client, rootReal, agent, model, thinking string, extraArgs []string, task string) []string {
+	var args []string
+	switch client {
+	case SubagentClientOMP:
+		// -p is omp's non-interactive print mode and --mode json emits one
+		// JSONL event per line, which the caller streams as progress.
+		// --allow-home keeps omp working in the requested directory when that
+		// directory is the home tree (the "host" workspace) instead of
+		// relocating itself to a temp dir.
+		args = []string{"-p", "--mode", "json", "--cwd", rootReal, "--auto-approve", "--allow-home"}
+		if model != "" {
+			args = append(args, "--model", model)
+		}
+		if thinking != "" {
+			args = append(args, "--thinking", thinking)
+		}
+		args = append(args, extraArgs...)
+		args = append(args, "--", task)
+	case SubagentClientOpencode:
+		args = []string{"run", "--format", "json", "--auto", "--dir", rootReal}
+		if agent != "" {
+			args = append(args, "--agent", agent)
+		}
+		if model != "" {
+			args = append(args, "--model", model)
+		}
+		if thinking != "" && thinking != "off" {
+			args = append(args, "--variant", thinking)
+		}
+		args = append(args, extraArgs...)
+		args = append(args, "--", task)
+	case SubagentClientCodex:
+		args = []string{"exec"}
+		if agent != "" {
+			args = append(args, "--profile", agent)
+		}
+		if model != "" {
+			args = append(args, "--model", model)
+		}
+		if thinking != "" && thinking != "off" {
+			args = append(args, "-c", "model_reasoning_effort="+thinking)
+		}
+		args = append(args, extraArgs...)
+		args = append(args, task)
+	}
+	return args
 }
 
 // lastAssistantMessage scans opencode JSONL event lines for the last text

@@ -19,7 +19,7 @@
       "interface": {
         "displayName": "CodeBridge",
         "shortDescription": "Your machines, from ChatGPT",
-        "longDescription": "Browse files, run permission-gated shell commands, and delegate self-contained tasks to local coding subagents (opencode) on the user's own hardware. Tools operate on logical workspaces; bash and subagents require explicit permission grants.",
+        "longDescription": "Browse files, run permission-gated shell commands, and delegate self-contained tasks to local coding subagents (omp by default) on the user's own hardware. Tools operate on logical workspaces; bash and subagents require explicit permission grants.",
         "developerName": "edynasty",
         "category": "Productivity",
         "capabilities": [

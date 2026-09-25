@@ -420,7 +420,7 @@
           <button class="ghost" id="subagent-add">添加子代理配置</button>
         </div>
         <div class="hint" style="color:var(--text-4);font-size:11.5px;margin-top:10px;line-height:1.5">
-          配置名称即 opencode 的 agent 名：ChatGPT 在 <span style="font-family:var(--mono)">agent</span> 工具里把 <span style="font-family:var(--mono)">agent</span> 参数设为该名称即套用整套参数，说明文案会通过 <span style="font-family:var(--mono)">agents_list</span> 展示给 AI。超时留空 = 永不超时（跑到子代理自然结束）。额外参数原样追加在命令中（无头模式示例 <span style="font-family:var(--mono)">--print-logs=false --log-level WARN</span>）。预置的 omo catalog（explore/librarian/general/build/oracle/metis/momus 等）直接复用本机 opencode 的同名 agent。
+          配置名称即 ChatGPT 在 <span style="font-family:var(--mono)">agent</span> 工具里传的 <span style="font-family:var(--mono)">agent</span> 参数：命中配置即套用整行参数，说明文案会通过 <span style="font-family:var(--mono)">agents_list</span> 展示给 AI。客户端默认 <span style="font-family:var(--mono)">omp</span>（本机需能执行 <span style="font-family:var(--mono)">omp -p</span>）；选 opencode/codex 时名称同时作为其 agent/profile 名，omp 无此 CLI 开关，只吃模型与思考强度。超时留空 = 永不超时（跑到子代理自然结束）。额外参数原样追加在命令中（无头模式示例 <span style="font-family:var(--mono)">--print-logs=false --log-level WARN</span>）。预置的 omo catalog（explore/librarian/general/build/oracle/metis/momus 等）对应本机 opencode 的同名 agent，切到 omp 时按需改回 opencode。
         </div>
       </div>
     </section>
@@ -499,7 +499,7 @@
     ["rollback_patch", "按 checkpoint_id 撤销一次写入"],
     ["bash", "Shell 命令（pi bash，需授权）"], ["list", "列目录（pi ls）"],
     ["list_devices", "设备发现"], ["list_workspaces", "工作区发现"],
-    ["agent", "本地子代理（opencode/codex，可配 agent/模型/思考强度，需授权）"],
+    ["agent", "本地子代理（omp/opencode/codex，可配 agent/模型/思考强度，需授权）"],
     ["permission_grant", "权限批准接口"]
   ];
 
@@ -672,10 +672,10 @@
       var name = cellInput(row.name, '如 ultrabrain');
       var clientTd = document.createElement('td');
       var clientSel = document.createElement('select');
-      ['opencode', 'codex'].forEach(function (c) {
+      ['omp', 'opencode', 'codex'].forEach(function (c) {
         var opt = document.createElement('option');
         opt.value = c; opt.textContent = c;
-        if ((row.client || 'opencode') === c) opt.selected = true;
+        if ((row.client || 'omp') === c) opt.selected = true;
         clientSel.appendChild(opt);
       });
       clientTd.appendChild(clientSel);
@@ -710,7 +710,7 @@
   }
 
   $('subagent-add').addEventListener('click', function () {
-    subagentRows.push({ name: '', client: 'opencode', description: '', model: '', thinking: '', timeout: '', extra: '' });
+    subagentRows.push({ name: '', client: 'omp', description: '', model: '', thinking: '', timeout: '', extra: '' });
     renderSubagents();
   });
 
@@ -796,7 +796,7 @@
     });
     renderCustom();
     subagentRows = (cfg.subagent_profiles || []).map(function (p) {
-      return { name: p.name || '', client: p.client || 'opencode', description: p.description || '', model: p.model || '', thinking: p.thinking || '', timeout: p.timeout_seconds ? String(p.timeout_seconds) : '', extra: (p.extra_args || []).join(' ') };
+      return { name: p.name || '', client: p.client || 'omp', description: p.description || '', model: p.model || '', thinking: p.thinking || '', timeout: p.timeout_seconds ? String(p.timeout_seconds) : '', extra: (p.extra_args || []).join(' ') };
     });
     renderSubagents();
     permRows = (cfg.permissions || []).map(function (r) {
@@ -841,7 +841,7 @@
       }),
       subagent_profiles: subagentRows.filter(function (r) { return (r.name || '').trim(); }).map(function (r) {
         return {
-          name: r.name.trim(), client: r.client || 'opencode', description: (r.description || '').trim(),
+          name: r.name.trim(), client: r.client || 'omp', description: (r.description || '').trim(),
           model: (r.model || '').trim(), thinking: r.thinking || '',
           timeout_seconds: parseInt(r.timeout, 10) > 0 ? parseInt(r.timeout, 10) : 0,
           extra_args: (r.extra || '').split(/\s+/).filter(Boolean)
