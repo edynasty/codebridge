@@ -307,7 +307,7 @@
         <div class="mode-row">
           <label class="mode-card" id="mode-full">
             <input type="radio" name="access_mode" value="full">
-            <span><b>完全访问</b><span class="desc">含 host 工作区：AI 可浏览整个家目录树（只读），系统目录自动跳过</span></span>
+            <span><b>完全访问</b><span class="desc">含 host 工作区：AI 可浏览整个家目录树，系统目录自动跳过；能否写入由下方工作区的「可写」开关决定</span></span>
           </label>
           <label class="mode-card" id="mode-workspaces">
             <input type="radio" name="access_mode" value="workspaces">
@@ -495,6 +495,8 @@
 
   var BUILTIN_TOOLS = [
     ["read", "读文件（pi read）"], ["write", "写文件（pi write）"], ["edit", "精确替换（pi edit）"],
+    ["apply_patch", "批量原子改动（多文件 create/replace/delete，preview→confirm）"],
+    ["rollback_patch", "按 checkpoint_id 撤销一次写入"],
     ["bash", "Shell 命令（pi bash，需授权）"], ["list", "列目录（pi ls）"],
     ["list_devices", "设备发现"], ["list_workspaces", "工作区发现"],
     ["agent", "本地子代理（opencode/codex，可配 agent/模型/思考强度，需授权）"],
@@ -593,8 +595,10 @@
 
   function isToolEnabled(name) {
     if (enabledTools["*"]) return true;
-    if (name in enabledTools) return !!enabledTools[name];
-    return PERMISSION_PRESETS.pi.indexOf(name) >= 0;
+    // enabledTools is always materialized by fillForm/preset clicks, so an
+    // absent entry means "not enabled" — falling back to the pi preset here
+    // would make the "minimal" preset silently select the pi set.
+    return !!enabledTools[name];
   }
 
   function selectedToolsList() {
@@ -609,7 +613,7 @@
   document.querySelectorAll('button[data-preset]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       enabledTools = {};
-      PRESETS[btn.dataset.preset].forEach(function (n) { enabledTools[n] = true; });
+      PERMISSION_PRESETS[btn.dataset.preset].forEach(function (n) { enabledTools[n] = true; });
       renderTools();
     });
   });

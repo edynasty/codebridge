@@ -110,6 +110,28 @@ type ListInput struct {
 	Path      string `json:"path,omitempty" jsonschema:"Optional workspace-relative directory; default ."`
 }
 
+// PatchEdit is one all-or-nothing edit inside apply_patch: replace (old_text and
+// new_text), create (new_text only) or delete (old_text only).
+type PatchEdit struct {
+	Path    string `json:"path" jsonschema:"Workspace-relative file path"`
+	OldText string `json:"old_text,omitempty" jsonschema:"Exact current text; must match once (replace) or be the whole file (delete)"`
+	NewText string `json:"new_text,omitempty" jsonschema:"Replacement text; empty deletes the file"`
+}
+
+type ApplyPatchInput struct {
+	DeviceID  string      `json:"device_id" jsonschema:"ID of the connected device"`
+	Workspace string      `json:"workspace" jsonschema:"Workspace name exposed by the local agent"`
+	Edits     []PatchEdit `json:"edits" jsonschema:"All-or-nothing edits applied together"`
+	Preview   bool        `json:"preview,omitempty" jsonschema:"Return the proposed diff without writing"`
+	Confirm   bool        `json:"confirm,omitempty" jsonschema:"Required true to actually write"`
+}
+
+type RollbackPatchInput struct {
+	DeviceID     string `json:"device_id" jsonschema:"ID of the connected device"`
+	Workspace    string `json:"workspace" jsonschema:"Workspace name exposed by the local agent"`
+	CheckpointID string `json:"checkpoint_id" jsonschema:"Checkpoint ID returned by apply_patch, write or edit"`
+}
+
 type BashInput struct {
 	DeviceID  string `json:"device_id" jsonschema:"ID of the connected device"`
 	Workspace string `json:"workspace" jsonschema:"Workspace name exposed by the local agent"`
@@ -216,6 +238,30 @@ var toolTable = map[string]func(t *ToolService, server *mcp.Server){
 					"path": in.Path, "content": in.Content,
 					"preview": in.Preview, "confirm": in.Confirm,
 				})
+			})
+		})
+	},
+
+	"apply_patch": func(t *ToolService, server *mcp.Server) {
+		mcp.AddTool(server, t.writeTool("apply_patch", "Apply several all-or-nothing file edits in one call (create/replace/delete; preview then confirm). Every apply creates a local checkpoint that rollback_patch can undo. Sensitive paths and binary content are rejected."), func(ctx context.Context, req *mcp.CallToolRequest, in ApplyPatchInput) (*mcp.CallToolResult, any, error) {
+			account := t.accountFor(req)
+			edits := make([]map[string]any, 0, len(in.Edits))
+			for _, edit := range in.Edits {
+				edits = append(edits, map[string]any{"path": edit.Path, "old_text": edit.OldText, "new_text": edit.NewText})
+			}
+			args := map[string]any{"edits": edits, "preview": in.Preview, "confirm": in.Confirm}
+			return t.invokeArgs(req, "apply_patch", in.DeviceID, in.Workspace, args, func() (*mcp.CallToolResult, any, error) {
+				return t.forward(ctx, account, in.DeviceID, in.Workspace, "apply_patch", args)
+			})
+		})
+	},
+
+	"rollback_patch": func(t *ToolService, server *mcp.Server) {
+		mcp.AddTool(server, t.writeTool("rollback_patch", "Undo one earlier write by restoring the files it touched from its local checkpoint. Checkpoints are kept on the device, bounded to the most recent 20."), func(ctx context.Context, req *mcp.CallToolRequest, in RollbackPatchInput) (*mcp.CallToolResult, any, error) {
+			account := t.accountFor(req)
+			args := map[string]any{"checkpoint_id": in.CheckpointID}
+			return t.invokeArgs(req, "rollback_patch", in.DeviceID, in.Workspace, args, func() (*mcp.CallToolResult, any, error) {
+				return t.forward(ctx, account, in.DeviceID, in.Workspace, "rollback_patch", args)
 			})
 		})
 	},

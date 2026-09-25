@@ -12,7 +12,8 @@ import (
 // builtinToolNames is the ordered registry of built-in MCP tools. Custom tool
 // definitions may only wrap names on this list.
 var builtinToolNames = []string{
-	"list_devices", "list_workspaces", "list", "read", "edit", "write", "bash",
+	"list_devices", "list_workspaces", "list", "read", "edit", "write",
+	"apply_patch", "rollback_patch", "bash",
 	"agents_list", "agent", "permission_grant",
 }
 
