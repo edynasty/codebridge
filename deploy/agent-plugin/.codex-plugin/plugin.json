@@ -1,30 +1,41 @@
 {
-  "name": "codebridge",
-  "version": "1.0.2",
-  "description": "Operate the user's own machines from ChatGPT and Codex: browse files, run permission-gated bash, and delegate tasks to local coding subagents.",
+  "name": "dev-6ab63d167fbc819180d2386919fa3370",
+  "version": "1.0.5",
+  "description": "Operate the user's own machines from ChatGPT and Codex: browse and safely edit workspace files with preview/rollback, run permission-gated bash, and delegate tasks to local coding subagents.",
   "author": {
     "name": "edynasty"
   },
   "homepage": "https://cb.edynasty.asia",
   "license": "MIT",
-  "keywords": ["code", "files", "bash", "subagent", "remote", "mcp"],
+  "keywords": [
+    "code",
+    "files",
+    "bash",
+    "subagent",
+    "remote",
+    "mcp"
+  ],
   "skills": "./skills/",
   "apps": "./.app.json",
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "CodeBridge",
     "shortDescription": "Your machines, from ChatGPT",
-    "longDescription": "Browse files, run permission-gated shell commands, and delegate self-contained tasks to local coding subagents (omp by default) on the user's own hardware. Tools operate on logical workspaces; bash and subagents require explicit permission grants.",
+    "longDescription": "Browse and safely edit files with preview/confirm checkpoints and rollback, run permission-gated shell commands, and delegate self-contained tasks to local coding subagents (omp by default) on the user's own hardware. Tools operate on logical workspaces; write access is locally opted in and bash/subagents require explicit permission grants.",
     "developerName": "edynasty",
     "category": "Productivity",
-    "capabilities": ["Read", "Write", "Execute"],
+    "capabilities": [
+      "Read",
+      "Write",
+      "Execute"
+    ],
     "websiteURL": "https://cb.edynasty.asia",
     "privacyPolicyURL": "https://cb.edynasty.asia/.well-known/codebridge-legal.txt",
     "termsOfServiceURL": "https://cb.edynasty.asia/.well-known/codebridge-legal.txt",
     "defaultPrompt": [
       "List my devices and workspaces",
-      "Show me what's in ~/Downloads using bash",
-      "Send the explore subagent to find where runBash is defined"
+      "Safely update a file in a writable workspace and show me the preview first",
+      "Use the best local subagent to inspect this project and report its findings"
     ],
     "brandColor": "#4d58c4",
     "logo": "./assets/logo.png"

@@ -32,6 +32,13 @@ func schemaInt(description string) map[string]any {
 	return map[string]any{"type": "integer", "description": description}
 }
 
+// schemaEnum builds a string schema restricted to a closed set of values: a
+// status the client invents fails validation instead of reaching the model as
+// unexplained text.
+func schemaEnum(description string, values ...string) map[string]any {
+	return map[string]any{"type": "string", "description": description, "enum": values}
+}
+
 // schemaObject builds an object schema; properties may be nil for a free-form
 // or opaque object.
 func schemaObject(description string, properties map[string]any, required ...string) map[string]any {
@@ -202,6 +209,96 @@ var agentOutputSchema = schemaObject(
 	"client", "task", "status", "output", "events", "elapsed",
 )
 
+// agentRunStatusValues is the full lifecycle a run can report, spelled the way
+// the client serializes RunStatus.
+var agentRunStatusValues = []string{"queued", "running", "completed", "failed", "cancelled", "timeout", "interrupted"}
+
+// agentStartOutputSchema mirrors the client's agentStartReply. status is
+// queued until the run gets a concurrency slot and started_at stays empty
+// until it starts, so both may report the pre-run state.
+var agentStartOutputSchema = schemaObject(
+	"Result of an agent_start call",
+	map[string]any{
+		"run_id":     schemaString("Run ID to pass to agent_status, agent_result and agent_cancel"),
+		"status":     schemaEnum("Run state at start", "queued", "running"),
+		"client":     schemaString("Harness that will run: omp, opencode or codex"),
+		"agent":      schemaString("Profile or harness agent name used"),
+		"model":      schemaString("Model the subagent will run"),
+		"thinking":   schemaString("Reasoning effort the subagent will run"),
+		"workspace":  schemaString("Workspace the run belongs to"),
+		"started_at": schemaString("RFC 3339 start time; empty while the run has not started"),
+	},
+	"run_id", "status",
+)
+
+var agentStatusOutputSchema = schemaObject(
+	"Result of an agent_status call",
+	map[string]any{
+		"run_id":      schemaString("Run ID the call asked about"),
+		"status":      schemaEnum("Current run state", agentRunStatusValues...),
+		"client":      schemaString("Harness running the task"),
+		"agent":       schemaString("Profile or harness agent name used"),
+		"model":       schemaString("Model the subagent runs"),
+		"thinking":    schemaString("Reasoning effort the subagent runs"),
+		"workspace":   schemaString("Workspace the run belongs to"),
+		"started_at":  schemaString("RFC 3339 start time; empty while the run has not started"),
+		"elapsed_ms":  schemaInt("Milliseconds the run took, or has taken so far; 0 before it started"),
+		"event_count": schemaInt("Progress events the run has recorded so far"),
+		"last_event":  schemaString("Most recent progress event line; empty when none was recorded"),
+	},
+	"run_id", "status",
+)
+
+// agentResultOutputSchema covers the client's two agent_result answers: a run
+// that has not finished reports identity and state only, so output, error,
+// elapsed_ms and finished_at are optional.
+var agentResultOutputSchema = schemaObject(
+	"Result of an agent_result call; a run that has not finished reports state only",
+	map[string]any{
+		"run_id":      schemaString("Run ID the call asked about"),
+		"status":      schemaEnum("Current run state; a terminal value means the outcome fields are set", agentRunStatusValues...),
+		"output":      schemaString("The subagent's final message, once the run finished"),
+		"error":       schemaString("Failure the run reported, present when it failed"),
+		"elapsed_ms":  schemaInt("Total run duration in milliseconds"),
+		"finished_at": schemaString("RFC 3339 finish time"),
+	},
+	"run_id", "status",
+)
+
+var agentCancelOutputSchema = schemaObject(
+	"Result of an agent_cancel call",
+	map[string]any{
+		"run_id":    schemaString("Run ID the call cancelled"),
+		"status":    schemaEnum("Run state after the cancellation settled", agentRunStatusValues...),
+		"cancelled": schemaBool("True when the run was cancelled; false when it had already finished"),
+	},
+	"run_id", "status", "cancelled",
+)
+
+var agentRunRowOutputSchema = schemaObject(
+	"One subagent run in the list",
+	map[string]any{
+		"run_id":      schemaString("Run ID to pass to agent_status, agent_result and agent_cancel"),
+		"status":      schemaEnum("Current run state", agentRunStatusValues...),
+		"workspace":   schemaString("Workspace the run belongs to"),
+		"client":      schemaString("Harness running the task"),
+		"agent":       schemaString("Profile or harness agent name used"),
+		"started_at":  schemaString("RFC 3339 start time; empty while the run has not started"),
+		"elapsed_ms":  schemaInt("Milliseconds the run took, or has taken so far; 0 before it started"),
+		"event_count": schemaInt("Progress events the run has recorded so far"),
+	},
+	"run_id", "status",
+)
+
+var agentRunsOutputSchema = schemaObject(
+	"Subagent runs known to one device, newest first",
+	map[string]any{
+		"runs":  schemaArray(agentRunRowOutputSchema, "Runs the device knows about"),
+		"count": schemaInt("Number of runs returned"),
+	},
+	"runs", "count",
+)
+
 var permissionRuleOutputSchema = schemaObject(
 	"Permission rule persisted by an always decision",
 	map[string]any{
@@ -276,6 +373,11 @@ var toolOutputSchemas = map[string]map[string]any{
 		"agents",
 	),
 	"agent":            agentOutputSchema,
+	"agent_start":      agentStartOutputSchema,
+	"agent_status":     agentStatusOutputSchema,
+	"agent_result":     agentResultOutputSchema,
+	"agent_cancel":     agentCancelOutputSchema,
+	"agent_runs":       agentRunsOutputSchema,
 	"permission_grant": permissionGrantOutputSchema,
 }
 

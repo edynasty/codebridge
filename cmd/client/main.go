@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -44,6 +45,7 @@ type runtime struct {
 	grpcTarget     string // host:port for the gRPC agent transport
 	reg            protocol.RegisterRequest
 	service        *agentops.Service
+	runs           *agentops.RunManager
 	credKey        string
 	credentialFile string
 }
@@ -148,19 +150,28 @@ func main() {
 	reload := make(chan struct{}, 1)
 	disconnect := make(chan struct{}, 1)
 	started := time.Now()
+
+	// The run manager is a sibling of every gRPC session, never a child of
+	// one: it is created once for the process and outlives every reconnect and
+	// configuration reload, so nothing that ends a session can end a run.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	liveService := &atomic.Pointer[agentops.Service]{}
+	runs := newRunManager(ctx, stateDir, liveService)
+	defer func() { _ = runs.Close() }()
+
 	rt, err := buildRuntime(boot, fileConfig, state)
 	if err != nil {
 		log.Printf("initial configuration problem: %v", err)
 	}
+	activateRuntime(rt, runs, liveService)
 
 	uiServer := startUI(*uiAddr, state, boot, rt, reload, disconnect, logRing, started)
 	if uiServer != "" {
 		log.Printf("configuration UI listening on http://%s", uiServer)
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-	backoff := time.Second
+	backoff := reconnectBackoffBase
 	for ctx.Err() == nil {
 		if rt == nil {
 			select {
@@ -171,11 +182,14 @@ func main() {
 				if err != nil {
 					log.Printf("configuration still invalid: %v", err)
 					rt = nil
+				} else {
+					activateRuntime(rt, runs, liveService)
 				}
 			}
 			continue
 		}
 		sessionCtx, cancelSession := context.WithCancel(ctx)
+		sessionStarted := time.Now()
 		sessionDone := make(chan error, 1)
 		go func() {
 			sessionDone <- runGRPCSession(sessionCtx, rt, state, func(issued string) error {
@@ -194,8 +208,9 @@ func main() {
 				log.Printf("new configuration rejected, keeping the previous one: %v", err)
 			} else {
 				rt = next
+				activateRuntime(rt, runs, liveService)
 			}
-			backoff = time.Second
+			backoff = reconnectBackoffBase
 			log.Printf("configuration applied; reconnecting as %s", rt.reg.DeviceID)
 			continue
 		case <-disconnect:
@@ -211,20 +226,115 @@ func main() {
 			if err != nil {
 				state.connected.Store(false)
 				state.reconnects.Add(1)
+				// A session that lived long enough not to count as a failure
+				// resets the ladder: a blip after hours of healthy work should
+				// reconnect in a second, not inherit an outage's delay.
+				backoff = nextBackoff(backoff, time.Since(sessionStarted))
 				log.Printf("connection ended: %v; reconnecting in %s", err, backoff)
 				select {
 				case <-ctx.Done():
 					return
 				case <-time.After(backoff):
 				}
-				if backoff < 15*time.Second {
-					backoff *= 2
-				}
 			} else {
 				time.Sleep(time.Second)
 			}
 		}
 	}
+}
+
+// Reconnect backoff. A session that reaches stableConnectionThreshold counts
+// as healthy, so the next failure starts the ladder over instead of paying
+// forever for an outage that is already over.
+const (
+	reconnectBackoffBase      = time.Second
+	reconnectBackoffMax       = 15 * time.Second
+	stableConnectionThreshold = 60 * time.Second
+)
+
+// nextBackoff returns how long to wait before the next reconnect attempt: the
+// base after a stable session (or a nonsensical one), a doubled delay while
+// failures pile up, and never more than reconnectBackoffMax.
+func nextBackoff(current, sessionDuration time.Duration) time.Duration {
+	if current <= 0 || sessionDuration >= stableConnectionThreshold {
+		return reconnectBackoffBase
+	}
+	if next := current * 2; next < reconnectBackoffMax {
+		return next
+	}
+	return reconnectBackoffMax
+}
+
+// newRunManager builds the process-level run manager. Both the executor and
+// the admission check resolve the live runtime on every call, because a
+// configuration reload replaces the Service while runs keep arriving; the
+// manager itself is created once and never replaced, so a reload cannot kill
+// a run.
+func newRunManager(rootCtx context.Context, stateDir string, live *atomic.Pointer[agentops.Service]) *agentops.RunManager {
+	return newRunManagerWith(rootCtx, stateDir, live, agentops.DefaultExecutor)
+}
+
+// newRunManagerWith is newRunManager with the harness adapter as a parameter.
+// Production passes DefaultExecutor; tests pass a fake, which lets the whole
+// client wiring — live runtime resolution, workspace mapping, admission and
+// persistence — run over the real gRPC session without spawning subagent
+// processes. Nothing else about the manager changes.
+func newRunManagerWith(rootCtx context.Context, stateDir string, live *atomic.Pointer[agentops.Service], adapt func(*agentops.Service) agentops.ExecutorFunc) *agentops.RunManager {
+	return agentops.NewRunManager(
+		agentops.WithRootContext(rootCtx),
+		agentops.WithStore(filepath.Join(stateDir, "runs.db")),
+		agentops.WithExecutor(func(ctx context.Context, spec agentops.RunSpec, _ string, onEvent func(string)) (agentops.SubagentResult, error) {
+			service := live.Load()
+			if service == nil {
+				return agentops.SubagentResult{}, errors.New("no runtime is configured yet")
+			}
+			root, err := resolveSubagentRoot(service, spec.Workspace)
+			if err != nil {
+				return agentops.SubagentResult{}, err
+			}
+			spec.Workspace = root
+			return adapt(service)(ctx, spec, root, onEvent)
+		}),
+		agentops.WithPreflight(func(spec agentops.RunSpec) error {
+			service := live.Load()
+			if service == nil {
+				return errors.New("no runtime is configured yet")
+			}
+			root, err := resolveSubagentRoot(service, spec.Workspace)
+			if err != nil {
+				return err
+			}
+			spec.Workspace = root
+			return service.SubagentPreflight(spec)
+		}),
+	)
+}
+
+// resolveSubagentRoot maps a run's workspace onto the root its harness runs
+// in. Requests name a workspace; a run started through the legacy agent path
+// carries the root already, so both spellings resolve.
+func resolveSubagentRoot(service *agentops.Service, workspace string) (string, error) {
+	if root, ok := service.Roots[workspace]; ok {
+		return root, nil
+	}
+	for _, root := range service.Roots {
+		if root == workspace {
+			return root, nil
+		}
+	}
+	return "", fmt.Errorf("unknown workspace %q", workspace)
+}
+
+// activateRuntime publishes rt as the runtime new runs execute against and
+// shares the process-level run manager with its service, so the agent tool,
+// the agent_* tools and any custom wrapper all drive the same runs.
+func activateRuntime(rt *runtime, runs *agentops.RunManager, live *atomic.Pointer[agentops.Service]) {
+	if rt == nil {
+		return
+	}
+	rt.runs = runs
+	rt.service.Runs = runs
+	live.Store(rt.service)
 }
 
 func persistCredential(rt *runtime, issued string, state *clientState) error {
@@ -491,20 +601,16 @@ func runGRPCSession(ctx context.Context, rt *runtime, state *clientState, onCred
 					if err := json.Unmarshal(env.Payload, &req); err != nil {
 						resp.Error = err.Error()
 					} else {
-						if req.Tool == "agent" {
-							agentops.OnSubagentEvent = func(tool, line string) {
-								b, _ := json.Marshal(protocol.ProgressEvent{RequestID: env.RequestId, Tool: tool, Event: line})
-								_ = send(&pb.Envelope{Type: protocol.TypeProgress, RequestId: env.RequestId, DeviceId: rt.reg.DeviceID, Payload: b})
-							}
-						} else {
-							agentops.OnSubagentEvent = nil
-						}
+						// Subagent runs are long; every other tool stays
+						// bounded. A non-positive timeout_seconds means no
+						// wall-clock budget: the run ends when its harness
+						// does.
 						budget := 30 * time.Second
 						if req.Tool == "agent" {
 							if secs := intArgAny(req.Args, "timeout_seconds", 0); secs > 0 {
 								budget = time.Duration(secs) * time.Second
 							} else {
-								budget = 0
+								budget = 0 // no client-side deadline; the run's own budget applies
 							}
 						}
 						var callCtx context.Context
@@ -514,7 +620,16 @@ func runGRPCSession(ctx context.Context, rt *runtime, state *clientState, onCred
 						} else {
 							callCtx, cancel = context.WithCancel(ctx)
 						}
-						result, err := rt.service.Execute(callCtx, req)
+						// Progress is fire and forget: a dead stream drops its
+						// updates, it never fails the run behind them.
+						progress := func(line string) {
+							payload, err := json.Marshal(protocol.ProgressEvent{RequestID: env.RequestId, Tool: req.Tool, Event: line})
+							if err != nil {
+								return
+							}
+							_ = send(&pb.Envelope{Type: protocol.TypeProgress, RequestId: env.RequestId, DeviceId: rt.reg.DeviceID, Payload: payload})
+						}
+						result, err := executeRequest(callCtx, rt, req, progress)
 						cancel()
 						if err != nil {
 							resp.Error = err.Error()

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"sync/atomic"
 	"time"
 )
 
@@ -37,25 +36,6 @@ func supportedSubagentClient(client string) bool {
 	return false
 }
 
-var subagentInflight atomic.Int32
-
-// subagentPermit is a tiny semaphore honoring subagentMaxConcurrent.
-type subagentPermit struct{}
-
-func acquireSubagent(ctx context.Context) (subagentPermit, error) {
-	for subagentInflight.Load() >= subagentMaxConcurrent {
-		select {
-		case <-ctx.Done():
-			return subagentPermit{}, ctx.Err()
-		case <-time.After(500 * time.Millisecond):
-		}
-	}
-	subagentInflight.Add(1)
-	return subagentPermit{}, nil
-}
-
-func (p subagentPermit) release() { subagentInflight.Add(-1) }
-
 // SubagentResult is the outcome of one local subagent run.
 type SubagentResult struct {
 	Client   string `json:"client"`
@@ -69,10 +49,6 @@ type SubagentResult struct {
 	Elapsed  string `json:"elapsed"`
 }
 
-// runSubagent spawns a local coding-agent subagent inside the workspace root
-// and returns its output. Supported clients: omp (default, `omp -p`),
-// opencode (`opencode run`) and codex (`codex exec`). Gated by the same
-// permission rules as bash: the operator must allow the client binary first.
 // SubagentProfileConfig is the exported wire form of a profile (used by the
 // UI config API); it mirrors clientconfig.SubagentProfile.
 type SubagentProfileConfig struct {
@@ -187,11 +163,35 @@ func orDefault(v, def string) string {
 	return v
 }
 
-// OnSubagentEvent, when set, receives each raw JSONL event line while the
-// subagent runs; the client uses it to stream progress to the manager.
-var OnSubagentEvent func(tool, eventLine string)
+// validateSubagentCall rejects a call whose harness, agent name or effort
+// level is unsupported. Callers pass already-resolved values, so a profile
+// that pins a harness or effort validates exactly like a direct call, and the
+// run manager can answer an invalid request before accepting it.
+func validateSubagentCall(client, agent, thinking string) error {
+	if !supportedSubagentClient(client) {
+		return fmt.Errorf("unsupported subagent client %q (use omp, opencode or codex)", client)
+	}
+	if agent != "" && !validIdentifierish(agent) {
+		return fmt.Errorf("invalid agent name %q", agent)
+	}
+	if thinking != "" {
+		switch thinking {
+		case "off", "minimal", "low", "medium", "high", "xhigh", "max":
+		default:
+			return fmt.Errorf("unsupported thinking level %q (use off, minimal, low, medium, high, xhigh, max)", thinking)
+		}
+	}
+	return nil
+}
 
-func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, model, thinking string, timeoutSeconds int) (*SubagentResult, error) {
+// runSubagent spawns a local coding-agent subagent inside the workspace root
+// and returns its output. Supported clients: omp (default, `omp -p`),
+// opencode (`opencode run`) and codex (`codex exec`). Gated by the same
+// permission rules as bash: the operator must allow the client binary first.
+// onEvent, when not nil, receives each raw event line while the run is in
+// flight (nil means events are not wanted); concurrency is the caller's
+// business, so this function never limits itself.
+func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, model, thinking string, timeoutSeconds int, onEvent func(eventLine string)) (*SubagentResult, error) {
 	task = strings.TrimSpace(task)
 	if task == "" {
 		return nil, errors.New("task is required")
@@ -202,18 +202,8 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 	if client == "" {
 		client = DefaultSubagentClient
 	}
-	if !supportedSubagentClient(client) {
-		return nil, fmt.Errorf("unsupported subagent client %q (use omp, opencode or codex)", client)
-	}
-	if agent != "" && !validIdentifierish(agent) {
-		return nil, fmt.Errorf("invalid agent name %q", agent)
-	}
-	if thinking != "" {
-		switch thinking {
-		case "off", "minimal", "low", "medium", "high", "xhigh", "max":
-		default:
-			return nil, fmt.Errorf("unsupported thinking level %q (use off, minimal, low, medium, high, xhigh, max)", thinking)
-		}
+	if err := validateSubagentCall(client, agent, thinking); err != nil {
+		return nil, err
 	}
 	rootReal, err := s.resolveWorkspaceRoot(root)
 	if err != nil {
@@ -240,12 +230,6 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 		timeout = time.Duration(timeoutSeconds) * time.Second
 	}
 
-	permit, err := acquireSubagent(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer permit.release()
-
 	// A zero timeout leaves ctx unbounded; harness-level budgets still apply.
 	var runCtx context.Context
 	var cancel context.CancelFunc
@@ -266,8 +250,10 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 	// callback (manager streams it as MCP progress notifications) and kept
 	// in the bounded buffer for the final result.
 	var events chan string
-	if OnSubagentEvent != nil {
+	var eventsDone chan struct{}
+	if onEvent != nil {
 		events = make(chan string, 256)
+		eventsDone = make(chan struct{})
 		limited := &lineTee{buf: &buf, max: subagentMaxOutput, onLine: func(line string) {
 			select {
 			case events <- line:
@@ -277,8 +263,9 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 		cmd.Stdout = limited
 		cmd.Stderr = limited
 		go func() {
+			defer close(eventsDone)
 			for line := range events {
-				OnSubagentEvent("agent", line)
+				onEvent(line)
 			}
 		}()
 	} else {
@@ -289,6 +276,9 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 	runErr := cmd.Run()
 	if events != nil {
 		close(events)
+		// The pump must have delivered every line before the result is handed
+		// back, so a caller never sees an event arrive after completion.
+		<-eventsDone
 	}
 
 	result := &SubagentResult{

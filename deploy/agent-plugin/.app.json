@@ -1,8 +1,7 @@
 {
   "apps": {
-    "codebridge": {
-      "id": "REPLACE_WITH_REAL_CONNECTOR_ID",
-      "required": false
+    "dev-6ab63d167fbc819180d2386919fa3370": {
+      "id": "asdk_app_6ab63d167fbc819180d2386919fa3370"
     }
   }
 }

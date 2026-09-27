@@ -14,16 +14,21 @@ import (
 var builtinToolNames = []string{
 	"list_devices", "list_workspaces", "list", "read", "edit", "write",
 	"apply_patch", "rollback_patch", "bash",
-	"agents_list", "agent", "permission_grant",
+	"agents_list", "agent", "agent_start", "agent_status", "agent_result",
+	"agent_cancel", "agent_runs", "permission_grant",
 }
 
 // piCoreTools is the pi-style default surface (badlogic/pi-mono's essential
-// four — read, write, edit, bash — plus ls and the discovery pair).
+// four — read, write, edit, bash — plus ls and the discovery pair), extended
+// with the agent run family: the recommended long-task workflow needs
+// agent_start and its follow-ups visible without an explicit tool policy.
 // Clients that never configured a tool policy get this set.
 var piCoreTools = map[string]bool{
 	"list_devices": true, "list_workspaces": true, "list": true,
 	"read": true, "edit": true, "write": true, "bash": true,
 	"agents_list": true, "agent": true, "permission_grant": true,
+	"agent_start": true, "agent_status": true, "agent_result": true,
+	"agent_cancel": true, "agent_runs": true,
 }
 
 func isBuiltinTool(name string) bool {

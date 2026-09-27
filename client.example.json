@@ -20,6 +20,11 @@
     "bash",
     "agents_list",
     "agent",
+    "agent_start",
+    "agent_status",
+    "agent_result",
+    "agent_cancel",
+    "agent_runs",
     "permission_grant"
   ],
   "disabled_tools": [],
@@ -40,8 +45,7 @@
       "description": "Read-only codebase exploration",
       "client": "omp",
       "model": "provider/model",
-      "thinking": "low",
-      "timeout_seconds": 300
+      "thinking": "low"
     }
   ],
   "permissions": [

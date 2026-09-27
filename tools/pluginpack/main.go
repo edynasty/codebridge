@@ -101,6 +101,11 @@ func buildFiles(opts options) (map[string][]byte, error) {
 		}
 	}
 
+	pluginName, err := pluginIdentity(dir)
+	if err != nil {
+		return nil, err
+	}
+
 	files := map[string][]byte{}
 	err = filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -180,7 +185,7 @@ func buildFiles(opts options) (map[string][]byte, error) {
 	if appID != "" {
 		b, err := marshalJSON(map[string]any{
 			"apps": map[string]any{
-				"codebridge": map[string]any{"id": appID},
+				pluginName: map[string]any{"id": appID},
 			},
 		})
 		if err != nil {
@@ -189,6 +194,31 @@ func buildFiles(opts options) (map[string][]byte, error) {
 		files[".app.json"] = b
 	}
 	return files, nil
+}
+
+func pluginIdentity(dir string) (string, error) {
+	portable, err := readManifest(dir, "plugin.json")
+	if err != nil {
+		return "", err
+	}
+	compat, err := readManifest(dir, ".codex-plugin/plugin.json")
+	if err != nil {
+		return "", err
+	}
+	portableName, _ := portable["name"].(string)
+	compatName, _ := compat["name"].(string)
+	portableName = strings.TrimSpace(portableName)
+	compatName = strings.TrimSpace(compatName)
+	if portableName == "" {
+		return "", errors.New("plugin.json name is required")
+	}
+	if compatName == "" {
+		return "", errors.New(".codex-plugin/plugin.json name is required")
+	}
+	if portableName != compatName {
+		return "", fmt.Errorf("plugin manifest names must match: plugin.json=%q .codex-plugin/plugin.json=%q", portableName, compatName)
+	}
+	return portableName, nil
 }
 
 func readManifest(dir, name string) (map[string]any, error) {

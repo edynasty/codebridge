@@ -37,8 +37,17 @@ func TestBuildFilesWithChatGPTApp(t *testing.T) {
 	if err := json.Unmarshal(files[".app.json"], &app); err != nil {
 		t.Fatal(err)
 	}
-	if got := app.Apps["codebridge"].ID; got != "asdk_app_abc123" {
-		t.Fatalf("app id = %q, want asdk_app_abc123", got)
+	shipped, err := os.ReadFile(filepath.Join(packageDir, "plugin.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var shippedManifest map[string]any
+	if err := json.Unmarshal(shipped, &shippedManifest); err != nil {
+		t.Fatal(err)
+	}
+	pluginName, _ := shippedManifest["name"].(string)
+	if got := app.Apps[pluginName].ID; got != "asdk_app_abc123" {
+		t.Fatalf("app id for %q = %q, want asdk_app_abc123", pluginName, got)
 	}
 
 	var plugin map[string]any
@@ -126,7 +135,7 @@ func TestBuildFilesCarriesCheckedInPackage(t *testing.T) {
 		t.Fatalf("version = %#v", got["version"])
 	}
 
-	for _, name := range []string{"README.md", "assets/logo.png", "skills/codebridge-ops/SKILL.md", "skills/codebridge-subagent/SKILL.md", "scripts/verify-plugin.sh"} {
+	for _, name := range []string{"README.md", "assets/logo.png", "skills/codebridge-ops/SKILL.md", "skills/codebridge-write/SKILL.md", "skills/codebridge-subagent/SKILL.md", "scripts/verify-plugin.sh"} {
 		if _, ok := files[name]; !ok {
 			t.Fatalf("package missing %s", name)
 		}
@@ -241,6 +250,22 @@ func TestWriteZipContainsExpectedFiles(t *testing.T) {
 	}
 	if info, err := os.Stat(path); err != nil || info.Size() == 0 {
 		t.Fatalf("zip not written: info=%v err=%v", info, err)
+	}
+}
+
+func TestPluginIdentityRejectsMismatchedManifestNames(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, ".codex-plugin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "plugin.json"), []byte(`{"name":"existing-plugin"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".codex-plugin", "plugin.json"), []byte(`{"name":"different-plugin"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pluginIdentity(dir); err == nil {
+		t.Fatal("mismatched plugin manifest names were accepted")
 	}
 }
 

@@ -150,6 +150,33 @@ type AgentInput struct {
 	TimeoutSeconds int    `json:"timeout_seconds,omitempty" jsonschema:"Optional wall-clock budget in seconds; 0 or omitted means no limit"`
 }
 
+// AgentStartInput accepts a long-running subagent task. It mirrors AgentInput,
+// but the call returns as soon as the run is accepted; AgentRunIDInput and
+// AgentRunsInput follow that run up.
+type AgentStartInput struct {
+	DeviceID       string `json:"device_id" jsonschema:"ID of the connected device"`
+	Workspace      string `json:"workspace" jsonschema:"Workspace the subagent works in"`
+	Task           string `json:"task" jsonschema:"Self-contained task description for the subagent"`
+	Client         string `json:"client,omitempty" jsonschema:"Subagent harness: omp (default), opencode or codex"`
+	Agent          string `json:"agent,omitempty" jsonschema:"Profile name from agents_list"`
+	Model          string `json:"model,omitempty" jsonschema:"Model override, provider/model format"`
+	Thinking       string `json:"thinking,omitempty" jsonschema:"Reasoning effort: off, minimal, low, medium, high, xhigh, max"`
+	TimeoutSeconds int    `json:"timeout_seconds,omitempty" jsonschema:"Optional wall-clock budget in seconds; 0 or omitted means no limit"`
+}
+
+// AgentRunIDInput addresses one run started by agent_start.
+type AgentRunIDInput struct {
+	DeviceID  string `json:"device_id" jsonschema:"ID of the connected device"`
+	Workspace string `json:"workspace" jsonschema:"Workspace the run belongs to"`
+	RunID     string `json:"run_id" jsonschema:"Run ID returned by agent_start"`
+}
+
+type AgentRunsInput struct {
+	DeviceID  string `json:"device_id" jsonschema:"ID of the connected device"`
+	Workspace string `json:"workspace" jsonschema:"Workspace to list runs for"`
+	Limit     int    `json:"limit,omitempty" jsonschema:"Maximum runs to return; default 20, max 100"`
+}
+
 type PermissionGrantInput struct {
 	DeviceID  string `json:"device_id" jsonschema:"ID of the connected device the request belongs to"`
 	Workspace string `json:"workspace" jsonschema:"Workspace the request belongs to"`
@@ -283,7 +310,7 @@ var toolTable = map[string]func(t *ToolService, server *mcp.Server){
 	},
 
 	"agent": func(t *ToolService, server *mcp.Server) {
-		mcp.AddTool(server, t.writeTool("agent", "Delegate a self-contained task to a local coding-agent subagent that works autonomously inside one workspace and returns its final output. Usage: call agents_list first, pick a profile, pass its name as the agent parameter, and write a complete task description (the subagent shares no conversation context with you). The client must allow the harness with a permission rule (allow agent omp / allow agent opencode / allow agent codex); the first call otherwise returns a permission request id to resolve with permission_grant."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentInput) (*mcp.CallToolResult, any, error) {
+		mcp.AddTool(server, t.writeTool("agent", "Delegate a self-contained task to a local coding-agent subagent that works autonomously inside one workspace and returns its final output. Usage: call agents_list first, pick a profile, pass its name as the agent parameter, and write a complete task description (the subagent shares no conversation context with you). Do not guess a wall-clock duration: omit timeout_seconds by default; 0 or omitted means no limit. Set a positive timeout only when the user explicitly requests a deadline/budget. The client must allow the harness with a permission rule (allow agent omp / allow agent opencode / allow agent codex); the first call otherwise returns a permission request id to resolve with permission_grant."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentInput) (*mcp.CallToolResult, any, error) {
 			account := t.accountFor(req)
 			return t.invokeArgs(req, "agent", in.DeviceID, in.Workspace, map[string]any{
 				"task": in.Task, "client": in.Client, "agent": in.Agent,
@@ -297,6 +324,63 @@ var toolTable = map[string]func(t *ToolService, server *mcp.Server){
 					"model": in.Model, "thinking": in.Thinking,
 					"timeout_seconds": in.TimeoutSeconds,
 				})
+			})
+		})
+	},
+
+	"agent_start": func(t *ToolService, server *mcp.Server) {
+		mcp.AddTool(server, t.writeTool("agent_start", "Start a long-running subagent task on a device and return immediately with its run ID. The run executes locally and independently of this connection, so a dropped MCP session never cancels it. Follow it up with agent_status (state and progress), agent_result (final output, or state while it is still going) and agent_cancel. Usage is the same as the agent tool: call agents_list first, pick a profile, pass its name as the agent parameter, and write a complete task description (the subagent shares no conversation context with you). Do not guess a wall-clock duration: omit timeout_seconds by default; 0 or omitted means no limit and the run ends only when the harness finishes or agent_cancel is called. Set a positive timeout only when the user explicitly requests a deadline/budget. The client must allow the harness with a permission rule (allow agent omp / allow agent opencode / allow agent codex); the first call otherwise returns a permission request id to resolve with permission_grant. The agent tool remains the entry point for short tasks whose result one call should wait for."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentStartInput) (*mcp.CallToolResult, any, error) {
+			account := t.accountFor(req)
+			args := map[string]any{
+				"task": in.Task, "client": in.Client, "agent": in.Agent,
+				"model": in.Model, "thinking": in.Thinking,
+				"timeout_seconds": in.TimeoutSeconds,
+			}
+			return t.invokeArgs(req, "agent_start", in.DeviceID, in.Workspace, args, func() (*mcp.CallToolResult, any, error) {
+				return t.forward(ctx, account, in.DeviceID, in.Workspace, "agent_start", args)
+			})
+		})
+	},
+
+	"agent_status": func(t *ToolService, server *mcp.Server) {
+		mcp.AddTool(server, t.readOnlyTool("agent_status", "Report the state of one subagent run started with agent_start: status (queued, running, completed, failed, cancelled, timeout, interrupted), elapsed milliseconds, how many progress events it has recorded and the most recent event line. Free to poll; it does not affect the run."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentRunIDInput) (*mcp.CallToolResult, any, error) {
+			account := t.accountFor(req)
+			args := map[string]any{"run_id": in.RunID}
+			return t.invokeArgs(req, "agent_status", in.DeviceID, in.Workspace, args, func() (*mcp.CallToolResult, any, error) {
+				return t.forward(ctx, account, in.DeviceID, in.Workspace, "agent_status", args)
+			})
+		})
+	},
+
+	"agent_result": func(t *ToolService, server *mcp.Server) {
+		mcp.AddTool(server, t.readOnlyTool("agent_result", "Collect the result of one subagent run started with agent_start. While the run is still queued or running the answer carries only its run ID and status; once it is terminal the answer adds output (the subagent's final message), error, elapsed_ms and finished_at. Safe to repeat until it is terminal."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentRunIDInput) (*mcp.CallToolResult, any, error) {
+			account := t.accountFor(req)
+			args := map[string]any{"run_id": in.RunID}
+			return t.invokeArgs(req, "agent_result", in.DeviceID, in.Workspace, args, func() (*mcp.CallToolResult, any, error) {
+				return t.forward(ctx, account, in.DeviceID, in.Workspace, "agent_result", args)
+			})
+		})
+	},
+
+	"agent_cancel": func(t *ToolService, server *mcp.Server) {
+		mcp.AddTool(server, t.writeTool("agent_cancel", "Cancel a queued or running subagent run started with agent_start and report the state it settled on. A run that already finished is reported as it is, with cancelled false."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentRunIDInput) (*mcp.CallToolResult, any, error) {
+			account := t.accountFor(req)
+			args := map[string]any{"run_id": in.RunID}
+			return t.invokeArgs(req, "agent_cancel", in.DeviceID, in.Workspace, args, func() (*mcp.CallToolResult, any, error) {
+				return t.forward(ctx, account, in.DeviceID, in.Workspace, "agent_cancel", args)
+			})
+		})
+	},
+
+	"agent_runs": func(t *ToolService, server *mcp.Server) {
+		mcp.AddTool(server, t.readOnlyTool("agent_runs", "List the subagent runs a device knows, newest first, with each run's status, harness, profile, start time, elapsed milliseconds and progress-event count. History survives a client restart, so this covers runs started by earlier sessions."), func(ctx context.Context, req *mcp.CallToolRequest, in AgentRunsInput) (*mcp.CallToolResult, any, error) {
+			account := t.accountFor(req)
+			args := map[string]any{}
+			if in.Limit > 0 {
+				args["limit"] = in.Limit
+			}
+			return t.invokeArgs(req, "agent_runs", in.DeviceID, in.Workspace, args, func() (*mcp.CallToolResult, any, error) {
+				return t.forward(ctx, account, in.DeviceID, in.Workspace, "agent_runs", args)
 			})
 		})
 	},

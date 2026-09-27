@@ -59,6 +59,18 @@ var cannedPayloads = map[string]string{
 	"agents_list":    `{"agents":[{"name":"plan","client":"omp","model":"local/kimi-k3:max","tab":"omp"}]}`,
 	"agent": `{"client":"omp","agent":"plan","model":"local/kimi-k3:max","task":"do it",
 	           "status":"completed","output":"done","events":7,"elapsed":"12.3s"}`,
+	"agent_start": `{"run_id":"run-1","status":"queued","client":"omp","agent":"plan",
+	                  "model":"local/kimi-k3:max","thinking":"max","workspace":"ws","started_at":""}`,
+	"agent_status": `{"run_id":"run-1","status":"running","client":"omp","agent":"plan",
+	                  "model":"local/kimi-k3:max","thinking":"max","workspace":"ws",
+	                  "started_at":"2026-09-27T10:00:00Z","elapsed_ms":1200,"event_count":7,
+	                  "last_event":"{\"type\":\"text\"}"}`,
+	"agent_result": `{"run_id":"run-1","status":"completed","output":"done","error":"",
+	                  "elapsed_ms":4321,"finished_at":"2026-09-27T10:00:04Z"}`,
+	"agent_cancel": `{"run_id":"run-1","status":"cancelled","cancelled":true}`,
+	"agent_runs": `{"runs":[{"run_id":"run-1","status":"running","workspace":"ws","client":"omp",
+	                "agent":"plan","started_at":"2026-09-27T10:00:00Z","elapsed_ms":1200,
+	                "event_count":7}],"count":1}`,
 	"permission_grant": `{"request_id":"req-1","granted":"always",
 	                       "rule":{"effect":"allow","tool":"bash","pattern":"rg"},
 	                       "message":"rule persisted; retry the blocked tool call now"}`,
@@ -120,6 +132,31 @@ func TestToolOutputsConformToDeclaredSchemas(t *testing.T) {
 		}
 	}
 
+	// The mutating half of the run family: agent_start and agent_cancel write
+	// to the device, the three readers do not. A wrong hint changes whether
+	// ChatGPT asks the user before starting or cancelling a run.
+	for _, tc := range []struct {
+		name     string
+		readOnly bool
+	}{
+		{"agent_start", false},
+		{"agent_status", true},
+		{"agent_result", true},
+		{"agent_cancel", false},
+		{"agent_runs", true},
+	} {
+		tool, ok := advertised[tc.name]
+		if !ok {
+			t.Fatalf("%s was not advertised", tc.name)
+		}
+		if tool.Annotations == nil || tool.Annotations.ReadOnlyHint != tc.readOnly {
+			t.Fatalf("%s annotations = %#v, want readOnlyHint=%v", tc.name, tool.Annotations, tc.readOnly)
+		}
+	}
+	if ann := advertised["agent_start"].Annotations; ann.DestructiveHint == nil || !*ann.DestructiveHint {
+		t.Fatalf("agent_start is not advertised destructive: %#v", ann)
+	}
+
 	// Args that satisfy each tool's input schema; forwarded tools reuse the
 	// canned payloads above.
 	calls := map[string]map[string]any{
@@ -132,6 +169,11 @@ func TestToolOutputsConformToDeclaredSchemas(t *testing.T) {
 		"bash":             {"command": "echo hi"},
 		"agents_list":      {},
 		"agent":            {"task": "do it", "agent": "plan"},
+		"agent_start":      {"task": "do it", "agent": "plan"},
+		"agent_status":     {"run_id": "run-1"},
+		"agent_result":     {"run_id": "run-1"},
+		"agent_cancel":     {"run_id": "run-1"},
+		"agent_runs":       {"limit": 5},
 		"permission_grant": {"request_id": "req-1", "decision": "always"},
 	}
 	for name, args := range calls {
@@ -234,6 +276,60 @@ func TestRollbackNullArraysBecomeEmpty(t *testing.T) {
 	object := got.(map[string]any)
 	if files, ok := object["restored_files"].([]any); !ok || len(files) != 0 {
 		t.Fatalf("restored_files = %#v", object["restored_files"])
+	}
+}
+
+// TestAgentResultSchemaAcceptsPendingShape pins the relaxed half of the
+// agent_result contract: polling a run that is still going answers with
+// identity and state only, so the declared schema must not require the
+// outcome fields.
+func TestAgentResultSchemaAcceptsPendingShape(t *testing.T) {
+	registry := NewRegistry(2)
+	fake := &fakeAgent{payloads: map[string]string{
+		"agent_result": `{"run_id":"run-1","status":"running"}`,
+	}}
+	fake.conn = registry.Put(Device{
+		ID:          "dev-1",
+		AccountID:   authstore.DefaultAccount,
+		Online:      true,
+		Workspaces:  []protocol.Workspace{{Name: "ws", Writable: true}},
+		ConnectedAt: time.Now(),
+	}, fake)
+
+	server := mcp.NewServer(&mcp.Implementation{Name: "CodeBridge", Version: "test"}, nil)
+	(&ToolService{Registry: registry}).Register(server)
+	handler := mcp.NewStreamableHTTPHandler(
+		func(*http.Request) *mcp.Server { return server },
+		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},
+	)
+	httpServer := httptest.NewServer(handler)
+	defer httpServer.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client := mcp.NewClient(&mcp.Implementation{Name: "output-schema-client", Version: "test"}, nil)
+	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: httpServer.URL}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{
+		Name:      "agent_result",
+		Arguments: map[string]any{"device_id": "dev-1", "workspace": "ws", "run_id": "run-1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.IsError {
+		t.Fatalf("pending agent_result was rejected: %s", toolErrorText(result))
+	}
+	structured, ok := result.StructuredContent.(map[string]any)
+	if !ok {
+		t.Fatalf("agent_result structuredContent = %#v", result.StructuredContent)
+	}
+	if structured["run_id"] != "run-1" || structured["status"] != "running" {
+		t.Fatalf("pending agent_result = %#v", structured)
 	}
 }
 

@@ -32,9 +32,18 @@ assert t == 'http', t" && ok ".mcp.json transport = http (Codex spec)" || bad ".
 # App binding must reference a real connector id (no placeholder).
 python3 -c "
 import json
-d = json.load(open('.app.json'))['apps']['codebridge']
+d = json.load(open('.app.json'))['apps']['dev-6ab63d167fbc819180d2386919fa3370']
 assert d['id'].startswith('connector_') or d['id'].startswith('asdk_app_'), 'placeholder id: ' + d['id']" \
   && ok ".app.json real connector id" || bad ".app.json id is a placeholder (register the connector in ChatGPT first)"
+
+# Plugin identity must match the existing app-backed plugin.
+python3 -c "
+import json
+expected='dev-6ab63d167fbc819180d2386919fa3370'
+assert json.load(open('plugin.json'))['name'] == expected
+assert json.load(open('.codex-plugin/plugin.json'))['name'] == expected
+assert expected in json.load(open('.app.json'))['apps']" \
+  && ok "existing plugin identity = dev-6ab63d167fbc819180d2386919fa3370" || bad "plugin identity mismatch"
 
 # Codex overlay must bind apps + skills + mcpServers.
 python3 -c "
@@ -44,9 +53,11 @@ assert d['apps'] == './.app.json'
 assert d['skills'] == './skills/'
 assert d['mcpServers'] == './.mcp.json'" && ok ".codex-plugin bindings (apps/skills/mcpServers)" || bad ".codex-plugin bindings incomplete"
 
-# Skills carry front-matter.
-for s in skills/*/SKILL.md; do
-  head -1 "$s" | grep -q '^---$' && grep -q '^name:' "$s" && ok "skill front-matter: $s" || bad "skill front-matter: $s"
+# Required Skills must exist and carry matching front-matter.
+for required in codebridge-ops codebridge-write codebridge-subagent; do
+  s="skills/$required/SKILL.md"
+  [ -f "$s" ] && head -1 "$s" | grep -q '^---$' && grep -q "^name: $required$" "$s" \
+    && ok "required skill: $required" || bad "required skill missing/invalid: $required"
 done
 
 # The two manifests must agree on the version (no hardcoded expectation, so a
@@ -89,7 +100,7 @@ else
   TOOLS=$(curl -sf --max-time 30 -X POST "$MCP_BASE/mcp" -H "Authorization: Bearer $AT" \
     -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
     -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}')
-  for want in list_devices list_workspaces read bash permission_grant agent agents_list; do
+  for want in list_devices list_workspaces list read write edit apply_patch rollback_patch bash permission_grant agents_list agent agent_start agent_status agent_result agent_cancel agent_runs; do
     echo "$TOOLS" | grep -q "\"$want\"" && ok "tool exposed: $want" || bad "tool missing: $want"
   done
 fi

@@ -45,7 +45,7 @@ ChatGPT Web / MCP client
 
 ## MCP tools
 
-Read-only tools are declared `readOnlyHint=true` and `openWorldHint=false`. The mutating tools — `edit`, `write`, `apply_patch`, `rollback_patch`, `bash`, and `agent` — are declared `readOnlyHint=false`/`destructiveHint=true`. When OAuth is enabled, each tool also advertises the `codebridge.read` OAuth scope (or your configured scope).
+Read-only tools are declared `readOnlyHint=true` and `openWorldHint=false`. The mutating tools — `edit`, `write`, `apply_patch`, `rollback_patch`, `bash`, `agent`, `agent_start`, and `agent_cancel` — are declared `readOnlyHint=false`/`destructiveHint=true`. When OAuth is enabled, each tool also advertises the `codebridge.read` OAuth scope (or your configured scope).
 
 Every tool declares a JSON Schema `outputSchema` and returns the matching result in `structuredContent`, alongside the same JSON serialized into a text block for clients that predate structured output. All output schemas are object-rooted, as the specification requires of `structuredContent`, so tools that naturally produce a list return it inside an object envelope (`{"devices": [...], "count": n}`). The manager validates every payload against its schema before answering, so a client response that does not fit fails the call rather than emitting undocumented output.
 
@@ -203,6 +203,15 @@ Pending requests expire after 5 minutes, and a retried blocked call reuses the e
 
 ### Subagents
 
+One job is split across three layers: ChatGPT Web does Explore/Plan/Review, CodeBridge does Discover/Route/Manage Runs (`list_devices`, `list_workspaces`, `agents_list`, `agent`, `agent_start`, `agent_status`, `agent_result`, `agent_cancel`, `agent_runs`), and OMP/OpenCode/Codex on the device does Execute. The Manager never runs a subagent itself: it routes the call to the device that owns the workspace.
+
+Two working modes:
+
+- **Short task — `agent`**: one call starts the subagent, waits for it, and returns its final output. Use it when the result should arrive in the same tool call.
+- **Long task — `agent_start` then poll**: `agents_list` → `agent_start` (returns a `run_id` immediately) → `agent_status` (poll state and progress) → `agent_result` once it is terminal, or `agent_cancel` to stop it. Use it for work that outlives one tool call; `agent_runs` lists every run the device still knows about. `agent` remains the short-task entry point.
+
+A run started with `agent_start` executes locally on the client, in its own process tree, and is not tied to the MCP connection that started it: a dropped WebSocket, a Manager restart, or a closed chat never stops it. V1 scope: a **client** restart does not re-attach to subprocesses of the previous process, so runs that were still queued or running at that moment are marked `interrupted` — run history survives through the local run store, but those runs end there.
+
 #### `agent`
 
 ```json
@@ -214,6 +223,46 @@ Delegates one self-contained task to a local coding-agent subagent that works au
 Returns `client`, `agent`, `model`, `thinking`, `task`, `status` (`completed`, `failed`, or `timeout`), `output` (the final assistant message plus a bounded raw event tail), `events` (JSONL event count), and `elapsed`.
 
 The harness is permission-gated like `bash`: the client needs an allow rule for it (for example an `agent` rule for `omp`), otherwise the first call returns a permission request id for `permission_grant`. `agent` does not require the write-mode opt-in, and an approved harness runs autonomously (`--auto-approve` / `--auto`) with the workspace as its working directory, so the permission rule — not the write opt-in — is what bounds it.
+
+#### `agent_start`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "agent": "refactor", "task": "Split internal/agentops by responsibility and run the package tests.", "timeout_seconds": 3600 }
+```
+
+Takes the same inputs as `agent` and answers as soon as the run is admitted: `run_id`, `status` (`queued` until it holds a concurrency slot), `client`, `agent`, `model`, `thinking`, `workspace`, and `started_at` (empty while it is still queued). Admission is synchronous, so an unknown workspace or a profile the client does not know fails here, and a harness without an allow rule answers with the permission request id it parked, exactly like `agent`.
+
+#### `agent_status`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "run_id": "run_9f2c" }
+```
+
+Returns `run_id`, `status` (`queued`, `running`, `completed`, `failed`, `cancelled`, `timeout`, or `interrupted`), `client`, `agent`, `model`, `thinking`, `workspace`, `started_at`, `elapsed_ms`, `event_count`, and `last_event` (the most recent progress line). Free to poll: it reports the run without touching it.
+
+#### `agent_result`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "run_id": "run_9f2c" }
+```
+
+While the run is not terminal the answer carries only `run_id` and `status`. Once it is terminal the answer adds `output` (the subagent's final message), `error`, `elapsed_ms`, and `finished_at`.
+
+#### `agent_cancel`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "run_id": "run_9f2c" }
+```
+
+Cancels a queued or running run, waits briefly for the cancellation to land, and returns `run_id`, `status`, and `cancelled`. A run that already finished is reported as it is, with `cancelled: false`.
+
+#### `agent_runs`
+
+```json
+{ "device_id": "mbp-m1", "workspace": "pms", "limit": 20 }
+```
+
+Returns `{"runs": [...], "count": n}`, newest first; each row carries `run_id`, `status`, `workspace`, `client`, `agent`, `started_at`, `elapsed_ms`, and `event_count`. `limit` defaults to 20 and is capped at 100.
 
 ## Requirements
 
@@ -378,6 +427,8 @@ POST /mcp   Authorization: Bearer <access-token>
 ```
 
 See [docs/oauth.md](docs/oauth.md), [docs/oauth-providers.md](docs/oauth-providers.md), [docs/chatgpt-web.md](docs/chatgpt-web.md), [docs/deployment.md](docs/deployment.md), and [docs/audit.md](docs/audit.md).
+
+For a practical walkthrough of the ChatGPT/Codex plugin — skills, tools, permission flow, safe writes, packaging, and troubleshooting — see [docs/plugin-tutorial.md](docs/plugin-tutorial.md) (中文).
 
 ## Inspect MCP locally
 

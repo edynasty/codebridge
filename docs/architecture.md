@@ -75,6 +75,7 @@ The admin API remains deployment-wide (admin token + loopback placement) and sho
 4. File and shell tool calls are routed to the selected online device, but only if that device belongs to the caller's account.
 5. The local agent validates the workspace and relative path, performs the bounded operation, and returns the result.
 6. The Manager reshapes the result to the tool's declared output schema and validates it, then relays it to the MCP client as `structuredContent` (mirrored into a text block) without writing it to a database or source cache.
+7. `agent_start` is the exception: it only admits the Run on the device and returns its `run_id`, so the Manager holds no pending request while a long task runs. The run is owned by the client's process-level RunManager and reported through `agent_status` / `agent_result` / `agent_cancel` / `agent_runs`. The short-task `agent` tool keeps the blocking path: its call stays a pending request until the run finishes.
 
 Tools describe their results rather than leaving them implicit: every tool advertises a JSON Schema `outputSchema`, and the Manager refuses to answer with a payload that does not conform to it. Tools whose clients return a bare list are declared with an object envelope (`{"devices": [...], "count": n}`), because `structuredContent` must be a JSON object.
 

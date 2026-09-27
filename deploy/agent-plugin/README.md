@@ -1,4 +1,4 @@
-# CodeBridge Plugin（v1.0.2）
+# CodeBridge Plugin（v1.0.5）
 
 双端加载链路。**两套配置、两种传输类型，不要混用。**
 
@@ -49,7 +49,7 @@ portable 的 `mcp.json`（`type: "streamable-http"`）是**两个不同规范**�
 ```bash
 make plugin-web \
   MCP_URL=https://cb.edynasty.asia/mcp \
-  APP_ID=plugin_asdk_app_... \
+  APP_ID=asdk_app_6ab63d167fbc819180d2386919fa3370 \
   PLUGIN_OUT=dist/codebridge-plugin.zip
 ```
 

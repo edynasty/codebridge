@@ -262,7 +262,7 @@ If `subagent_tabs` is absent, the UI starts with one tab per harness (`omp`, `op
 
 `enabled_tools`, `disabled_tools`, and `custom_tools` travel with device registration and are applied by the Manager when it answers `tools/list`:
 
-- with no policy configured, the Manager exposes its default core set (`list_devices`, `list_workspaces`, `list`, `read`, `write`, `edit`, `bash`, `agents_list`, `agent`, `permission_grant`); `apply_patch` and `rollback_patch` are not in that default set and must be enabled explicitly;
+- with no policy configured, the Manager exposes its default core set (`list_devices`, `list_workspaces`, `list`, `read`, `write`, `edit`, `bash`, `agents_list`, `agent`, `agent_start`, `agent_status`, `agent_result`, `agent_cancel`, `agent_runs`, `permission_grant`); `apply_patch` and `rollback_patch` are not in that default set and must be enabled explicitly;
 - `enabled_tools` is an explicit allowlist — a listed tool is exposed, `"*"` exposes every built-in tool;
 - `disabled_tools` hides built-in tools; a built-in tool is hidden as soon as one registered device of the account hides it, and a device with no tool policy hides everything outside the default core set;
 - a built-in tool that is not enabled is hidden from callers even if the client can run it.

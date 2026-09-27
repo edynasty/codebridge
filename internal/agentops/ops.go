@@ -45,9 +45,15 @@ type Service struct {
 	// are the authoritative surface now.
 	BashAllowlist []string
 
+	// Runs owns long-lived local agent runs: a run outlives the request that
+	// started it. It is created on first use unless the client installs its
+	// own (with a store and a process root context) before the first run.
+	Runs *RunManager
+
 	// onRulePersisted persists permission rules after an always-grant.
 	onRulePersisted func(rules []PermissionRule)
 
+	runsOnce   sync.Once
 	lspMu      sync.Mutex
 	lspClients map[string]*lspClient
 }
@@ -115,7 +121,7 @@ func (s *Service) Execute(ctx context.Context, req protocol.AgentRequest) (any, 
 		// The client parameter may name a subagent profile configured in the
 		// local UI (extra CLI flags, model, effort); profiles resolve in
 		// resolveSubagentCall.
-		return s.runSubagent(ctx, root,
+		return s.RunSubagentSync(ctx, root,
 			stringArg(req.Args, "task", ""),
 			stringArg(req.Args, "client", ""),
 			stringArg(req.Args, "agent", ""),
