@@ -3,10 +3,9 @@
 # Purpose: try CodeBridge end-to-end locally before deploying the real
 # (public, OAuth-protected) Manager on a server.
 #
-# When you deploy the real server, switch the client to it by setting in
-# deploy/.env:
-#   CODEBRIDGE_MANAGER_URL=wss://<your-server>/agent
-#   CODEBRIDGE_ALLOW_INSECURE_WS=false
+# When you deploy the real server, switch the client to the public gRPC
+# endpoint in deploy/.env:
+#   CODEBRIDGE_MANAGER_HOST=<your-server>:443
 #   # fresh enrollment: CODEBRIDGE_ENROLL_CODE=<code from the real server's admin API>
 #   # and start with an empty client-state directory (the local credential only
 #   # verifies against this local Manager)
@@ -59,11 +58,9 @@ services:
     environment:
       TZ: Asia/Shanghai
       <<: *host-info
-      # Agent transport: gRPC bidi stream (host[:port], default port 8081).
+      # Agent transport: gRPC bidi stream. The local Compose network
+      # dials Manager :8081 directly; public Caddy deployments normally use :443.
       CODEBRIDGE_MANAGER_HOST: ${CODEBRIDGE_MANAGER_HOST:-manager:8081}
-      # plaintext ws inside the compose network only; never enable against a
-      # public manager
-      CODEBRIDGE_ALLOW_INSECURE_WS: ${CODEBRIDGE_ALLOW_INSECURE_WS:-true}
       # Workspaces live in the persistent client.json (first boot seeds the
       # directories from /Users/tangxingpeng/IdeaProjects below) so the
       # configuration UI can edit them with hot reload.
@@ -81,6 +78,12 @@ services:
       # seeds a writable copy from the read-only host mount below and rewrites
       # the loopback provider URLs to host.docker.internal.
       PI_CODING_AGENT_DIR: ${PI_CODING_AGENT_DIR:-/state/omp}
+      # Codex sessions/auth stay in the persistent client state; only auth.json
+      # is seeded from the host (see /codex-seed below).
+      CODEX_HOME: ${CODEX_HOME:-/state/codex}
+      # OpenCode keeps its SQLite session database under this persistent XDG
+      # data root. The client injects it only into OpenCode subprocesses.
+      CODEBRIDGE_OPENCODE_DATA_HOME: ${CODEBRIDGE_OPENCODE_DATA_HOME:-/state/opencode-data}
       # UI must bind 0.0.0.0 inside the container for the host port mapping to
       # reach it; the published port stays loopback-only on the host.
       CODEBRIDGE_UI_ADDR: ${CODEBRIDGE_UI_ADDR:-0.0.0.0:8190}
@@ -88,6 +91,9 @@ services:
     # run on the host, not in this container.
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      # DNS fallback for the public Manager. Keep the hostname in
+      # CODEBRIDGE_MANAGER_HOST so TLS/SNI still validates cb.edynasty.asia.
+      - "cb.edynasty.asia:45.202.240.63"
     ports:
       - "127.0.0.1:${CODEBRIDGE_UI_PORT:-8190}:8190"
     volumes:
@@ -104,7 +110,10 @@ services:
       # mounted, so runs are deterministic and cannot hang on host-only
       # plugin infrastructure. Models/agents are chosen per call via the
       # agent tool's model/agent parameters.
-      - ${HOST_OPENCODE_AUTH:-/Users/tangxingpeng/.local/share/opencode/auth.json}:/home/codebridge/.local/share/opencode/auth.json:ro
+      - ${HOST_OPENCODE_AUTH:-/Users/tangxingpeng/.local/share/opencode/auth.json}:/opencode-seed/auth.json:ro
+      # Codex gets only the host login material; the entrypoint copies it into
+      # the persistent CODEX_HOME and deliberately does not import config.toml.
+      - ${HOST_CODEX_AUTH:-/Users/tangxingpeng/.codex/auth.json}:/codex-seed/auth.json:ro
       # omp's agent directory, read-only: the entrypoint copies models.yml,
       # config.yml and agent.db into PI_CODING_AGENT_DIR once and rewrites the
       # provider base URLs that point at the host loopback.

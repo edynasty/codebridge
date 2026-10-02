@@ -10,10 +10,10 @@ ChatGPT Web / MCP client
 +---------------------------+
 | CodeBridge Manager        |
 | /mcp     MCP tools        |
-| /agent   WebSocket hub    |
+| gRPC      AgentService    |
 | /admin   device identity  |
 +-------------^-------------+
-              | outbound WSS
+              | outbound gRPC / HTTP/2
         +-----+------+
         | Local Agent |
         | list/read   |
@@ -37,7 +37,7 @@ ChatGPT Web / MCP client
 - Device enrollment uses short-lived **one-time enrollment codes**.
 - Each enrolled device receives a random **per-device credential**. The manager persists only its SHA-256 digest; the client persists the credential locally with file mode `0600`.
 - Device credentials can be rotated or revoked through the admin API.
-- Runtime safety limits bound MCP request size/concurrency, per-device in-flight calls, WebSocket messages, directory listings, and agent response payloads.
+- Runtime safety limits bound MCP request size/concurrency, per-device in-flight calls, gRPC envelope/agent payloads, directory listings, and agent response payloads.
 - Every MCP/admin/agent request gets a Manager-generated request ID, and security-relevant actions emit structured metadata-only JSONL audit events.
 - MCP user access supports OAuth 2.1 with an external IdP: RFC 9728 protected-resource metadata, JWT signature/issuer/audience/expiry/subject/scope validation, optional subject allowlisting, and OAuth security metadata on each tool.
 - Every device belongs to an account. MCP callers only see and call devices in their own account; wrong-account device IDs behave like unknown ones. See [docs/oauth.md](docs/oauth.md#accounts-and-device-visibility).
@@ -208,9 +208,9 @@ One job is split across three layers: ChatGPT Web does Explore/Plan/Review, Code
 Two working modes:
 
 - **Short task — `agent`**: one call starts the subagent, waits for it, and returns its final output. Use it when the result should arrive in the same tool call.
-- **Long task — `agent_start` then poll**: `agents_list` → `agent_start` (returns a `run_id` immediately) → `agent_status` (poll state and progress) → `agent_result` once it is terminal, or `agent_cancel` to stop it. Use it for work that outlives one tool call; `agent_runs` lists every run the device still knows about. `agent` remains the short-task entry point.
+- **Long task — `agent_start` then detach**: `agents_list` → `agent_start` (returns a `run_id` immediately) → end the current ChatGPT turn. Runtime events continue independently of the request and are replayed after reconnects. Use `agent_status` only for an explicit status check/diagnostic/recovery request; once a terminal state is known, call `agent_result` once, or use `agent_cancel` to stop the run. `agent_runs` lists every run the device still knows about. `agent` remains the short-task entry point.
 
-A run started with `agent_start` executes locally on the client, in its own process tree, and is not tied to the MCP connection that started it: a dropped WebSocket, a Manager restart, or a closed chat never stops it. V1 scope: a **client** restart does not re-attach to subprocesses of the previous process, so runs that were still queued or running at that moment are marked `interrupted` — run history survives through the local run store, but those runs end there.
+A run started with `agent_start` executes locally on the client, in its own process tree, and is not tied to the MCP connection that started it: a dropped gRPC device stream, a Manager restart, or a closed chat never stops it. V1 scope: a **client** restart does not re-attach to subprocesses of the previous process, so runs that were still queued or running at that moment are marked `interrupted` — run history survives through the local run store, but those runs end there.
 
 #### `agent`
 
@@ -238,7 +238,7 @@ Takes the same inputs as `agent` and answers as soon as the run is admitted: `ru
 { "device_id": "mbp-m1", "workspace": "pms", "run_id": "run_9f2c" }
 ```
 
-Returns `run_id`, `status` (`queued`, `running`, `completed`, `failed`, `cancelled`, `timeout`, or `interrupted`), `client`, `agent`, `model`, `thinking`, `workspace`, `started_at`, `elapsed_ms`, `event_count`, and `last_event` (the most recent progress line). Free to poll: it reports the run without touching it.
+Returns `run_id`, `status` (`queued`, `running`, `completed`, `failed`, `cancelled`, `timeout`, or `interrupted`), `client`, `agent`, `model`, `thinking`, `workspace`, `started_at`, `elapsed_ms`, `event_count`, and `last_event` (the most recent progress line). It is an inspection/recovery API; normal long-task execution must not keep a ChatGPT turn alive by polling it.
 
 #### `agent_result`
 
@@ -302,7 +302,7 @@ The Client optionally reads `~/.config/codebridge/client.json`, so Manager URL, 
 
 ```json
 {
-  "manager_host": "codebridge.example.com:8081",
+  "manager_host": "codebridge.example.com:443",
   "device_id": "mbp-m1",
   "device_name": "MacBook Pro",
   "allow_sensitive_files": false,
@@ -397,7 +397,7 @@ curl -sS -X DELETE http://127.0.0.1:8080/admin/devices/mbp-m1 \
   -H 'Authorization: Bearer replace-with-a-long-random-admin-token'
 ```
 
-Revocation also disconnects the currently active WebSocket. Re-enrollment requires a fresh one-time enrollment code.
+Revocation also disconnects the currently active gRPC device stream. Re-enrollment requires a fresh one-time enrollment code.
 
 ## OAuth for ChatGPT Web
 
@@ -471,9 +471,9 @@ If `@CodeBridge` is visible but the current chat has no CodeBridge Tools, verify
 
 See [docs/chatgpt-web.md](docs/chatgpt-web.md) for the complete registration, packaging, installation, and troubleshooting flow.
 
-## HTTPS/WSS deployment
+## HTTPS / gRPC deployment
 
-A Caddy + Docker Compose example is included under `deploy/`. It terminates TLS, forwards `/mcp` and `/agent`, and deliberately returns 404 for public `/admin/*`; the Manager admin API is bound to host loopback only.
+A Caddy + Docker Compose example is included under `deploy/`. It terminates public TLS on port 443, routes MCP/HTTP traffic to the Manager HTTP listener and gRPC `AgentService.Connect` traffic to the Manager gRPC listener, and deliberately returns 404 for public `/admin/*`; the Manager admin API is bound to host loopback only.
 
 See [docs/deployment.md](docs/deployment.md).
 
@@ -507,9 +507,9 @@ See [docs/audit.md](docs/audit.md).
 
 CI now exercises three real protocol layers:
 
-- Manager ↔ Client WebSocket enrollment, one-time enrollment-code consumption, tool round-trip, disconnect cleanup, and credential reconnect;
+- Manager ↔ Client gRPC `AgentService.Connect` enrollment, one-time enrollment-code consumption, tool round-trip, disconnect cleanup, and credential reconnect;
 - official MCP Go SDK Streamable HTTP discovery and tool invocation;
-- signed JWT/JWKS OAuth authentication through `/mcp`, then `read` across Manager → WebSocket Client → local workspace, including OAuth `sub` propagation into metadata-only audit records.
+- signed JWT/JWKS OAuth authentication through `/mcp`, then `read` across Manager → gRPC Client → local workspace, including OAuth `sub` propagation into metadata-only audit records.
 
 The remaining OAuth gap is an external-provider/UI smoke test against a provider that implements the current MCP requirements, plus the interactive ChatGPT linking flow. The provider compatibility guide currently uses WorkOS AuthKit as the reference path because its documentation explicitly covers RFC 8707 Resource Indicators; Keycloak 26.7.x is not treated as fully compatible because its own MCP guide says Resource Indicators are not supported.
 

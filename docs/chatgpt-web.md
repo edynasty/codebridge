@@ -134,7 +134,7 @@ Use the generated ZIP with the ChatGPT plugin-creator/local plugin workflow for 
 4. Call `list_devices`.
 5. Call `list_workspaces` with one returned device ID.
 6. Only after those metadata calls succeed, test `list` or `read`.
-7. Verify the long-task subagent flow: `agents_list` → `agent_start` (returns a `run_id` immediately) → poll `agent_status` until the run is terminal → collect `agent_result`. This is the path that survives a dropped connection or a closed chat; `agent` remains the single-call short-task entry point.
+7. Verify the long-task subagent flow: `agents_list` → `agent_start` (returns a `run_id` immediately) → let the originating turn end. Runtime events are independent of the request and reconcile after reconnects. Use `agent_status` only for an explicit inspection/recovery check; once terminal completion is known, collect `agent_result` once. `agent` remains the single-call short-task entry point.
 
 If ChatGPT reports that a tool is missing an output schema, the running Manager predates the schema declarations. Every tool now advertises an object `outputSchema` and returns `structuredContent` that conforms to it, so verify the deployment rather than the plugin package:
 

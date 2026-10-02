@@ -46,6 +46,14 @@ func openRunStore(path string) (*runStore, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("init agent run store: %w", err)
 	}
+	if err := initRunEventStore(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if err := recordInterruptedRunEvents(db); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("recover agent run events: %w", err)
+	}
 	// A run still marked queued or running belongs to a previous process: the
 	// binary is gone, so the run can never finish.
 	if _, err := db.Exec(`UPDATE agent_runs SET status = ? WHERE status IN (?, ?)`,

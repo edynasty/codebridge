@@ -85,7 +85,7 @@ func TestSubagentArgsPerHarness(t *testing.T) {
 	}
 
 	codex := subagentArgs(SubagentClientCodex, root, "work", "m/1", "high", nil, "do it")
-	if strings.Join(codex, " ") != "exec --profile work --model m/1 -c model_reasoning_effort=high do it" {
+	if strings.Join(codex, " ") != "exec --json --full-auto --profile work --model m/1 -c model_reasoning_effort=high do it" {
 		t.Fatalf("codex args changed: %v", codex)
 	}
 }
@@ -114,5 +114,24 @@ func TestLastOMPMessageExtractsFinalAssistantText(t *testing.T) {
 	toolOnly := `{"type":"agent_end","messages":[{"role":"assistant","content":[{"type":"tool_use","name":"bash"}]}]}`
 	if got := lastOMPMessage(toolOnly); got != "" {
 		t.Fatalf("tool-only run should yield no message, got %q", got)
+	}
+}
+
+func TestLastCodexMessageExtractsFinalAgentMessage(t *testing.T) {
+	transcript := strings.Join([]string{
+		`{"type":"thread.started","thread_id":"thread-1"}`,
+		`{"type":"turn.started"}`,
+		`{"type":"item.completed","item":{"id":"item-1","type":"agent_message","text":"working"}}`,
+		`{"type":"item.completed","item":{"id":"item-2","type":"command_execution","aggregated_output":"ok"}}`,
+		`{"type":"item.completed","item":{"id":"item-3","type":"agent_message","text":"CODEX_OK"}}`,
+		`{"type":"turn.completed","usage":{"input_tokens":1,"output_tokens":1}}`,
+		`not json`,
+	}, "\n")
+
+	if got := lastCodexMessage(transcript); got != "CODEX_OK" {
+		t.Fatalf("lastCodexMessage = %q, want CODEX_OK", got)
+	}
+	if got := lastCodexMessage(`{"type":"item.completed","item":{"type":"reasoning","text":"hidden"}}`); got != "" {
+		t.Fatalf("reasoning must not become final output: %q", got)
 	}
 }

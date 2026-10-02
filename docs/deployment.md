@@ -1,22 +1,24 @@
-# HTTPS / WSS deployment
+# HTTPS / gRPC deployment
 
-The recommended production shape is:
+The recommended production shape uses one public TLS origin on port 443:
 
 ```text
 Internet
    |
-   | 443 / TLS
+   | 443 / TLS + HTTP/2
    v
  Caddy
-   |---------------- /mcp
-   |---------------- /agent (WebSocket -> WSS externally)
-   |---------------- /.well-known/oauth-protected-resource
+   |---------------- /mcp, OAuth metadata, plugin assets
+   |                     -> Manager :8080
+   |
+   |---------------- gRPC AgentService.Connect
+   |                     -> h2c Manager :8081
    |
    X /admin/*  (404 from the public proxy)
-   |
- Docker network
-   v
- CodeBridge Manager :8080
+
+Docker network:
+Manager :8080  HTTP/MCP
+Manager :8081  gRPC device transport
 
 Host loopback only:
 127.0.0.1:8080/admin/*
@@ -102,13 +104,13 @@ Devices are grouped into accounts for MCP visibility (see [oauth.md](oauth.md#ac
 
 ## Local agents
 
-Local clients connect outbound through the same public domain:
+Local clients connect outbound through the same public TLS origin. In the recommended Caddy deployment, gRPC shares public port 443 with HTTPS/MCP and Caddy routes it to the Manager's internal `:8081` listener:
 
 ```env
-CODEBRIDGE_MANAGER_HOST=codebridge.example.com:8081
+CODEBRIDGE_MANAGER_HOST=codebridge.example.com:443
 ```
 
-No inbound port is required on the developer laptop. Caddy forwards the WebSocket upgrade to the Manager automatically.
+No inbound port is required on the developer laptop, and Manager port 8081 does not need to be exposed publicly. For a direct/LAN deployment without Caddy, the Client can instead dial the Manager gRPC listener directly (default `:8081`).
 
 ## Reverse-proxy logging
 

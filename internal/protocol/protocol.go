@@ -1,6 +1,9 @@
 package protocol
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 const (
 	TypeRegister   = "register"
@@ -12,7 +15,15 @@ const (
 	// manager while a request is still running; the manager forwards them
 	// as MCP progress notifications.
 	TypeProgress = "progress"
-	TypeError    = "error"
+	// TypeRunEvent is an unsolicited durable runtime event. Unlike progress,
+	// it is not tied to an outstanding request_id and may be replayed after a
+	// reconnect using its per-run sequence number.
+	TypeRunEvent = "run_event"
+	// TypeRunHeads advertises the Client's durable event heads after connect.
+	// TypeRunReplay asks the Client to replay the missing suffix for each run.
+	TypeRunHeads  = "run_heads"
+	TypeRunReplay = "run_replay"
+	TypeError     = "error"
 )
 
 type Workspace struct {
@@ -87,4 +98,39 @@ type ProgressEvent struct {
 	RequestID string `json:"request_id"`
 	Tool      string `json:"tool"`
 	Event     string `json:"event"`
+}
+
+// RunEvent is the wire form of one ordered Runtime event. Seq is monotonic
+// within a run. The manager uses it for idempotence and reconnect replay.
+type RunEvent struct {
+	RunID   string    `json:"run_id"`
+	Seq     int64     `json:"seq"`
+	At      time.Time `json:"at"`
+	Source  string    `json:"source,omitempty"`
+	Kind    string    `json:"kind"`
+	Payload string    `json:"payload,omitempty"`
+}
+
+// RunHead is one Client-side durable journal head advertised after connect.
+type RunHead struct {
+	RunID   string `json:"run_id"`
+	LastSeq int64  `json:"last_seq"`
+	Status  string `json:"status,omitempty"`
+}
+
+type RunHeads struct {
+	Runs []RunHead `json:"runs"`
+}
+
+// RunReplayCursor asks for (AfterSeq, ThroughSeq] of one run. ThroughSeq is
+// the Client head observed during reconciliation, so a concurrently running
+// task cannot make replay chase a moving target forever.
+type RunReplayCursor struct {
+	RunID      string `json:"run_id"`
+	AfterSeq   int64  `json:"after_seq"`
+	ThroughSeq int64  `json:"through_seq"`
+}
+
+type RunReplayRequest struct {
+	Runs []RunReplayCursor `json:"runs"`
 }

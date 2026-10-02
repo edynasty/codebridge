@@ -13,7 +13,8 @@ ChatGPT / MCP client
 | device identity + router     |
 +---------------+--------------+
                 |
-                | WSS, per-device credential
+                | gRPC / HTTP/2, per-device credential
+                | AgentService.Connect bidi stream
                 v
 +------------------------------+
 | Local agent                  |
@@ -37,7 +38,7 @@ Administrator
 one-time enrollment code (short TTL)
     |
     v
-Local Agent ---- WSS register ----> Manager
+Local Agent ---- gRPC register ----> Manager
     |                                  |
     |<-- per-device credential --------+
     |
@@ -69,7 +70,7 @@ The admin API remains deployment-wide (admin token + loopback placement) and sho
 
 ## Request flow
 
-1. The local agent opens an outbound WebSocket to `/agent` and authenticates using a saved device credential, or uses a one-time enrollment code on first registration.
+1. The local agent opens the outbound gRPC `AgentService.Connect` bidirectional stream and authenticates using a saved device credential, or uses a one-time enrollment code on first registration.
 2. ChatGPT discovers tools from `/mcp` using MCP Streamable HTTP.
 3. `list_devices` and `list_workspaces` are answered by the Manager from the caller's account.
 4. File and shell tool calls are routed to the selected online device, but only if that device belongs to the caller's account.
@@ -90,7 +91,7 @@ Tools describe their results rather than leaving them implicit: every tool adver
 - Bounded file and command output.
 - `rg` is invoked without a shell and with `--fixed-strings`.
 - Git diff disables external diff and text conversion.
-- Browser-originated WebSocket connections to `/agent` are rejected.
+- The device transport is an authenticated outbound gRPC/HTTP2 stream; browser clients are not accepted as device agents.
 - Enrollment codes are single-use and short-lived.
 - Device credentials are high-entropy and stored only as hashes on the Manager.
 - Admin API is disabled unless `CODEBRIDGE_ADMIN_TOKEN` is configured.

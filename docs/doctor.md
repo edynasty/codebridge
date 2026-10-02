@@ -59,7 +59,7 @@ CODEBRIDGE_ACCESS_TOKEN='eyJ...' codebridge-doctor \
   --workspace pms
 ```
 
-This additionally calls `list_workspaces` and then the read-only `list` tool on the workspace root (`path: "."`). `list` crosses the real Manager → WebSocket Client path but only returns directory entries (`name`, `path`, `type`, `size`); it never returns file contents.
+This additionally calls `list_workspaces` and then the read-only `list` tool on the workspace root (`path: "."`). `list` crosses the real Manager → gRPC Client path but only returns directory entries (`name`, `path`, `type`, `size`); it never returns file contents.
 
 The smoke reports three checks: `mcp_authenticated` (handshake, tool listing, `list_devices`), `mcp_device` (`list_workspaces` for the requested device), and `mcp_workspace` (the `list` round trip for the requested workspace). Passing `--workspace` without `--device-id` fails `mcp_workspace` with `--workspace requires --device-id`.
 

@@ -182,9 +182,9 @@ func main() {
 		Stateless: true,
 	})
 
-	// Agent transport: gRPC bidi stream (preferred, HTTP/2 keepalive) on
-	// CODEBRIDGE_GRPC_ADDR (default :8081). The legacy /agent WebSocket
-	// stays mounted during migration.
+	// Agent transport: gRPC bidi stream (HTTP/2 keepalive) on
+	// CODEBRIDGE_GRPC_ADDR (default :8081). Public reverse proxies may
+	// terminate TLS and forward gRPC to this internal h2c listener.
 	grpcAddr := envOrDefault("CODEBRIDGE_GRPC_ADDR", ":8081")
 	grpcSrv, grpcLis, err := mgr.ServeGRPC(grpcAddr, &mgr.GRPCAgentServer{Auth: deviceAuth, Registry: registry, Audit: audit})
 	if err != nil {

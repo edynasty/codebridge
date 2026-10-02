@@ -19,7 +19,7 @@ The product roadmap lives in [../TODO.md](../TODO.md). Engineering-governance wo
 
 ### `cmd/manager`
 
-Only process startup, configuration loading, dependency wiring, and HTTP/WebSocket server assembly belong here.
+Only process startup, configuration loading, dependency wiring, and HTTP/gRPC server assembly belong here.
 
 Business/security behavior belongs under `internal/`.
 
@@ -41,7 +41,7 @@ Owns:
 
 - device registry and connection lifecycle;
 - MCP tool routing;
-- WebSocket Agent handling;
+- gRPC `AgentService.Connect` handling;
 - admin endpoints;
 - Manager-side limits and concurrency;
 - metadata-only audit integration.
@@ -65,8 +65,8 @@ The following are **non-negotiable invariants** unless an explicit design change
 ### Manager invariants
 
 - Public MCP endpoint is `/mcp`.
-- Agent transport is outbound Client → Manager WebSocket.
-- Public deployment must use HTTPS/WSS.
+- Agent transport is an outbound Client → Manager gRPC bidirectional stream using `AgentService.Connect`.
+- Public remote deployment must terminate TLS for MCP and gRPC/HTTP2; the recommended Caddy deployment shares public port 443 and proxies gRPC internally with h2c.
 - Public reverse proxy must not expose `/admin/*`.
 - Manager does not persist source-code/tool-result payloads.
 - Audit records contain metadata only.
@@ -81,7 +81,7 @@ The following are **non-negotiable invariants** unless an explicit design change
 - Common sensitive files/directories are blocked by default.
 - Sensitive-file protection can only be disabled through explicit **local** configuration/environment/CLI.
 - Device credentials are stored separately from non-secret Client configuration.
-- Remote Manager URLs require WSS except explicitly local development endpoints.
+- Remote Manager gRPC endpoints use TLS with certificate verification; plaintext gRPC is limited to local/LAN development targets.
 
 ### OAuth invariants
 
@@ -260,7 +260,7 @@ Do not introduce unbounded:
 - file reads;
 - directory walks;
 - search output;
-- WebSocket payloads;
+- gRPC envelope/response payloads;
 - goroutines;
 - pending request maps;
 - HTTP bodies;
@@ -288,9 +288,9 @@ Security bugs require a specifically named regression test describing the bypass
 
 Maintain these layers:
 
-1. Manager ↔ Client WebSocket enrollment and reconnect;
+1. Manager ↔ Client gRPC `AgentService.Connect` enrollment and reconnect;
 2. official MCP Go SDK Streamable HTTP discovery/tool call;
-3. OAuth JWT/JWKS → MCP → Manager → WebSocket Client;
+3. OAuth JWT/JWKS → MCP → Manager → gRPC Client;
 4. deployment Doctor metadata/authenticated smoke.
 
 When changing protocol boundaries, extend the relevant real integration test rather than relying only on mocks.

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -245,6 +246,13 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 	started := time.Now()
 	cmd := exec.CommandContext(runCtx, client, args...)
 	cmd.Dir = rootReal
+	if client == SubagentClientOpencode {
+		// OpenCode derives its durable SQLite location from XDG_DATA_HOME.
+		// Keep it in the persistent Client state instead of the container home.
+		if dataHome := strings.TrimSpace(os.Getenv("CODEBRIDGE_OPENCODE_DATA_HOME")); dataHome != "" {
+			cmd.Env = append(os.Environ(), "XDG_DATA_HOME="+dataHome)
+		}
+	}
 	var buf bytes.Buffer
 	// Tee the subagent output: every line is forwarded live to the progress
 	// callback (manager streams it as MCP progress notifications) and kept
@@ -307,6 +315,10 @@ func (s *Service) runSubagent(ctx context.Context, root, task, client, agent, mo
 		if final := lastOMPMessage(result.Output); final != "" {
 			result.Output = final + "\n\n--- raw events tail ---\n" + truncateTail(result.Output, 1200)
 		}
+	case SubagentClientCodex:
+		if final := lastCodexMessage(result.Output); final != "" {
+			result.Output = final + "\n\n--- raw events tail ---\n" + truncateTail(result.Output, 1200)
+		}
 	}
 	result.Events = countJSONLines(result.Output)
 	return result, nil
@@ -342,6 +354,33 @@ func lastOMPMessage(out string) string {
 					final = text
 				}
 			}
+		}
+	}
+	return final
+}
+
+// lastCodexMessage scans `codex exec --json` output for the last completed
+// assistant/agent message. Codex emits JSONL events such as:
+// {"type":"item.completed","item":{"type":"agent_message","text":"..."}}.
+func lastCodexMessage(out string) string {
+	final := ""
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || line[0] != '{' {
+			continue
+		}
+		var ev struct {
+			Type string `json:"type"`
+			Item struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"item"`
+		}
+		if json.Unmarshal([]byte(line), &ev) != nil {
+			continue
+		}
+		if ev.Type == "item.completed" && ev.Item.Type == "agent_message" && strings.TrimSpace(ev.Item.Text) != "" {
+			final = ev.Item.Text
 		}
 	}
 	return final
@@ -408,7 +447,9 @@ func subagentArgs(client, rootReal, agent, model, thinking string, extraArgs []s
 		args = append(args, extraArgs...)
 		args = append(args, "--", task)
 	case SubagentClientCodex:
-		args = []string{"exec"}
+		// --json emits one structured JSONL event per line. --full-auto keeps
+		// approved CodeBridge subagent runs non-interactive inside the workspace.
+		args = []string{"exec", "--json", "--full-auto"}
 		if agent != "" {
 			args = append(args, "--profile", agent)
 		}

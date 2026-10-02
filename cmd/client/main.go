@@ -586,14 +586,64 @@ func runGRPCSession(ctx context.Context, rt *runtime, state *clientState, onCred
 	}
 
 	done := make(chan error, 1)
+	reportDone := func(err error) {
+		select {
+		case done <- err:
+		default:
+		}
+	}
+
+	// Runtime events are independent of any outstanding MCP request. The
+	// process-level RunManager publishes new events live and advertises its
+	// durable journal heads after every reconnect so the Manager can request
+	// only the suffix it missed while the stream was down.
+	if rt.runs != nil {
+		runEvents, cancelRunEvents := rt.runs.SubscribeEvents("", 256)
+		defer cancelRunEvents()
+		if err := sendRunHeads(rt.runs, rt.reg.DeviceID, send); err != nil {
+			return fmt.Errorf("send runtime heads: %w", err)
+		}
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case ev, ok := <-runEvents:
+					if !ok {
+						return
+					}
+					env, err := runtimeEventEnvelope(rt.reg.DeviceID, ev)
+					if err != nil {
+						continue
+					}
+					if err := send(env); err != nil {
+						reportDone(err)
+						return
+					}
+				}
+			}
+		}()
+	}
+
 	go func() {
 		for {
 			env, err := stream.Recv()
 			if err != nil {
-				done <- err
+				reportDone(err)
 				return
 			}
 			switch env.Type {
+			case protocol.TypeRunReplay:
+				var replay protocol.RunReplayRequest
+				if err := json.Unmarshal(env.Payload, &replay); err != nil {
+					log.Printf("invalid runtime replay request: %v", err)
+					continue
+				}
+				go func() {
+					if err := replayRunEvents(rt.runs, replay, rt.reg.DeviceID, send); err != nil {
+						log.Printf("runtime replay failed: %v", err)
+					}
+				}()
 			case protocol.TypeRequest:
 				go func(env *pb.Envelope) {
 					var req protocol.AgentRequest

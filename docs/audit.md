@@ -62,7 +62,7 @@ Current events include:
 
 ## Correlation IDs
 
-The Manager generates a fresh request ID for every incoming `/mcp`, `/agent`, and `/admin` request. Client-provided request IDs are overwritten.
+The Manager generates a fresh request ID for every incoming `/mcp` and `/admin` HTTP request and for each authenticated gRPC device connection/session. Client-provided request IDs are not trusted as audit authority.
 
 For HTTP requests the same ID is returned as:
 

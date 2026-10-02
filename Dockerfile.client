@@ -13,6 +13,7 @@ FROM debian:bookworm-slim
 ARG TARGETARCH
 ARG OPENCODE_VERSION=1.18.32
 ARG OMP_VERSION=18.3.1
+ARG CODEX_VERSION=0.159.2
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 
 # git, ripgrep and bash back the bash/git tooling; opencode and omp back the
@@ -29,8 +30,14 @@ RUN apt-get update \
     && tar -xzf /tmp/opencode.tar.gz -C /tmp \
     && install -m 0755 /tmp/opencode /usr/local/bin/opencode \
     && rm -rf /tmp/opencode* \
+    && CODEX_TRIPLE=$(if [ "$TARGETARCH" = "arm64" ]; then echo aarch64-unknown-linux-musl; else echo x86_64-unknown-linux-musl; fi) \
+    && curl -fsSL --retry 3 "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-${CODEX_TRIPLE}.tar.gz" -o /tmp/codex.tar.gz \
+    && tar -xzf /tmp/codex.tar.gz -C /tmp \
+    && install -m 0755 "/tmp/codex-${CODEX_TRIPLE}" /usr/local/bin/codex \
+    && rm -f /tmp/codex.tar.gz "/tmp/codex-${CODEX_TRIPLE}" \
     && BUN_INSTALL=/usr/local bun install -g "@oh-my-pi/pi-coding-agent@${OMP_VERSION}" \
-    && omp --version
+    && omp --version \
+    && codex --version
 
 COPY deploy/client-entrypoint.sh /usr/local/bin/codebridge-entrypoint
 COPY --from=build /out/codebridge-client /usr/local/bin/codebridge-client

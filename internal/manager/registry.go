@@ -32,7 +32,7 @@ type pendingCall struct {
 }
 
 // streamConn is the transport-neutral device connection the Registry
-// drives: the WebSocket handler and the gRPC adapter both implement it.
+// drives. The current production adapter is the gRPC device stream.
 type streamConn interface {
 	WriteJSON(v any) error
 	Close() error

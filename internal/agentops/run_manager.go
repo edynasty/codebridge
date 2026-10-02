@@ -110,6 +110,7 @@ type AgentRun struct {
 	Error      string    `json:"error,omitempty"`
 	EventCount int       `json:"event_count"`
 	LastEvent  string    `json:"last_event,omitempty"`
+	LastSeq    int64     `json:"last_seq,omitempty"`
 }
 
 const (
@@ -197,10 +198,12 @@ type RunManager struct {
 	sem           chan struct{}
 	store         *runStore
 
-	mu     sync.RWMutex
-	runs   map[string]*runState
-	closed bool
-	wg     sync.WaitGroup
+	mu          sync.RWMutex
+	runs        map[string]*runState
+	subscribers map[uint64]runSubscriber
+	subNext     uint64
+	closed      bool
+	wg          sync.WaitGroup
 }
 
 // runState is the mutable run record; every field is guarded by the owning
@@ -219,9 +222,14 @@ type runState struct {
 
 	eventTotal int
 	lastEvent  string
-	events     []string // ring buffer, len == manager event capacity
-	eventNext  int      // next ring slot to write
-	eventKept  int      // valid entries in the ring
+	events     []string // raw harness line ring, len == manager event capacity
+	eventNext  int      // next raw-line ring slot to write
+	eventKept  int      // valid raw-line entries in the ring
+
+	eventSeq    int64
+	journal     []RunEvent // recent structured runtime events
+	journalNext int
+	journalKept int
 
 	lifeCtx  context.Context
 	lifeStop context.CancelFunc
@@ -239,6 +247,7 @@ func NewRunManager(opts ...RunManagerOption) *RunManager {
 		maxConcurrent: defaultRunConcurrency,
 		eventCapacity: defaultRunEventCapacity,
 		runs:          map[string]*runState{},
+		subscribers:   map[uint64]runSubscriber{},
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -260,7 +269,12 @@ func NewRunManager(opts ...RunManagerOption) *RunManager {
 			log.Printf("agent runs: load history: %v", err)
 		}
 		for _, snap := range history {
-			m.runs[snap.ID] = loadedRunState(snap, m.eventCapacity)
+			seq, seqErr := m.store.lastSeq(snap.ID)
+			if seqErr != nil {
+				log.Printf("agent runs: load event head for %s: %v", snap.ID, seqErr)
+			}
+			snap.LastSeq = seq
+			m.runs[snap.ID] = loadedRunState(snap, m.eventCapacity, seq)
 		}
 	}
 	return m
@@ -296,6 +310,7 @@ func (m *RunManager) Start(ctx context.Context, spec RunSpec) (*AgentRun, error)
 		spec:     spec,
 		status:   RunQueued,
 		events:   make([]string, m.eventCapacity),
+		journal:  make([]RunEvent, m.eventCapacity),
 		lifeCtx:  lifeCtx,
 		lifeStop: lifeStop,
 		done:     make(chan struct{}),
@@ -308,6 +323,7 @@ func (m *RunManager) Start(ctx context.Context, spec RunSpec) (*AgentRun, error)
 		return nil, errors.New("run manager is closed")
 	}
 	m.runs[id] = rs
+	m.appendRuntimeEventLocked(rs, "codebridge", "run.queued", "")
 	snap := m.snapshotLocked(rs)
 	m.persistLocked(rs)
 	m.wg.Add(1)
@@ -339,6 +355,11 @@ func (m *RunManager) Get(id string) (*AgentRun, bool) {
 	}
 	if stored == nil {
 		return nil, false
+	}
+	if seq, seqErr := m.store.lastSeq(id); seqErr == nil {
+		stored.LastSeq = seq
+	} else {
+		log.Printf("agent runs: load event head for %s: %v", id, seqErr)
 	}
 	m.cacheLoaded(stored)
 	return stored, true
@@ -438,6 +459,10 @@ func (m *RunManager) Close() error {
 		return nil
 	}
 	m.closed = true
+	for id, sub := range m.subscribers {
+		close(sub.ch)
+		delete(m.subscribers, id)
+	}
 	m.mu.Unlock()
 
 	m.rootStop()
@@ -564,6 +589,7 @@ func (m *RunManager) transitionLocked(rs *runState, to RunStatus) bool {
 		}
 		close(rs.done)
 	}
+	m.appendRuntimeEventLocked(rs, "codebridge", runStatusEventKind(to), "")
 	m.persistLocked(rs)
 	return true
 }
@@ -583,6 +609,7 @@ func (m *RunManager) recordEvent(rs *runState, line string) {
 	}
 	rs.eventTotal++
 	rs.lastEvent = line
+	m.appendRuntimeEventLocked(rs, rs.spec.Client, "harness.raw", line)
 }
 
 // snapshotLocked copies a run into its exported, read-only form. The caller
@@ -604,6 +631,7 @@ func (m *RunManager) snapshotLocked(rs *runState) *AgentRun {
 		Error:      rs.errText,
 		EventCount: rs.eventTotal,
 		LastEvent:  rs.lastEvent,
+		LastSeq:    rs.eventSeq,
 	}
 }
 
@@ -621,14 +649,20 @@ func (m *RunManager) cacheLoaded(snap *AgentRun) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, ok := m.runs[snap.ID]; !ok {
-		m.runs[snap.ID] = loadedRunState(snap, m.eventCapacity)
+		seq := snap.LastSeq
+		if seq == 0 {
+			if storedSeq, err := m.store.lastSeq(snap.ID); err == nil {
+				seq = storedSeq
+			}
+		}
+		m.runs[snap.ID] = loadedRunState(snap, m.eventCapacity, seq)
 	}
 }
 
 // loadedRunState rebuilds the state of a run loaded from the store. A row
 // still marked queued or running belongs to a dead process and is reported as
 // interrupted.
-func loadedRunState(snap *AgentRun, eventCapacity int) *runState {
+func loadedRunState(snap *AgentRun, eventCapacity int, lastSeq int64) *runState {
 	status := snap.Status
 	if !terminalRunStatus(status) {
 		status = RunInterrupted
@@ -650,6 +684,8 @@ func loadedRunState(snap *AgentRun, eventCapacity int) *runState {
 		eventTotal: snap.EventCount,
 		lastEvent:  snap.LastEvent,
 		events:     make([]string, eventCapacity),
+		eventSeq:   lastSeq,
+		journal:    make([]RunEvent, eventCapacity),
 		done:       done,
 	}
 }

@@ -31,6 +31,7 @@ const chainDeviceID = "chain-device"
 type chainHarness struct {
 	t          *testing.T
 	registry   *manager.Registry
+	runEvents  *manager.RunEventBroker
 	service    *agentops.Service
 	live       *atomic.Pointer[agentops.Service]
 	runs       *agentops.RunManager
@@ -62,7 +63,10 @@ func newChainHarness(t *testing.T, exec agentops.ExecutorFunc) *chainHarness {
 		t.Fatalf("create enrollment: %v", err)
 	}
 	registry := manager.NewRegistry(4)
-	grpcSrv, listener, err := manager.ServeGRPC("127.0.0.1:0", &manager.GRPCAgentServer{Registry: registry, Auth: store})
+	runEvents := manager.NewRunEventBroker()
+	grpcSrv, listener, err := manager.ServeGRPC("127.0.0.1:0", &manager.GRPCAgentServer{
+		Registry: registry, Auth: store, RunEvents: runEvents,
+	})
 	if err != nil {
 		t.Fatalf("serve grpc: %v", err)
 	}
@@ -81,6 +85,7 @@ func newChainHarness(t *testing.T, exec agentops.ExecutorFunc) *chainHarness {
 	return &chainHarness{
 		t:          t,
 		registry:   registry,
+		runEvents:  runEvents,
 		service:    &agentops.Service{Roots: map[string]string{"work": workspace}},
 		live:       live,
 		runs:       runs,
@@ -412,8 +417,18 @@ func TestGRPCDisconnectKeepsAgentRunning(t *testing.T) {
 	t.Logf("one second after the session died, run %s is %s with %d events (was %d)",
 		start.RunID, offline.Status, offline.EventCount, before.EventCount)
 
-	// Reconnect: a new session for the same device reaches the same runs.
+	// Reconnect: a new session for the same device reaches the same runs and
+	// advertises its durable journal head. The Manager requests only the
+	// missing suffix recorded while this device was offline.
+	managerHeadBeforeReconnect := h.runEvents.Head(authstore.DefaultAccount, chainDeviceID, start.RunID)
+	if managerHeadBeforeReconnect >= offline.LastSeq {
+		t.Fatalf("Manager head %d unexpectedly includes offline seq %d before reconnect", managerHeadBeforeReconnect, offline.LastSeq)
+	}
 	cancelReconnect, reconnectDone, _ := h.connect(h.registerCredential(credential))
+	awaitCondition(t, 5*time.Second, "the Manager to replay the offline run-event gap", func() bool {
+		return h.runEvents.Head(authstore.DefaultAccount, chainDeviceID, start.RunID) >= offline.LastSeq
+	})
+
 	resumed := h.statusOverSession(start.RunID)
 	if resumed.Status != string(agentops.RunRunning) {
 		t.Fatalf("agent_status over the new session = %q, want the still-running run", resumed.Status)

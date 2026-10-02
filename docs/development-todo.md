@@ -249,7 +249,7 @@ Account scoping (MGR-001) is complete. P2 write mode is implemented with local o
 ### DX-004 Dependency update policy
 
 - [ ] Define update cadence.
-- [ ] Require release-note/security review for MCP SDK, OAuth/JWT, WebSocket, and crypto-related dependencies.
+- [ ] Require release-note/security review for MCP SDK, OAuth/JWT, gRPC/HTTP2, and crypto-related dependencies.
 - [ ] Run full integration suite after critical dependency upgrades.
 - [ ] Record externally visible compatibility changes in docs.
 

@@ -1,6 +1,6 @@
 ---
 name: codebridge-subagent
-description: Delegate self-contained coding and investigation tasks to local subagents (omp by default; opencode or codex when a profile pins them) on the user's machine. Prefer persistent agent_start + agent_status/result when task duration is unknown; use synchronous agent only for trivially bounded work.
+description: Delegate self-contained coding and investigation tasks to local subagents (omp by default; opencode or codex when a profile pins them) on the user's machine. Prefer persistent agent_start for work of unknown duration; do not keep the ChatGPT turn alive by polling agent_status/result.
 ---
 
 # Delegating to local subagents
@@ -35,14 +35,19 @@ task description looks short.
 Typical long-task flow:
 
 1. `agent_start` → capture `run_id`;
-2. poll `agent_status` at a reasonable cadence;
-3. once terminal, call `agent_result`;
-4. use `agent_cancel` only when the run is no longer useful;
-5. use `agent_runs` to recover runs after a reconnect or when a `run_id`
+2. end the current assistant turn after the run is accepted; do **not** keep
+   the turn alive with repeated `agent_status` or `agent_result` calls;
+3. Runtime events continue independently of the MCP request and are replayed
+   after Client/Manager reconnects;
+4. when a terminal state is known, call `agent_result` once and report it;
+5. use `agent_status` only when the user explicitly asks for current status,
+   for diagnostics, or during recovery;
+6. use `agent_cancel` only when the run is no longer useful;
+7. use `agent_runs` to recover runs after a reconnect or when a `run_id`
    was lost.
 
-Do not start a second duplicate run merely because a status call was
-interrupted. Check `agent_runs` first.
+Do not start a second duplicate run merely because a connection or status
+check was interrupted. Check `agent_runs` first.
 
 ## Timeout policy
 
@@ -57,8 +62,10 @@ Do **not** guess how long an agent task should take.
 - Do not convert phrases like "long task", "deep analysis", or "write the
   documentation" into an invented timeout.
 
-Use `agent_status` and progress events to decide whether a run is healthy;
-lack of a guessed deadline is not a reason to start a duplicate run.
+When the user explicitly asks about a running task, use `agent_status` and
+the Runtime/session view to inspect health. Do not create a background polling
+loop merely to wait for completion; lack of a guessed deadline is not a reason
+to start a duplicate run.
 
 ## Choosing a profile
 

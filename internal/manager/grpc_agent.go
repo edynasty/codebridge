@@ -23,13 +23,25 @@ import (
 )
 
 // GRPCAgentServer adapts the gRPC bidi stream onto the existing Registry,
-// reusing the WebSocket handler's registration, account-binding and
-// dispatch semantics. One stream equals one device session.
+// reusing the Registry's registration, account-binding and dispatch
+// semantics. One stream equals one device session.
 type GRPCAgentServer struct {
 	pb.UnimplementedAgentServiceServer
-	Auth     *authstore.Store
-	Registry *Registry
-	Audit    *auditlog.Logger
+	Auth      *authstore.Store
+	Registry  *Registry
+	Audit     *auditlog.Logger
+	RunEvents *RunEventBroker
+
+	runEventsOnce sync.Once
+}
+
+func (s *GRPCAgentServer) runEventBroker() *RunEventBroker {
+	s.runEventsOnce.Do(func() {
+		if s.RunEvents == nil {
+			s.RunEvents = NewRunEventBroker()
+		}
+	})
+	return s.RunEvents
 }
 
 // ServeGRPC starts the agent gRPC listener with transport-level keepalive
@@ -187,6 +199,44 @@ func (s *GRPCAgentServer) Connect(stream pb.AgentService_ConnectServer) error {
 				}
 			case protocol.TypeProgress:
 				registryConn.DeliverEvent(env.RequestId, json.RawMessage(env.Payload))
+			case protocol.TypeRunEvent:
+				if len(env.Payload) > maxAgentPayloadBytes {
+					log.Printf("run event from %s exceeded payload limit", reg.DeviceID)
+					continue
+				}
+				var event protocol.RunEvent
+				if err := json.Unmarshal(env.Payload, &event); err != nil {
+					log.Printf("invalid run event from %s: %v", reg.DeviceID, err)
+					continue
+				}
+				if _, _, err := s.runEventBroker().Accept(account, reg.DeviceID, event); err != nil {
+					log.Printf("reject run event from %s: %v", reg.DeviceID, err)
+				}
+			case protocol.TypeRunHeads:
+				if len(env.Payload) > maxAgentPayloadBytes {
+					log.Printf("run heads from %s exceeded payload limit", reg.DeviceID)
+					continue
+				}
+				var heads protocol.RunHeads
+				if err := json.Unmarshal(env.Payload, &heads); err != nil {
+					log.Printf("invalid run heads from %s: %v", reg.DeviceID, err)
+					continue
+				}
+				replay, err := s.runEventBroker().Missing(account, reg.DeviceID, heads.Runs)
+				if err != nil {
+					log.Printf("reject run heads from %s: %v", reg.DeviceID, err)
+					continue
+				}
+				if len(replay.Runs) == 0 {
+					continue
+				}
+				payload, err := json.Marshal(replay)
+				if err != nil {
+					continue
+				}
+				conn.Send(&pb.Envelope{
+					Type: protocol.TypeRunReplay, DeviceId: reg.DeviceID, Payload: payload,
+				})
 			}
 		}
 	}()

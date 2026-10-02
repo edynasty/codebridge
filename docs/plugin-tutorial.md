@@ -17,8 +17,8 @@
 ChatGPT Web / Codex Desktop（@CodeBridge 插件）
         |  HTTPS + OAuth 2.1（MCP Streamable HTTP）
         v
-CodeBridge Manager（/mcp：MCP 工具层；/agent：WebSocket 枢纽；/admin：设备身份）
-        |  出站 WSS（设备主动连接）
+CodeBridge Manager（/mcp：MCP 工具层；gRPC AgentService：设备通道；/admin：设备身份）
+        |  出站 gRPC / HTTP2（设备主动连接）
         v
 本地 CodeBridge Client（工具策略 / 权限门 / 检查点）
         |
@@ -76,7 +76,7 @@ Codex 自动发现插件根的 `.mcp.json`（`type: "http"`）；它与 Agent Pl
 |---|---|
 | `codebridge-ops` | 设备/工作区发现、文件浏览、tool_policy 理解、权限门控 bash。用户要求检查、搜索、诊断、跑命令时用 |
 | `codebridge-write` | `write` / `edit` / `apply_patch` / `rollback_patch` 安全写流程：先 preview 后 confirm，保留 checkpoint |
-| `codebridge-subagent` | 把自包含任务委托给本地子代理（默认 omp；profile 锁定 opencode/codex 时用对应端）。任务时长未知时默认用持久 `agent_start` + `agent_status/result`；只有明确极短且适合同步等待的任务才用 `agent` |
+| `codebridge-subagent` | 把自包含任务委托给本地子代理（默认 omp；profile 锁定 opencode/codex 时用对应端）。任务时长未知时默认用持久 `agent_start` 并立即结束当前 ChatGPT turn；`agent_status/result` 只用于显式检查、恢复和终态取结果 |
 
 ## 5. 当前 MCP 工具面
 
@@ -148,7 +148,7 @@ permission_grant { request_id, decision }
 **默认不要设置总任务超时。** ChatGPT/Skill 无法可靠预知本地 Agent 需要读多少仓库文件、调用多少工具或等待模型多久，因此：
 
 - `timeout_seconds` 省略或为 `0` = **无 wall-clock 总时限**；
-- 默认使用 `agent_start` 启动持久 run，再通过 `agent_status / agent_result / agent_runs` 跟踪；
+- 默认使用 `agent_start` 启动持久 run，然后结束当前 ChatGPT turn；Runtime 事件独立于请求持续记录并在重连后补齐，禁止用 `agent_status / agent_result` 持续轮询等待；
 - 只有用户明确要求 deadline、执行预算或硬性总时长时，才传正数 `timeout_seconds`；
 - 不要把“长任务”“深度分析”“写文档”之类描述自行换算成 5 分钟、10 分钟或其他猜测值；
 - MCP 会话断开不应取消 `agent_start` 的本地 run；
@@ -161,12 +161,16 @@ agent_start (不传 timeout_seconds)
     ↓
 run_id
     ↓
-agent_status / agent_runs
+当前 ChatGPT turn 结束
     ↓
-completed / failed / cancelled / interrupted
+Runtime 事件 / 重连补偿
     ↓
-agent_result
+terminal 已知
+    ↓
+agent_result（一次）
 ```
+
+用户主动询问运行进度、诊断异常或恢复丢失上下文时，才调用 `agent_status` / `agent_runs`。
 
 `timeout` 状态仍然保留，只用于调用方**明确传入正数 timeout_seconds** 的场景，而不是默认策略。
 
@@ -283,9 +287,9 @@ agent_start {
 ```
 
 4. **权限门**（如本地未放行该 harness）：调用返回 `request_id` 而非 `run_id` → `permission_grant { decision: "once" }` → 原样重试 `agent_start` → 得到 `run_id`。
-5. **跟进**：以合理节奏轮询 `agent_status`（免费、不影响 run）；终态后 `agent_result` 取最终输出。
+5. **跟进**：得到 `run_id` 后结束当前 ChatGPT turn，不持续轮询。Runtime 事件在本地独立记录并通过 gRPC 推送/重连补偿；只有用户主动询问状态或执行恢复时才调 `agent_status` / `agent_runs`，终态已知后调用一次 `agent_result`。
 6. **验收**：把子代理结果当证据而非真相——必要时用 `read` / `list` 抽查它引用的文件；本任务只读，全程不触发写工具。
-7. **异常分支**：若中途会话断开，重新进入后 `agent_runs` 找回该 run，继续 5–6。
+7. **异常分支**：若中途连接断开，Client 的 durable RunEvent journal 继续记录；重连后按序列自动补齐。若聊天上下文已丢失，可用 `agent_runs` 找回该 run，再按 5–6 恢复。
 
 若任务改成"修复该问题并提交修改"，第 3 步换成允许编辑的任务描述，第 6 步改为：检查改动 diff → 聚焦测试 → 若需整体撤销用 `rollback_patch`（codebridge-write 流程）。
 
