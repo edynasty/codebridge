@@ -66,13 +66,15 @@ V1 已支持原生客户端（`deploy/launchd`、`deploy/systemd`）；V2 放弃
 
 ## 4. CodexBridge 复用
 
-### 4.1 现状：上游已定位，但尚未固定
+### 4.1 现状：上游已固定并审计；未导入源码
 
-目标上游现已从外部明确定位为 `Fanch-hui/codex-bridge`。其公开 `win` 分支已经描述了预期的原生桌面/服务架构、Secure MCP Tunnel、任务/会话、审批、Agent Discovery/Connectivity，以及 Apache-2.0 许可证。但本仓库仍没有 vendored 副本或固定的上游 commit，CodeBridge 也尚未完成上游原样构建。Phase 0 因此仍需先验证具体模块边界，再决定复用方式。
+Phase 0 已审计 `Fanch-hui/codex-bridge` 的 `win` / `v1.3.4`，准确 commit 为 `7844bb608a9a4e96ed09c084589b7825db77aa3e`。[审计证据](evidence/phase0-upstream.md) 记录 Apache-2.0 LICENSE/NOTICE 义务、源码与模块清单、原样构建和 smoke、测试/构建失败，以及逐模块复用决策。未向 CodeBridge 添加 vendored 副本、上游依赖，或上游 domain/IPC/Store 类型。
 
 Secure MCP Tunnel 本身是 OpenAI 的 `tunnel-client`。CodeBridge 由 `codebridged` 监管它，并让它通过 Unix-domain socket 访问 daemon 的 Streamable HTTP MCP Endpoint，因此关键路径不依赖 CodexBridge，也不需要额外的 stdio shim。
 
-### 4.2 能力矩阵（Phase 0 填写）
+### 4.2 能力矩阵（已记录 Phase 0 审计）
+
+完整实测矩阵（是否存在、位置、依赖、可复用性、复用模式、补丁、风险与 fallback）见[上游证据](evidence/phase0-upstream.md)。下表保留设计中的首选复用优先级，不覆盖审计后的具体决策。
 
 | 宣称的上游能力 | 需求方 | 首选复用方式 | 兜底方案 |
 | --- | --- | --- | --- |

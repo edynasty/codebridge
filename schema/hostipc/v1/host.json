@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codebridge.local/schema/hostipc/v1/host.json",
+  "title": "Host IPC v1 host service",
+  "$defs": {
+    "caller": {
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["app", "diagnostics", "harness"] },
+        "class": { "type": "string", "enum": ["local_ui", "local_mcp"] },
+        "peer_uid": { "type": "integer" },
+        "peer_pid": { "type": "integer" },
+        "signature_verified": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "healthParams": { "type": "object", "additionalProperties": true },
+    "healthResult": {
+      "type": "object",
+      "required": ["status", "daemon_version", "protocol", "uptime_ms", "caller"],
+      "properties": {
+        "status": { "type": "string", "enum": ["ok", "degraded"] },
+        "daemon_version": { "type": "string" },
+        "protocol": {
+          "type": "object",
+          "required": ["major", "minor"],
+          "properties": { "major": { "type": "integer" }, "minor": { "type": "integer" } }
+        },
+        "uptime_ms": { "type": "integer" },
+        "pid": { "type": "integer" },
+        "caller": { "$ref": "#/$defs/caller" },
+        "store": {
+          "type": "object",
+          "properties": {
+            "wired": { "type": "boolean" },
+            "schema_version": { "type": "integer" },
+            "error": { "type": "string" }
+          }
+        },
+        "tunnel": {
+          "type": "object",
+          "properties": {
+            "configured": { "type": "boolean" },
+            "supervised": { "type": "boolean" },
+            "state": { "type": "string" },
+            "restarts": { "type": "integer" },
+            "last_error": { "type": "string" }
+          }
+        },
+        "listeners": {
+          "type": "object",
+          "properties": {
+            "mcp_socket": { "type": "string" },
+            "host_socket": { "type": "string" }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "prepareRestartParams": { "type": "object", "additionalProperties": true },
+    "prepareRestartResult": {
+      "type": "object",
+      "required": ["prepared"],
+      "properties": {
+        "prepared": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "active_runs": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+    "nativeHostSmokeParams": {
+      "type": "object",
+      "properties": {
+        "only": {
+          "type": "array",
+          "description": "Optional selector from the daemon's fixed check set. Unknown names are rejected; no caller-supplied argv exists.",
+          "items": { "type": "string", "enum": ["shell", "git", "docker", "ssh", "kubectl", "env"] }
+        }
+      },
+      "additionalProperties": true
+    },
+    "nativeHostSmokeResult": {
+      "type": "object",
+      "required": ["report"],
+      "properties": {
+        "report": {
+          "type": "object",
+          "required": ["started_at", "finished_at", "daemon_pid", "cwd", "checks"],
+          "properties": {
+            "started_at": { "type": "string", "format": "date-time" },
+            "finished_at": { "type": "string", "format": "date-time" },
+            "daemon_pid": { "type": "integer" },
+            "cwd": { "type": "string" },
+            "env": {
+              "type": "object",
+              "properties": {
+                "PATH": { "type": "string" },
+                "HOME": { "type": "string" },
+                "SHELL": { "type": "string" },
+                "USER": { "type": "string" }
+              }
+            },
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "argv", "started"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "argv": { "type": "array", "items": { "type": "string" } },
+                  "started": { "type": "boolean", "description": "False when the fixed executable is absent from PATH; the check is reported, not skipped silently." },
+                  "exit_code": { "type": "integer" },
+                  "timed_out": { "type": "boolean" },
+                  "duration_ms": { "type": "integer" },
+                  "stdout": { "type": "string" },
+                  "stderr": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "phase0ProbeParams": {
+      "type": "object",
+      "required": ["probe"],
+      "properties": {
+        "probe": {
+          "type": "string",
+          "enum": ["permissions", "signing", "native-host", "harness", "lock-state", "input-monitor"]
+        },
+        "args": { "type": "array", "items": { "type": "string" }, "description": "Accepted for wire compatibility; the daemon passes only its fixed per-probe argv." },
+        "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 600000 }
+      },
+      "additionalProperties": true
+    },
+    "phase0ProbeResult": {
+      "type": "object",
+      "required": ["exit_code", "stdout", "stderr", "timed_out"],
+      "properties": {
+        "exit_code": { "type": "integer" },
+        "stdout": { "type": "string" },
+        "stderr": { "type": "string" },
+        "timed_out": { "type": "boolean" },
+        "argv": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

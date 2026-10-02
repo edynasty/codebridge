@@ -1,0 +1,226 @@
+{
+  "date": "2026-10-02",
+  "signedAcceptance": "NOT_RUN",
+  "signingRefusal": {
+    "scenario": "real signing preflight, no identities, preserve existing output",
+    "exitCode": 2,
+    "stdout": "== observed code-signing identities ==\n     0 valid identities found\n",
+    "stderr": "SIGNED_TCC_BLOCKED_EXTERNAL: install an Apple Development or Developer ID Application certificate with its private key\n",
+    "markerPreserved": true,
+    "entries": [
+      "preserve-marker"
+    ]
+  },
+  "unsignedAssemblyPreparation": {
+    "exitCode": 0,
+    "stdout": "== observed code-signing identities ==\n     0 valid identities found\n\n== build ==\n[0/1] Planning build\nBuilding for production...\n[0/3] Write swift-version--58304C5D6DBC2206.txt\nBuild complete! (0.25s)\n/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/Info.plist: OK\n/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/Library/LaunchAgents/com.codebridge.daemon.plist: OK\n\n== signing tree (observed) ==\n-- /var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/codebridge-probe\nExecutable=/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/codebridge-probe\nIdentifier=codebridge-probe\nFormat=Mach-O thin (arm64)\nCodeDirectory v=20400 size=11017 flags=0x20002(adhoc,linker-signed) hashes=341+0 location=embedded\nVersionPlatform=1\nVersionMin=851968\nVersionSDK=1704960\nHash type=sha256 size=32\nCandidateCDHash sha256=c5538cc5f80e93ae71facde8cdf45430ba4bb8e9\nCandidateCDHashFull sha256=c5538cc5f80e93ae71facde8cdf45430ba4bb8e9fa7e933d4c2904d887fda410\nHash choices=sha256\nCMSDigest=c5538cc5f80e93ae71facde8cdf45430ba4bb8e9fa7e933d4c2904d887fda410\nCMSDigestType=2\nExecutable Segment base=0\nExecutable Segment limit=333292\nExecutable Segment flags=0x1\nPage size=4096\nCDHash=c5538cc5f80e93ae71facde8cdf45430ba4bb8e9\nSignature=adhoc\nInfo.plist=not bound\nTeamIdentifier=not set\nSealed Resources=none\nInternal requirements=none\nExecutable=/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/codebridge-probe\n# designated => cdhash H\"c5538cc5f80e93ae71facde8cdf45430ba4bb8e9\"\nbc72631378d2da50208c2a48c917ca69ad48006a6d089fbdb68e6c07ee86b4b0  /var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/codebridge-probe\n-- /var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/codebridged\nExecutable=/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/codebridged\nIdentifier=a.out\nFormat=Mach-O thin (arm64)\nCodeDirectory v=20400 size=98430 flags=0x20002(adhoc,linker-signed) hashes=3073+0 location=embedded\nVersionPlatform=1\nVersionMin=1704960\nVersionSDK=1704960\nHash type=sha256 size=32\nCandidateCDHash sha256=29126036734997b82f34ec5b97d198d822d24f3f\nCandidateCDHashFull sha256=29126036734997b82f34ec5b97d198d822d24f3f16e02c0d8c7253a5f64da42e\nHash choices=sha256\nCMSDigest=29126036734997b82f34ec5b97d198d822d24f3f16e02c0d8c7253a5f64da42e\nCMSDigestType=2\nExecutable Segment base=0\nExecutable Segment limit=10813440\nExecutable Segment flags=0x1\nPage size=4096\nCDHash=29126036734997b82f34ec5b97d198d822d24f3f\nSignature=adhoc\nInfo.plist=not bound\nTeamIdentifier=not set\nSealed Resources=none\nInternal requirements=none\nExecutable=/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/codebridged\n# designated => cdhash H\"29126036734997b82f34ec5b97d198d822d24f3f\"\nbccd0478e0dd70fae23f4cbbb87368520dc236dd30c5e4c8fd460704f96f916a  /var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/codebridged\n-- /var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app\nExecutable=/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/CodeBridge\nIdentifier=CodeBridge\nFormat=app bundle with Mach-O thin (arm64)\nCodeDirectory v=20400 size=11811 flags=0x20002(adhoc,linker-signed) hashes=366+0 location=embedded\nVersionPlatform=1\nVersionMin=851968\nVersionSDK=1704960\nHash type=sha256 size=32\nCandidateCDHash sha256=e1c4f4442c7818d5a9a405ad8db14ff94b17d5e1\nCandidateCDHashFull sha256=e1c4f4442c7818d5a9a405ad8db14ff94b17d5e18b6251b8c6a38aca5cd53e1a\nHash choices=sha256\nCMSDigest=e1c4f4442c7818d5a9a405ad8db14ff94b17d5e18b6251b8c6a38aca5cd53e1a\nCMSDigestType=2\nExecutable Segment base=0\nExecutable Segment limit=376980\nExecutable Segment flags=0x1\nPage size=4096\nCDHash=e1c4f4442c7818d5a9a405ad8db14ff94b17d5e1\nSignature=adhoc\nInfo.plist=not bound\nTeamIdentifier=not set\nSealed Resources=none\nInternal requirements=none\nExecutable=/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/CodeBridge\n# designated => cdhash H\"e1c4f4442c7818d5a9a405ad8db14ff94b17d5e1\"\n\n== result ==\napp bundle: /var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app\nsigning mode: unsigned-dev\nteam id: <none>\ndaemon embedded: true\n\nWARNING: unsigned development build.\n  It is NOT valid for TCC, SMAppService or LaunchAgent evidence.\n  Rebuild with --sign-identity \"<genuine identity>\" --team-id <TEAMID> for those spikes.\n",
+    "stderr": "",
+    "notSignedAcceptance": true
+  },
+  "appEntryRuns": [
+    {
+      "args": [
+        "--phase0b-probe",
+        "signing",
+        "--json"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"command_line\":[\"/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/CodeBridge\",\"--phase0b-probe\",\"signing\",\"--json\"],\"duration_seconds\":0.1300450563430786,\"ended_at\":\"2026-10-02T14:41:40.159Z\",\"findings\":{\"blocked\":[\"no CODEBRIDGE_EXPECT_TEAM_ID / daemon signing identity configured in this environment\"],\"observed\":[\"self: pid=54707 ppid=57275 context=process_child:bun path=/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/CodeBridge signed=true identifier=CodeBridge team=none adhoc=true valid=false cdhash=e1c4f4442c7818d5a9a405ad8db14ff94b17d5e1\",\"parent: path=/opt/homebrew/Cellar/bun/1.3.14/bin/bun signed=true identifier=bun team=none\"],\"untested\":[\"expected Team ID / daemon signing identity presence (configured=false)\"]},\"host\":{\"architecture\":\"arm64\",\"gui_session_available\":true,\"launchd_domain\":\"gui/501\",\"model_identifier\":\"MacBookPro18,3\",\"os_build\":\"26A428\",\"os_version\":\"Version 27.0 (Build 26A428)\",\"user_uid\":501},\"launch\":{\"adhoc_signed\":true,\"bundle_identifier\":\"com.codebridge.app\",\"bundle_path\":\"/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app\",\"cdhash\":\"e1c4f4442c7818d5a9a405ad8db14ff94b17d5e1\",\"executable_path\":\"/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/CodeBridge\",\"launch_context\":\"process_child:bun\",\"parent_executable_path\":\"/opt/homebrew/Cellar/bun/1.3.14/bin/bun\",\"parent_pid\":57275,\"pid\":54707,\"signature_valid\":false,\"signed\":true,\"signing_identifier\":\"CodeBridge\"},\"privacy\":\"no file names inside protected roots, no pixels persisted, no keystroke content, no input injected\",\"probe\":\"signing\",\"schema\":\"codebridge.phase0.probe.v1\",\"signing\":{\"parent_signed\":true,\"parent_signing_identifier\":\"bun\",\"tcc_attribution_note\":\"TCC attribution requires comparing this report across launch contexts: child of CodeBridge.app (app-attributed), child of codebridged (daemon-attributed) and standalone. Grants are per code-signing identity; a process with no signature cannot be granted or verified.\",\"team_identifier_configured\":false},\"started_at\":\"2026-10-02T14:41:40.025Z\"}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "--phase0b-service",
+        "status"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"available\":false,\"detail\":\"launchctl exit 113; the job is not loaded in gui\\/501\",\"running\":false,\"status\":\"plist not found in the bundle\"}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "--phase0b-service",
+        "register"
+      ],
+      "exitCode": 3,
+      "stdout": "",
+      "stderr": "CodeBridge: internal failure: SIGNED_TCC_BLOCKED_EXTERNAL: genuine signed bundle required\n"
+    },
+    {
+      "args": [
+        "--phase0b-probe",
+        "permissions",
+        "--json"
+      ],
+      "exitCode": 3,
+      "stdout": "",
+      "stderr": "CodeBridge: internal failure: SIGNED_TCC_BLOCKED_EXTERNAL: genuine signed bundle required\n"
+    },
+    {
+      "args": [
+        "--phase0b-probe",
+        "input-monitor",
+        "--json"
+      ],
+      "exitCode": 3,
+      "stdout": "",
+      "stderr": "CodeBridge: internal failure: SIGNED_TCC_BLOCKED_EXTERNAL: genuine signed bundle required\n"
+    },
+    {
+      "args": [
+        "--phase0b-probe",
+        "files-folders",
+        "--json"
+      ],
+      "exitCode": 3,
+      "stdout": "",
+      "stderr": "CodeBridge: internal failure: SIGNED_TCC_BLOCKED_EXTERNAL: genuine signed bundle required\n"
+    }
+  ],
+  "inProcessIdentityReport": {
+    "command_line": [
+      "/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/CodeBridge",
+      "--phase0b-probe",
+      "signing",
+      "--json"
+    ],
+    "duration_seconds": 0.1300450563430786,
+    "ended_at": "2026-10-02T14:41:40.159Z",
+    "findings": {
+      "blocked": [
+        "no CODEBRIDGE_EXPECT_TEAM_ID / daemon signing identity configured in this environment"
+      ],
+      "observed": [
+        "self: pid=54707 ppid=57275 context=process_child:bun path=/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/CodeBridge signed=true identifier=CodeBridge team=none adhoc=true valid=false cdhash=e1c4f4442c7818d5a9a405ad8db14ff94b17d5e1",
+        "parent: path=/opt/homebrew/Cellar/bun/1.3.14/bin/bun signed=true identifier=bun team=none"
+      ],
+      "untested": [
+        "expected Team ID / daemon signing identity presence (configured=false)"
+      ]
+    },
+    "host": {
+      "architecture": "arm64",
+      "gui_session_available": true,
+      "launchd_domain": "gui/501",
+      "model_identifier": "MacBookPro18,3",
+      "os_build": "26A428",
+      "os_version": "Version 27.0 (Build 26A428)",
+      "user_uid": 501
+    },
+    "launch": {
+      "adhoc_signed": true,
+      "bundle_identifier": "com.codebridge.app",
+      "bundle_path": "/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app",
+      "cdhash": "e1c4f4442c7818d5a9a405ad8db14ff94b17d5e1",
+      "executable_path": "/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/CodeBridge",
+      "launch_context": "process_child:bun",
+      "parent_executable_path": "/opt/homebrew/Cellar/bun/1.3.14/bin/bun",
+      "parent_pid": 57275,
+      "pid": 54707,
+      "signature_valid": false,
+      "signed": true,
+      "signing_identifier": "CodeBridge"
+    },
+    "privacy": "no file names inside protected roots, no pixels persisted, no keystroke content, no input injected",
+    "probe": "signing",
+    "schema": "codebridge.phase0.probe.v1",
+    "signing": {
+      "parent_signed": true,
+      "parent_signing_identifier": "bun",
+      "tcc_attribution_note": "TCC attribution requires comparing this report across launch contexts: child of CodeBridge.app (app-attributed), child of codebridged (daemon-attributed) and standalone. Grants are per code-signing identity; a process with no signature cannot be granted or verified.",
+      "team_identifier_configured": false
+    },
+    "started_at": "2026-10-02T14:41:40.025Z"
+  },
+  "ordinaryRootReport": {
+    "command_line": [
+      "/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/codebridge-probe",
+      "files-folders",
+      "--json",
+      "--roots",
+      "/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/ordinary-root,/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/missing,/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/ordinary-root/a"
+    ],
+    "duration_seconds": 0.01752495765686035,
+    "ended_at": "2026-10-02T14:42:40.036Z",
+    "files_folders": {
+      "note": "read-only opendir on the root plus entry counting, bounded at 5s per root; file names are neither reported nor persisted; nothing is created, modified or deleted",
+      "roots": [
+        {
+          "entry_count": 2,
+          "exists": true,
+          "path": "/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/ordinary-root",
+          "readable": true
+        },
+        {
+          "exists": false,
+          "path": "/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/missing",
+          "readable": false
+        },
+        {
+          "errno": 20,
+          "exists": true,
+          "path": "/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/ordinary-root/a",
+          "readable": false
+        }
+      ]
+    },
+    "findings": {
+      "blocked": [],
+      "observed": [
+        "Files & Folders only: read-only root probe, 5s deadline per root; no Computer Use API called"
+      ],
+      "untested": [
+        "signed protected-root grant persistence across restart/rebuild/update"
+      ]
+    },
+    "host": {
+      "architecture": "arm64",
+      "gui_session_available": true,
+      "launchd_domain": "gui/501",
+      "model_identifier": "MacBookPro18,3",
+      "os_build": "26A428",
+      "os_version": "Version 27.0 (Build 26A428)",
+      "user_uid": 501
+    },
+    "launch": {
+      "adhoc_signed": true,
+      "bundle_identifier": "com.codebridge.app",
+      "bundle_path": "/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app",
+      "cdhash": "c5538cc5f80e93ae71facde8cdf45430ba4bb8e9",
+      "executable_path": "/private/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T/codebridge-phase0b-X1va6k/assembly/CodeBridge.app/Contents/MacOS/codebridge-probe",
+      "launch_context": "process_child:bun",
+      "parent_executable_path": "/opt/homebrew/Cellar/bun/1.3.14/bin/bun",
+      "parent_pid": 57275,
+      "pid": 55471,
+      "signature_valid": true,
+      "signed": true,
+      "signing_identifier": "codebridge-probe"
+    },
+    "privacy": "no file names inside protected roots, no pixels persisted, no keystroke content, no input injected",
+    "probe": "files-folders",
+    "schema": "codebridge.phase0.probe.v1",
+    "started_at": "2026-10-02T14:42:40.013Z"
+  },
+  "bundleMarker": {
+    "buildKind": "unsigned-dev",
+    "unsignedMarker": true,
+    "expectedTeam": ""
+  },
+  "externalPresence": {
+    "CODEBRIDGE_SIGNING_IDENTITY": false,
+    "CODEBRIDGE_TEAM_ID": false,
+    "CODEBRIDGE_APP_TEAM_ID": false,
+    "CODEBRIDGE_APP_BUNDLE_ID": false,
+    "CODEBRIDGE_TUNNEL_ID": false,
+    "CONTROL_PLANE_TUNNEL_ID": false,
+    "CONTROL_PLANE_API_KEY": false,
+    "OPENAI_TUNNEL_ID": false,
+    "OPENAI_TUNNEL_API_KEY": false,
+    "OPENAI_API_KEY": false
+  },
+  "candidatePreservation": {
+    "count": 124,
+    "missing": []
+  },
+  "assertionCorrection": "Initial smoke assertion compared /var with /private/var. Existing results passed after canonical-path resolution; no application command was rerun to hide a failure."
+}

@@ -1,6 +1,6 @@
 # CodeBridge V2 Design
 
-Status: **ARCHITECTURE FROZEN — 2026-10-02; Phase 0 ready**
+Status: **ARCHITECTURE FROZEN — 2026-10-02; PHASE_0_BLOCKED; Phase 1 NOT READY**
 
 CodeBridge V2 connects AI clients to the user's real development environment through three first-class domains:
 
@@ -20,6 +20,8 @@ Computer Use is the highest feature priority, and it ships through the same Brid
 - [Migration](migration.md) — V1 code disposition, CodexBridge reuse procedure, data migration.
 - [Kimi K3 Architecture Audit — 2026-10-02](reviews/2026-10-02-kimi-k3-architecture-audit.md) — independent P0/P1 challenge and remediation record.
 - [GLM 5.3 Final Freeze Gate — 2026-10-02](reviews/2026-10-02-glm-5.3-freeze-gate.md) — final gate: `READY_TO_FREEZE`, P0=0, P1=0.
+- [Phase 0 implementation closeout](evidence/phase0-closeout.md) — actual checks, per-task results, prerequisites and complete file manifest; code availability is not evidence-gap closure.
+- [Phase 0B blocker closure / signed native acceptance](evidence/phase0b-closeout.md) — **PHASE0_BLOCKED**: genuine signing and actual ChatGPT/Tunnel prerequisites absent; F2 not closed, Phase 1 not ready.
 
 Chinese versions:
 
@@ -36,7 +38,7 @@ Chinese versions:
 - **Domain model**: Project, Session, Run, ProviderSession, ComputerSession, Event, Artifact. Turn is a correlation field, not an entity.
 - **Computer input safety**: every action cites the frame it was planned from; the arbiter validates and injects in one process; physical user input preempts the agent; only a human can resume the agent.
 - **No model-visible path can grant permissions.**
-- **CodexBridge is an implementation source behind adapters**; the intended upstream is identified, but its exact commit/module reuse is not yet pinned and nothing on the critical path depends on it.
+- **CodexBridge is an implementation source behind adapters**; audited at `win` / `v1.3.4`, commit `7844bb608a9a4e96ed09c084589b7825db77aa3e` ([upstream evidence](evidence/phase0-upstream.md)). No upstream types or source were imported into CodeBridge's domain, Host IPC or store.
 
 ## Architectural rule
 

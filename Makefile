@@ -2,7 +2,7 @@ VERSION ?= dev
 LDFLAGS := -s -w -X main.version=$(VERSION)
 PLUGIN_OUT ?= dist/codebridge-plugin.zip
 
-.PHONY: fmt fmt-check test build run-manager run-client run-doctor plugin plugin-web
+.PHONY: fmt fmt-check test build build-daemon run-manager run-client run-doctor run-codebridged plugin plugin-web
 
 fmt:
 	gofmt -w ./cmd ./internal
@@ -25,8 +25,17 @@ build:
 	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/codebridge-client ./cmd/client
 	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/codebridge-doctor ./cmd/doctor
 
+# codebridged needs cgo: the Host IPC app role is verified against the live
+# peer process with the Security framework (never a path or file-only check).
+build-daemon:
+	mkdir -p bin
+	CGO_ENABLED=1 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/codebridged ./cmd/codebridged
+
 run-manager:
 	go run ./cmd/manager
+
+run-codebridged:
+	CGO_ENABLED=1 go run ./cmd/codebridged run
 
 run-client:
 	go run ./cmd/client

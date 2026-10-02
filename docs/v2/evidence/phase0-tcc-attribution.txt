@@ -1,0 +1,9 @@
+# Read-only existing unified log; 2026-10-02 local time. No new permission request.
+# /usr/bin/log show --last 20m --style compact --info --predicate 'subsystem == "com.apple.TCC" AND (eventMessage CONTAINS "77878" OR eventMessage CONTAINS "72321" OR eventMessage CONTAINS "codebridge-probe")'
+# Selected ScreenCapture request only; no pixels, tokens, or unrelated environment.
+2026-10-02 21:17:06.948 Df tccd[436:1637ceb] [com.apple.TCC:access] REQUEST: tccd_uid=0, sender_pid=77878, sender_uid=501, sender_auid=501, function=TCCAccessRequest, msgID=77878.1
+2026-10-02 21:17:06.948 Df tccd[436:1637ceb] [com.apple.TCC:access] AUTHREQ_CTX: msgID=77878.1, function=<private>, service=kTCCServiceScreenCapture, preflight=yes, query=1, client_dict=(null), daemon_dict=<private>
+2026-10-02 21:17:06.948 Df tccd[436:1637ceb] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=77878.1, attribution={responsible={TCCDProcess: identifier=a.out, pid=72321, auid=501, euid=501, responsible_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/bin/codebridged, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/bin/codebridged}, requesting={TCCDProcess: identifier=codebridge-probe, pid=77878, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/.build/arm64-apple-macosx/release/codebridge-probe}, },
+2026-10-02 21:17:06.950 Df tccd[436:1637ceb] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=77878.1, subject=/Users/tangxingpeng/IdeaProjects/me/codebridge/bin/codebridged,
+2026-10-02 21:17:06.952 Df tccd[436:1637ceb] [com.apple.TCC:access] AUTHREQ_RESULT: msgID=77878.1, authValue=2, authReason=4, authVersion=1, desired_auth=0, error=(null),
+2026-10-02 21:17:06.952 Df tccd[436:1637ceb] [com.apple.TCC:access] REPLY: (0) function=TCCAccessRequest, msgID=77878.1

@@ -71,25 +71,31 @@ The review judged the design against code and external facts, not against the V2
 - Computer Use has no code; only design documents.
 - CodexBridge has no code or vendored copy in this repository. The intended upstream has now been externally identified as `Fanch-hui/codex-bridge` (default development branch `win`, Apache-2.0); CodeBridge has not yet pinned a commit or built that upstream locally.
 
+#### 3.1.1 Phase 0 implementation update
+
+The baseline above remains a record of V1 at `d251a3c`. Phase 0 adds an independent Go daemon, a minimal Swift app/probe, language-neutral Host IPC/capability/store contracts and an Application Support SQLite WAL store. V1 remains unchanged. [Implementation closeout](evidence/phase0-closeout.md) records **PHASE_0_BLOCKED**: signed TCC isolation, protected-root grant persistence and real ChatGPT/Tunnel approval evidence are not established.
+
 ### 3.2 Verified externally (2026-10-02)
 
 - Secure MCP Tunnel is OpenAI's [`tunnel-client`](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels): it opens an outbound HTTPS long-poll to OpenAI and forwards MCP JSON-RPC to a local MCP server over **stdio or HTTP**; streamed results are supported. It serves private / developer-mode connections, not public plugin distribution.
 - Apps SDK ([reference](https://developers.openai.com/plugins/reference)): tool-result `_meta` is delivered only to the widget and hidden from the model; `_meta.ui.visibility` can make a tool callable only from the UI; widgets call tools with `window.openai.callTool`; widget CSP `connectDomains` governs fetch/XHR.
 - Codex Cloud ([docs](https://developers.openai.com/codex/ide/cloud-tasks)) runs tasks in published environments built from GitHub repositories. The CLI offers `codex cloud exec`, `codex cloud list` and `codex apply` (applies a cloud diff via `git apply`, failing on conflict). A fully scriptable environment/task lifecycle is an open request ([openai/codex#24777](https://github.com/openai/codex/issues/24777)).
 - First-party ChatGPT Computer Use exists on the macOS/Windows desktop app (§1.1).
-- The intended CodexBridge upstream is `Fanch-hui/codex-bridge`. Its public README documents a native macOS/Windows desktop/service architecture, Secure MCP Tunnel for ChatGPT, SQLite-backed tasks/sessions, local approvals, agent discovery/connectivity and Apache-2.0 licensing. Its exact reusable module boundaries still require a Phase 0 source/build audit.
+- The intended CodexBridge upstream is `Fanch-hui/codex-bridge`. Phase 0 audited its actual source, LICENSE/NOTICE, module boundaries, unchanged build and smoke at `win` / `v1.3.4`, commit `7844bb608a9a4e96ed09c084589b7825db77aa3e`; the [capability/reuse matrix](evidence/phase0-upstream.md) records failures and limits rather than treating documentation as implementation proof.
 
 ### 3.3 Evidence gaps
 
 | Gap | Blocks | Closure |
 | --- | --- | --- |
-| CodexBridge upstream commit/module boundaries. Repository identity, branch family and Apache-2.0 license are known, but no commit is pinned and no upstream build has been verified in this repository. | Concrete upstream reuse | Phase 0: pin a commit, build it unchanged and produce a capability/reuse matrix |
+| CodexBridge upstream commit/module boundaries | Concrete upstream reuse | **CLOSED** by the [Phase 0 source/build audit and capability/reuse matrix](evidence/phase0-upstream.md); no upstream source or types imported |
 | WebRTC inside the ChatGPT widget sandbox (web, desktop, mobile) and its CSP interaction | Phase 2 | Phase 0 spike |
 | TCC attribution of the LaunchAgent daemon and its harness subprocesses; they must **not** inherit CodeBridge.app grants | Phase 1 security | Phase 0 spike. If attribution leaks, the daemon ships under a separate signing identity and/or spawns harnesses with disclaimed responsibility, before any `computer.input` ships |
 | `tunnel-client` supervised-runtime lifecycle and restart behavior with a Streamable HTTP MCP target over a Unix-domain socket | Phase 1 ingress | Phase 0 spike |
 | Programmatic Codex Cloud handoff | Phase 5 | Re-evaluate at Phase 5 |
 
 No architecture rule in this document depends on unverified CodexBridge internals.
+
+Phase 0B qualification of the disclaimer contingency above: **CONTINGENCY_NOT_PUBLICLY_SUPPORTED** ([public API investigation](evidence/phase0b-responsibility.md)). Launch environment constraints validate the responsible process; they do not disclaim it. `ppid = 1` is not TCC isolation proof. No private API/SPI or entitlement workaround is implemented. F2 stays frozen and **NOT CLOSED**. First test independent, genuinely signed launchd identities; only a reproducible signed isolation failure warrants a minimal architecture amendment. Missing certificates alone do not warrant one. [Current blockers](evidence/phase0b-closeout.md).
 
 ## 4. Domain decomposition
 
@@ -555,7 +561,7 @@ Upstream-derived code runs inside CodeBridge.app with its TCC grants. Every upst
 
 ## 16. Upstream strategy
 
-CodexBridge is an implementation source, not an owner. The intended upstream is identified, while the exact commit and module reuse remain unpinned (§3.3). Reuse modes, the adapter layer, the patch queue and the sync procedure are defined in [Migration](migration.md) §4. Binding rules:
+CodexBridge is an implementation source, not an owner. Phase 0 pinned `7844bb608a9a4e96ed09c084589b7825db77aa3e` (`win`, `v1.3.4`) and recorded per-module reuse decisions ([audit](evidence/phase0-upstream.md)); no upstream source was imported. Reuse modes, the adapter layer, the patch queue and the sync procedure are defined in [Migration](migration.md) §4. Binding rules:
 
 - CodeBridge owns the MCP surface, Policy, Runtime and Computer contracts; upstream code never registers or routes CodeBridge tools.
 - Upstream code is wrapped by CodeBridge-owned adapters; upstream types never cross into CodeBridge domain code or Host IPC, and CodeBridge types never enter upstream code.
@@ -608,7 +614,7 @@ CodexBridge is an implementation source, not an owner. The intended upstream is 
 | D8 | OAuth through the tunnel for multi-user access | a tunnel must serve more than one person |
 | D9 | Sandbox execution | Phase 7 |
 | D10 | Orphan reattach vs. terminate | per provider, Phase 3 |
-| D11 | Reuse mode per upstream module | after the Phase 0 upstream pin |
+| D11 | Reuse mode per upstream module | Resolved by the [Phase 0 audit](evidence/phase0-upstream.md); actual imports still require the adapter/attribution procedure |
 
 ## 20. Architectural invariants
 

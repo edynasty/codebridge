@@ -1,0 +1,415 @@
+{
+  "classification": "Real local/macOS smoke; not genuine signed TCC or ChatGPT end-to-end proof",
+  "native_host": {
+    "started_at": "2026-10-02T12:52:02.961881Z",
+    "finished_at": "2026-10-02T12:52:03.294606Z",
+    "daemon_pid": 62447,
+    "cwd": "/",
+    "env": {
+      "PATH": "/opt/miniconda3/bin:/Users/tangxingpeng/.bun/bin:/Users/tangxingpeng/.opencode/bin:/Users/tangxingpeng/.antigravity-ide/antigravity-ide/bin:/Users/tangxingpeng/.local/share/mise/dotnet-root:/Users/tangxingpeng/.local/share/mise/installs/node/24/bin:/Users/tangxingpeng/.local/bin:/Users/tangxingpeng/.local/bin:/Users/tangxingpeng/.local/bin:/Library/Frameworks/Python.framework/Versions/3.11/bin:/Users/tangxingpeng/.jenv/shims:/Users/tangxingpeng/.jenv/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Applications/VMware Fusion.app/Contents/Public:/usr/local/share/dotnet:~/.dotnet/tools:/Users/tangxingpeng/.local/bin:/Users/tangxingpeng/Library/pnpm/bin:/Users/tangxingpeng/Library/pnpm:/opt/miniconda3/bin:/opt/miniconda3/condabin:/Library/Frameworks/Python.framework/Versions/3.11/bin:/Users/tangxingpeng/.jenv/shims:/Users/tangxingpeng/.jenv/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/tangxingpeng/.cargo/bin:/Users/tangxingpeng/Library/Application Support/JetBrains/Toolbox/scripts:/Users/tangxingpeng/Library/Application Support/JetBrains/Toolbox/scripts:/Users/tangxingpeng/Library/Application Support/Code/User/globalStorage/github.copilot-chat/debugCommand:/Users/tangxingpeng/Library/Application Support/Code/User/globalStorage/github.copilot-chat/copilotCli:/Users/tangxingpeng/Library/Application Support/Code/User/globalStorage/github.copilot-chat/debugCommand:/Users/tangxingpeng/Library/Application Support/Code/User/globalStorage/github.copilot-chat/copilotCli:/Users/tangxingpeng/.bun/bin:/Users/tangxingpeng/.opencode/bin:/Users/tangxingpeng/.antigravity-ide/antigravity-ide/bin",
+      "HOME": "/Users/tangxingpeng",
+      "SHELL": "/bin/zsh",
+      "USER": "tangxingpeng",
+      "cwd": "/"
+    },
+    "launch": {
+      "pid": 62447,
+      "ppid": 1,
+      "executable": "/Users/tangxingpeng/IdeaProjects/me/codebridge/bin/codebridged",
+      "cwd": "/",
+      "run_dir": "/tmp/cb0-launch-skuc59o3/run",
+      "host_socket": "/tmp/cb0-launch-skuc59o3/run/hostipc.sock"
+    },
+    "checks": [
+      {
+        "name": "shell",
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf codebridge-native-host"
+        ],
+        "started": true,
+        "exit_code": 0,
+        "timed_out": false,
+        "duration_ms": 21,
+        "stdout": "codebridge-native-host",
+        "stderr": ""
+      },
+      {
+        "name": "git",
+        "argv": [
+          "git",
+          "--version"
+        ],
+        "started": true,
+        "exit_code": 0,
+        "timed_out": false,
+        "duration_ms": 36,
+        "stdout": "git version 2.50.1 (Apple Git-155)\n",
+        "stderr": ""
+      },
+      {
+        "name": "docker",
+        "argv": [
+          "docker",
+          "version"
+        ],
+        "started": true,
+        "exit_code": 0,
+        "timed_out": false,
+        "duration_ms": 33,
+        "stdout": "Client:\n Version:           29.7.2\n API version:       1.55\n Go version:        go1.26.5\n Git commit:        a7dcaa6\n Built:             Wed Aug  5 18:27:50 2026\n OS/Arch:           darwin/arm64\n Context:           desktop-linux\n\nServer: Docker Desktop 4.86.0 (236216)\n Engine:\n  Version:          29.7.2\n  API version:      1.55 (minimum version 1.40)\n  Go version:       go1.26.5\n  Git commit:       6a43e3d\n  Built:            Wed Aug  5 18:28:35 2026\n  OS/Arch:          linux/arm64\n  Experimental:     false\n containerd:\n  Version:          v2.2.5\n  GitCommit:        e53c7c1516c3b2bff98eb76f1f4117477e6f4e66\n runc:\n  Version:          1.3.6\n  GitCommit:        v1.3.6-0-g491b69ba\n docker-init:\n  Version:          0.19.0\n  GitCommit:        de40ad0\n",
+        "stderr": ""
+      },
+      {
+        "name": "ssh",
+        "argv": [
+          "ssh",
+          "-V"
+        ],
+        "started": true,
+        "exit_code": 0,
+        "timed_out": false,
+        "duration_ms": 12,
+        "stdout": "",
+        "stderr": "OpenSSH_10.3p1, LibreSSL 3.3.6\n"
+      },
+      {
+        "name": "kubectl",
+        "argv": [
+          "kubectl",
+          "version",
+          "--client"
+        ],
+        "started": true,
+        "exit_code": 0,
+        "timed_out": false,
+        "duration_ms": 224,
+        "stdout": "Client Version: v1.36.1\nKustomize Version: v5.8.1\n",
+        "stderr": ""
+      },
+      {
+        "name": "path",
+        "argv": [
+          "/usr/bin/which",
+          "-a",
+          "git"
+        ],
+        "started": true,
+        "exit_code": 0,
+        "timed_out": false,
+        "duration_ms": 2,
+        "stdout": "/usr/bin/git\n",
+        "stderr": ""
+      }
+    ]
+  },
+  "launchd_restart": {
+    "before_pid": 62447,
+    "after_pid": 72321,
+    "parent_pid": 1,
+    "selected_launchctl_status": [
+      "runs = 2",
+      "pid = 72321",
+      "last terminating signal = Killed: 9"
+    ],
+    "new_bearer_works": true,
+    "old_bearer_http_status": 401,
+    "store_wired": true,
+    "schema_version": 1
+  },
+  "daemon_child_probes": {
+    "permissions": {
+      "command_line": [
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/.build/release/codebridge-probe",
+        "permissions",
+        "--json"
+      ],
+      "duration_seconds": 1.0589959621429443,
+      "ended_at": "2026-10-02T13:17:08.010Z",
+      "findings": {
+        "blocked": [],
+        "observed": [
+          "screen_capture: preflight=true shareable_content=ok capture=ok pixels_persisted=false",
+          "accessibility: trusted=false focused_application=error ax_error=-25204",
+          "input_monitoring_preflight: listen=false post=false secure_input=false",
+          "protected_roots(read-only, names not reported): /Users/tangxingpeng/Desktop: exists=true readable=true errno=none entries=3; /Users/tangxingpeng/Documents: exists=true readable=true errno=none entries=7; /Users/tangxingpeng/Downloads: exists=true readable=true errno=none entries=230; /tmp: exists=true readable=true errno=none entries=377"
+        ],
+        "untested": [
+          "real TCC grant state for a signed CodeBridge.app bundle: this run has launch_context=codebridged_child signed=true identity=codebridge-probe",
+          "TCC attribution comparison across launch contexts (app child / codebridged child / standalone)"
+        ]
+      },
+      "host": {
+        "architecture": "arm64",
+        "gui_session_available": true,
+        "launchd_domain": "gui/501",
+        "model_identifier": "MacBookPro18,3",
+        "os_build": "26A428",
+        "os_version": "Version 27.0 (Build 26A428)",
+        "user_uid": 501
+      },
+      "launch": {
+        "adhoc_signed": true,
+        "bundle_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/.build/release",
+        "cdhash": "e84f693a3c3a94a81f42af966c581186285bbf9f",
+        "executable_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/.build/arm64-apple-macosx/release/codebridge-probe",
+        "launch_context": "codebridged_child",
+        "parent_executable_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/bin/codebridged",
+        "parent_pid": 72321,
+        "pid": 77878,
+        "signature_valid": true,
+        "signed": true,
+        "signing_identifier": "codebridge-probe"
+      },
+      "permissions": {
+        "accessibility": {
+          "api_error_code": -25204,
+          "focused_application_call": "error",
+          "focused_application_error": "kAXErrorCannotComplete",
+          "trusted": false
+        },
+        "files_folders": {
+          "note": "read-only opendir on the root plus entry counting, bounded at 5s per root; file names are neither reported nor persisted; nothing is created, modified or deleted",
+          "roots": [
+            {
+              "entry_count": 3,
+              "exists": true,
+              "path": "/Users/tangxingpeng/Desktop",
+              "readable": true
+            },
+            {
+              "entry_count": 7,
+              "exists": true,
+              "path": "/Users/tangxingpeng/Documents",
+              "readable": true
+            },
+            {
+              "entry_count": 230,
+              "exists": true,
+              "path": "/Users/tangxingpeng/Downloads",
+              "readable": true
+            },
+            {
+              "entry_count": 377,
+              "exists": true,
+              "path": "/tmp",
+              "readable": true
+            }
+          ]
+        },
+        "input_monitoring_preflight": {
+          "preflight_listen_access": false,
+          "preflight_post_access": false,
+          "secure_input_enabled": false
+        },
+        "screen_capture": {
+          "capture_call": "ok",
+          "captured_height": 1169,
+          "captured_sha256": "5186ae37cda0a8d32859257201bce4fcff17c1ad106f001053adb7b55208f096",
+          "captured_width": 1800,
+          "display_count": 1,
+          "pixels_persisted": false,
+          "preflight_granted": true,
+          "shareable_content_call": "ok"
+        }
+      },
+      "privacy": "no file names inside protected roots, no pixels persisted, no keystroke content, no input injected",
+      "probe": "permissions",
+      "schema": "codebridge.phase0.probe.v1",
+      "started_at": "2026-10-02T13:17:06.949Z"
+    },
+    "input-monitor": {
+      "command_line": [
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/.build/release/codebridge-probe",
+        "input-monitor",
+        "--json"
+      ],
+      "duration_seconds": 5.063555955886841,
+      "ended_at": "2026-10-02T13:07:24.558Z",
+      "findings": {
+        "blocked": [
+          "input monitor is not verified usable on this host right now (secure_input_active): per architecture §11.6 computer.input must be reported unavailable (fail closed) until hardware-input preemption is observed on a signed, granted build"
+        ],
+        "observed": [
+          "input_monitor: tap_created=true monitor_state=installedUnverified input_available=false disabled_events=0 hardware_events=0 delivery_proof=preflight_false origins=[:]",
+          "input_monitor decisions: [:]"
+        ],
+        "untested": [
+          "real hardware-input preemption with Input Monitoring granted to a signed bundle, and preemption against synthetic input from another Accessibility-permitted process"
+        ]
+      },
+      "host": {
+        "architecture": "arm64",
+        "gui_session_available": true,
+        "launchd_domain": "gui/501",
+        "model_identifier": "MacBookPro18,3",
+        "os_build": "26A428",
+        "os_version": "Version 27.0 (Build 26A428)",
+        "user_uid": 501
+      },
+      "input_monitor": {
+        "delivery_proof": "preflight_false",
+        "event_counts_by_origin": {},
+        "hardware_events_observed": 0,
+        "injected_events": 0,
+        "input_available": false,
+        "monitor_state": "installedUnverified",
+        "note": "listen-only tap; input is reported available only when preflight allows it, the tap is installed, it was never disabled, at least one hardware event was observed, and Secure Input was not observed active. Synthetic events from other processes and events with unknown origin are classified as preempting (conservative: unknown never resolves to safe).",
+        "observation_seconds": 5,
+        "preemption_decisions": {},
+        "preflight": {
+          "preflight_listen_access": false,
+          "preflight_post_access": false,
+          "secure_input_enabled": true
+        },
+        "tap_created": true,
+        "tap_disabled_count": 0,
+        "unavailability_reason": "secure_input_active"
+      },
+      "launch": {
+        "adhoc_signed": true,
+        "bundle_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/.build/release",
+        "cdhash": "4b793f8c41f09a2384f93a88585ebe270fb906a2",
+        "executable_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/.build/arm64-apple-macosx/release/codebridge-probe",
+        "launch_context": "codebridged_child",
+        "parent_executable_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/bin/codebridged",
+        "parent_pid": 62447,
+        "pid": 71058,
+        "signature_valid": true,
+        "signed": true,
+        "signing_identifier": "codebridge-probe"
+      },
+      "privacy": "no file names inside protected roots, no pixels persisted, no keystroke content, no input injected",
+      "probe": "input-monitor",
+      "schema": "codebridge.phase0.probe.v1",
+      "started_at": "2026-10-02T13:07:19.492Z"
+    },
+    "lock-state": {
+      "command_line": [
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/.build/release/codebridge-probe",
+        "lock-state",
+        "--json"
+      ],
+      "duration_seconds": 5.046568036079407,
+      "ended_at": "2026-10-02T13:07:29.663Z",
+      "findings": {
+        "blocked": [
+          "no OS evidence about queued CGEvents after unlock is claimed: discard is proven only by the arbiter state machine, and ScreenCaptureKit/CGEvent behavior during lock requires a signed, granted build"
+        ],
+        "observed": [
+          "no lock/sleep/session-switch transition occurred during the 5s observation window",
+          "state-machine spike: applied 1 suspension transition(s); queue_replay_blocked=true"
+        ],
+        "untested": [
+          "real lock / wake / fast-user-switch transitions on this host: run `codebridge-probe lock-state --json --duration 120` and lock the screen manually; the probe never triggers lock or sleep"
+        ]
+      },
+      "host": {
+        "architecture": "arm64",
+        "gui_session_available": true,
+        "launchd_domain": "gui/501",
+        "model_identifier": "MacBookPro18,3",
+        "os_build": "26A428",
+        "os_version": "Version 27.0 (Build 26A428)",
+        "user_uid": 501
+      },
+      "launch": {
+        "adhoc_signed": true,
+        "bundle_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/.build/release",
+        "cdhash": "4b793f8c41f09a2384f93a88585ebe270fb906a2",
+        "executable_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/.build/arm64-apple-macosx/release/codebridge-probe",
+        "launch_context": "codebridged_child",
+        "parent_executable_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/bin/codebridged",
+        "parent_pid": 62447,
+        "pid": 71119,
+        "signature_valid": true,
+        "signed": true,
+        "signing_identifier": "codebridge-probe"
+      },
+      "lock_state": {
+        "events": [],
+        "evidence_class": "os_observation:none_in_window + state_machine_spike",
+        "final": {
+          "note": "values come from the current GUI session dictionary; nil means the key was absent",
+          "on_console": true,
+          "screen_locked": true,
+          "session_dictionary_keys": [
+            "CGSSessionScreenIsLocked",
+            "CGSSessionScreenLockedTime",
+            "kCGSSessionLoginwindowSafeLogin",
+            "kCGSSessionOnConsoleKey",
+            "kCGSessionLoginDoneKey"
+          ]
+        },
+        "initial": {
+          "note": "values come from the current GUI session dictionary; nil means the key was absent",
+          "on_console": true,
+          "screen_locked": true,
+          "session_dictionary_keys": [
+            "CGSSessionScreenIsLocked",
+            "CGSSessionScreenLockedTime",
+            "kCGSSessionLoginwindowSafeLogin",
+            "kCGSSessionOnConsoleKey",
+            "kCGSessionLoginDoneKey"
+          ]
+        },
+        "model_transitions_applied": [
+          {
+            "controller": "none",
+            "controller_epoch": 2,
+            "discarded_actions": 1,
+            "geometry_generation": 2,
+            "previous_controller": "agent",
+            "reason": "screenLock",
+            "requires_human_resume": false,
+            "state": "suspended"
+          }
+        ],
+        "note": "Observation only: the probe never locks, sleeps or wakes the machine. Any transition in os_transitions_observed is OS evidence for this host and window; model_transitions_applied and queue_replay_blocked are the state-machine spike and are NOT OS evidence about macOS behavior during lock or wake. Initial/final locked, off-console or unknown snapshots also suspend the model; queue_replay_blocked requires an admitted model action and actual discard.",
+        "observation_seconds": 5,
+        "os_transitions_observed": [],
+        "queue_replay_blocked": true
+      },
+      "privacy": "no file names inside protected roots, no pixels persisted, no keystroke content, no input injected",
+      "probe": "lock-state",
+      "schema": "codebridge.phase0.probe.v1",
+      "started_at": "2026-10-02T13:07:24.615Z"
+    }
+  },
+  "f2_blocker": {
+    "baseline_daemon_pid": 62447,
+    "baseline_screen_capture_result": "SCStreamErrorDomain -3801; preflight false",
+    "baseline_protected_roots": "Desktop/Documents/Downloads each blocked at configured 5s deadline",
+    "after_restart_daemon_pid": 72321,
+    "after_restart_capture_call": "ok",
+    "grant_attribution": "TCC AUTHREQ_ATTRIBUTION responsible pid 72321 a.out; AUTHREQ_SUBJECT codebridged; msgID 77878.1",
+    "screen_capture_authorization": {"authValue": 2, "authReason": 4, "authVersion": 1, "error": null},
+    "original_grant_source": "UNKNOWN; genuine signed App-grant inheritance not established",
+    "attribution_evidence": "phase0-tcc-attribution.txt",
+    "signing": "ADHOC; no Team ID",
+    "stop": "No subsequent Computer permission or input experiment; Phase 1 blocked"
+  },
+  "host_ipc": {
+    "go_swift_handshake": "PASS diagnostics 1.0 same UID/audit token",
+    "major_mismatch": -32000,
+    "unsupported_minor": -32001,
+    "pre_hello_request": -32002,
+    "wrong_direction_computer_request": -32601,
+    "diagnostics_runtime_request": -32011,
+    "unconfigured_app_role": -32010,
+    "live_native_signature_rejection": "SecCodeCheckValidity OSStatus -67050 despite unverified-peer opt-in"
+  },
+  "approval_transport": {
+    "cross_http_request_state": "PASS",
+    "token_result_location": "_meta only; token excluded from this evidence file",
+    "replay": "REJECTED",
+    "missing_token": "REJECTED",
+    "wrong_widget": "REJECTED",
+    "project_always": "REJECTED",
+    "grant_created": false,
+    "without_widget_session_id": "token-possession-only; actual host support UNTESTED",
+    "chatgpt_model_context_visibility": "UNTESTED; login unavailable"
+  },
+  "privacy": "No pixels, keystroke content, approval/bearer tokens, or raw launchctl inherited environment stored here"
+}

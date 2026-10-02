@@ -1,0 +1,224 @@
+2026-10-02 Phase 0B
+
+$ make fmt-check && go test ./... && go vet ./... && go build ./... && make build-daemon
+ok  	github.com/edynasty/codebridge/cmd/client	(cached)
+?   	github.com/edynasty/codebridge/cmd/codebridged	[no test files]
+?   	github.com/edynasty/codebridge/cmd/doctor	[no test files]
+ok  	github.com/edynasty/codebridge/cmd/manager	(cached)
+?   	github.com/edynasty/codebridge/cmd/store-smoke	[no test files]
+ok  	github.com/edynasty/codebridge/internal/agentops	(cached)
+ok  	github.com/edynasty/codebridge/internal/approvalspike	(cached)
+ok  	github.com/edynasty/codebridge/internal/auditlog	(cached)
+ok  	github.com/edynasty/codebridge/internal/authserver	(cached)
+ok  	github.com/edynasty/codebridge/internal/authstore	(cached)
+ok  	github.com/edynasty/codebridge/internal/clientconfig	(cached)
+ok  	github.com/edynasty/codebridge/internal/clientcred	(cached)
+ok  	github.com/edynasty/codebridge/internal/config	(cached)
+ok  	github.com/edynasty/codebridge/internal/daemon	(cached)
+ok  	github.com/edynasty/codebridge/internal/doctor	(cached)
+ok  	github.com/edynasty/codebridge/internal/hostipc	(cached)
+ok  	github.com/edynasty/codebridge/internal/manager	(cached)
+?   	github.com/edynasty/codebridge/internal/mcpcallstore	[no test files]
+ok  	github.com/edynasty/codebridge/internal/oauthresource	(cached)
+?   	github.com/edynasty/codebridge/internal/pb	[no test files]
+?   	github.com/edynasty/codebridge/internal/protocol	[no test files]
+ok  	github.com/edynasty/codebridge/internal/runtime	(cached)
+?   	github.com/edynasty/codebridge/internal/ui	[no test files]
+?   	github.com/edynasty/codebridge/schema/store/v1	[no test files]
+ok  	github.com/edynasty/codebridge/tools/pluginpack	(cached)
+mkdir -p bin
+CGO_ENABLED=1 go build -trimpath -ldflags="-s -w -X main.version=dev" -o bin/codebridged ./cmd/codebridged
+
+Exit: 0
+
+Initial native integration attempt (failed; missing shared-module import, source ownership warnings):
+$ swift build -c release --package-path desktop/macos && swift test --package-path desktop/macos
+warning: 'macos': found 12 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/HostToolsProbe.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/InputMonitorProbe.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/HostEnvironment.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/ProbeOptions.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/ProbeRunner.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/LockStateProbe.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/ScreenCaptureProbe.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/AccessibilityProbe.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/HostIPCHandshakeProbe.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/AsyncBridge.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/FilesFoldersProbe.swift
+    /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/ProbeCLI.swift
+[0/1] Planning build
+Building for production...
+[0/1] Write sources
+[5/10] Write swift-version--58304C5D6DBC2206.txt
+[7/11] Compiling CodeBridgeIPC Framing.swift
+[8/12] Compiling CodeBridgeComputerSpike InputClassifier.swift
+[9/13] Compiling CodeBridgeNativeProbe AccessibilityProbe.swift
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/Sources/codebridge-probe/ProbeCLI.swift:46:13: error: cannot find 'ProbeReportWriter' in scope
+44 | 
+45 |         let report = try ProbeRunner.run(options: options)
+46 |         try ProbeReportWriter.emit(report, pretty: options.pretty, outputPath: options.outputPath)
+   |             `- error: cannot find 'ProbeReportWriter' in scope
+47 |         return 0
+48 |     }
+
+Exit: 1; tests did not run in this attempt.
+
+After correcting module import and explicit target source ownership:
+$ swift build -c release --package-path desktop/macos && swift test --package-path desktop/macos
+[0/1] Planning build
+Building for production...
+[0/7] Write sources
+[2/7] Write swift-version--58304C5D6DBC2206.txt
+[4/8] Compiling CodeBridgeIPC Framing.swift
+[5/9] Compiling CodeBridgeNativeProbe AccessibilityProbe.swift
+[6/11] Compiling codebridge_probe main.swift
+[6/11] Write Objects.LinkFileList
+[7/11] Linking codebridge-probe
+[9/11] Compiling CodeBridgeApp AppDelegate.swift
+[9/11] Write Objects.LinkFileList
+[10/11] Linking CodeBridge
+Build complete! (9.74s)
+[0/1] Planning build
+Building for debugging...
+[0/1] Write sources
+[5/13] Write swift-version--58304C5D6DBC2206.txt
+[7/15] Compiling CodeBridgeIPC HostIPCPaths.swift
+[8/15] Emitting module CodeBridgeIPC
+[9/17] Compiling CodeBridgeComputerSpike ProbeReport.swift
+[10/17] Emitting module CodeBridgeComputerSpike
+[11/31] Compiling CodeBridgeNativeProbe AccessibilityProbe.swift
+[12/31] Compiling CodeBridgeNativeProbe AsyncBridge.swift
+[13/31] Compiling CodeBridgeNativeProbe HostIPCHandshakeProbe.swift
+[14/31] Compiling CodeBridgeNativeProbe ProbeCLI.swift
+[15/31] Compiling CodeBridgeNativeProbe FilesFoldersProbe.swift
+[16/31] Compiling CodeBridgeNativeProbe HostEnvironment.swift
+[17/31] Compiling CodeBridgeNativeProbe ProbeRunner.swift
+[18/32] Compiling CodeBridgeNativeProbe ProbeOptions.swift
+[19/32] Compiling CodeBridgeNativeProbe InputMonitorProbe.swift
+[20/32] Compiling CodeBridgeNativeProbe HostToolsProbe.swift
+[21/32] Compiling CodeBridgeNativeProbe LockStateProbe.swift
+[22/32] Emitting module CodeBridgeNativeProbe
+[23/32] Emitting module CodeBridgeComputerSpikeTests
+[23/32] Write Objects.LinkFileList
+[25/32] Compiling CodeBridgeNativeProbe ScreenCaptureProbe.swift
+[25/38] Linking CodeBridgeMacPackageTests
+[27/38] Compiling codebridge_probe main.swift
+[28/38] Emitting module codebridge_probe
+[28/38] Write Objects.LinkFileList
+[30/38] Emitting module CodeBridgeApp
+[31/38] Compiling CodeBridgeApp Phase0BAcceptance.swift
+[32/38] Compiling CodeBridgeApp main.swift
+[33/38] Compiling CodeBridgeApp LaunchAgentController.swift
+[33/40] Linking codebridge-probe
+[34/40] Applying codebridge-probe
+[36/40] Compiling CodeBridgeApp AppDelegate.swift
+[37/40] Compiling CodeBridgeApp MenuBarController.swift
+[37/40] Write Objects.LinkFileList
+[38/40] Linking CodeBridge
+[39/40] Applying CodeBridge
+Build complete! (5.11s)
+Test Suite 'All tests' started at 2026-10-02 22:40:33.887.
+Test Suite 'CodeBridgeMacPackageTests.xctest' started at 2026-10-02 22:40:33.890.
+Test Suite 'FramingTests' started at 2026-10-02 22:40:33.890.
+Test Case '-[CodeBridgeIPCTests.FramingTests testAttachmentFramesAreBoundedAtSixteenMiB]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testAttachmentFramesAreBoundedAtSixteenMiB]' passed (0.003 seconds).
+Test Case '-[CodeBridgeIPCTests.FramingTests testBinaryAttachmentFrameRoundTrip]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testBinaryAttachmentFrameRoundTrip]' passed (0.001 seconds).
+Test Case '-[CodeBridgeIPCTests.FramingTests testControlFramesOverOneMiBillionAreRejected]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testControlFramesOverOneMiBillionAreRejected]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.FramingTests testDecoderHandlesTwoFramesInOneBuffer]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testDecoderHandlesTwoFramesInOneBuffer]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.FramingTests testDecoderWaitsForCompleteFrames]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testDecoderWaitsForCompleteFrames]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.FramingTests testJSONFrameRoundTrip]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testJSONFrameRoundTrip]' passed (0.000 seconds).
+Test Suite 'FramingTests' passed at 2026-10-02 22:40:33.895.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'InputClassifierTests' started at 2026-10-02 22:40:33.895.
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testInputAvailabilityFollowsTheMonitorState]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testInputAvailabilityFollowsTheMonitorState]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testOnlyEngineOriginatedEventsAreIgnored]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testOnlyEngineOriginatedEventsAreIgnored]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testSecureInputBlocksAnOtherwiseVerifiedMonitor]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testSecureInputBlocksAnOtherwiseVerifiedMonitor]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testUnknownOriginNeverResolvesToSafe]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testUnknownOriginNeverResolvesToSafe]' passed (0.000 seconds).
+Test Suite 'InputClassifierTests' passed at 2026-10-02 22:40:33.896.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'PeerTrustPolicyTests' started at 2026-10-02 22:40:33.896.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testAConfiguredExpectationAlwaysApplies]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testAConfiguredExpectationAlwaysApplies]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testDiagnosticsMaySkipItsPreCheckOnlyWithExplicitOptIn]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testDiagnosticsMaySkipItsPreCheckOnlyWithExplicitOptIn]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testEmptyIdentifierCannotProduceARequirement]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testEmptyIdentifierCannotProduceARequirement]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testHarnessMaySkipPeerCheckOnlyWithExplicitOptIn]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testHarnessMaySkipPeerCheckOnlyWithExplicitOptIn]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppCannotBypassVerificationEvenWithTheOptIn]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppCannotBypassVerificationEvenWithTheOptIn]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppRequiresANonEmptyTeamIdentifier]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppRequiresANonEmptyTeamIdentifier]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppWithAFullExpectationRequiresALiveVerifiedPeer]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppWithAFullExpectationRequiresALiveVerifiedPeer]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testUnknownRoleRequiresAConfiguredIdentity]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testUnknownRoleRequiresAConfiguredIdentity]' passed (0.000 seconds).
+Test Suite 'PeerTrustPolicyTests' passed at 2026-10-02 22:40:33.898.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'ProtocolNegotiationTests' started at 2026-10-02 22:40:33.898.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testIdenticalVersionsAreAccepted]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testIdenticalVersionsAreAccepted]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testJSONValueRoundTripsThroughJSON]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testJSONValueRoundTripsThroughJSON]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testMajorMismatchIsRejected]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testMajorMismatchIsRejected]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testMinorTwoAheadIsRejected]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testMinorTwoAheadIsRejected]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testNewerClientAgainstOlderDaemonIsRejected]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testNewerClientAgainstOlderDaemonIsRejected]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testOlderClientAgainstNewerDaemonIsAcceptedWithLowerMinor]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testOlderClientAgainstNewerDaemonIsAcceptedWithLowerMinor]' passed (0.000 seconds).
+Test Suite 'ProtocolNegotiationTests' passed at 2026-10-02 22:40:33.900.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'SuspensionModelTests' started at 2026-10-02 22:40:33.900.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testAcquisitionBumpsTheEpochSoTheAcquisitionFrameCannotBeReused]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testAcquisitionBumpsTheEpochSoTheAcquisitionFrameCannotBeReused]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testArbiterRestartInvalidatesForeignFrames]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testArbiterRestartInvalidatesForeignFrames]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testControllerEpochChangeInvalidatesFrames]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testControllerEpochChangeInvalidatesFrames]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testEnqueueIsRefusedWithoutAgentControl]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testEnqueueIsRefusedWithoutAgentControl]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testGeometryChangeInvalidatesFramesPlannedAgainstTheOldGeometry]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testGeometryChangeInvalidatesFramesPlannedAgainstTheOldGeometry]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testHumanHoldRequiresAHumanActorToResume]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testHumanHoldRequiresAHumanActorToResume]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testQueuedInputIsDiscardedOnSuspensionAndCannotReplay]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testQueuedInputIsDiscardedOnSuspensionAndCannotReplay]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testResumeRequiresAFreshObservationFrame]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testResumeRequiresAFreshObservationFrame]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testStaleFrameIsRejectedAfterTheAgeBound]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testStaleFrameIsRejectedAfterTheAgeBound]' passed (0.000 seconds).
+Test Suite 'SuspensionModelTests' passed at 2026-10-02 22:40:33.902.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'CodeBridgeMacPackageTests.xctest' passed at 2026-10-02 22:40:33.902.
+	 Executed 33 tests, with 0 failures (0 unexpected) in 0.009 (0.013) seconds
+Test Suite 'All tests' passed at 2026-10-02 22:40:33.902.
+	 Executed 33 tests, with 0 failures (0 unexpected) in 0.009 (0.016) seconds
+◇ Test run started.
+↳ Testing Library Version: 1743
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+
+Exit: 0; 33 XCTest cases, zero failures.
+
+$ bash -n desktop/macos/Building/build-app.sh desktop/macos/Building/check-signing-identity.sh
+Exit: 0 (no output).
+
+$ desktop/macos/Building/check-signing-identity.sh
+Observed: macOS 27.0 / 26A428 / arm64; 0 valid identities found; SIGNED_TCC_BLOCKED_EXTERNAL; gui/501 exists; all reported signing/probe/socket environment values unset.
+Exit: 0 (read-only diagnostic, not signed acceptance).
+
+$ git diff --check
+Exit: 0 (no output).
+
+Signed codesign --verify --deep --strict --verbose=4, codesign -dv --verbose=4 and designated requirements: NOT RUN for a genuine Apple-signed candidate, certificate absent. Unsigned assembly metadata in phase0b-smoke.json is diagnostic only.

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codebridge.local/schema/hostipc/v1/approval.json",
+  "title": "Host IPC v1 approval service (frozen contract, unimplemented in Phase 0)",
+  "$defs": {
+    "scope": { "type": "string", "enum": ["once", "session", "project", "always"] },
+    "decision": { "type": "string", "enum": ["allow", "deny"] },
+    "presentParams": {
+      "type": "object",
+      "required": ["approval_id", "verb", "requested_scope"],
+      "properties": {
+        "approval_id": { "type": "string" },
+        "verb": { "type": "string" },
+        "selector": { "type": "string" },
+        "requested_scope": { "$ref": "#/$defs/scope" },
+        "caller": { "type": "string", "enum": ["remote_ai", "local_mcp", "agent_internal"] },
+        "summary": { "type": "string" },
+        "expires_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "presentResult": {
+      "type": "object",
+      "required": ["presented"],
+      "properties": {
+        "presented": { "type": "boolean" },
+        "reason": { "type": "string" }
+      }
+    },
+    "decisionParams": {
+      "type": "object",
+      "required": ["approval_id", "decision", "scope"],
+      "properties": {
+        "approval_id": { "type": "string" },
+        "decision": { "$ref": "#/$defs/decision" },
+        "scope": { "$ref": "#/$defs/scope" },
+        "note": { "type": "string" }
+      }
+    },
+    "decisionResult": {
+      "type": "object",
+      "required": ["approval_id", "decision", "scope"],
+      "properties": {
+        "approval_id": { "type": "string" },
+        "decision": { "$ref": "#/$defs/decision" },
+        "scope": { "$ref": "#/$defs/scope" }
+      }
+    },
+    "cancelParams": {
+      "type": "object",
+      "required": ["approval_id"],
+      "properties": { "approval_id": { "type": "string" }, "reason": { "type": "string" } }
+    }
+  }
+}

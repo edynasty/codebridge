@@ -71,25 +71,31 @@ V2 必须做到：
 - Computer Use 没有代码，只有设计文档。
 - CodexBridge 在本仓库中没有代码或 vendored 副本。目标上游现已从外部明确定位为 `Fanch-hui/codex-bridge`（默认开发主线 `win`，Apache-2.0）；但 CodeBridge 还没有固定具体 commit，也没有在本仓库中完成上游原样构建验证。
 
+#### 3.1.1 Phase 0 实施更新
+
+上面的基线保留为 `d251a3c` 时的 V1 记录。Phase 0 新增独立 Go daemon、最小 Swift App/probe、语言中立的 Host IPC/能力/Store 契约，以及 Application Support 下的 SQLite WAL Store。V1 保持不变。[实施收尾](evidence/phase0-closeout.zh-CN.md) 记录 **PHASE_0_BLOCKED**：真实签名下的 TCC 隔离、保护 Root 授权持久性与真实 ChatGPT/Tunnel 审批证据尚未建立。
+
 ### 3.2 外部验证（2026-10-02）
 
 - Secure MCP Tunnel 是 OpenAI 的 [`tunnel-client`](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)：它向 OpenAI 发起出站 HTTPS long-poll，并把 MCP JSON-RPC 转发给本地 MCP server，传输方式为 **stdio 或 HTTP**；支持流式结果。它服务的是私有 / 开发者模式连接，而不是公开的插件分发。
 - Apps SDK（[reference](https://developers.openai.com/plugins/reference)）：tool-result `_meta` 只投递给 widget，对模型隐藏；`_meta.ui.visibility` 可以让某个工具只能从 UI 调用；widget 通过 `window.openai.callTool` 调用工具；widget CSP 的 `connectDomains` 管控 fetch/XHR。
 - Codex Cloud（[docs](https://developers.openai.com/codex/ide/cloud-tasks)）在由 GitHub 仓库构建的已发布环境中运行任务。CLI 提供 `codex cloud exec`、`codex cloud list` 和 `codex apply`（通过 `git apply` 应用云端 diff，冲突时报错失败）。完全可脚本化的环境/任务生命周期仍是一个未决请求（[openai/codex#24777](https://github.com/openai/codex/issues/24777)）。
 - 第一方 ChatGPT Computer Use 已存在于 macOS/Windows 桌面应用中（§1.1）。
-- 目标 CodexBridge 上游是 `Fanch-hui/codex-bridge`。其公开 README 已明确描述 macOS/Windows 原生桌面/服务架构、ChatGPT Secure MCP Tunnel、SQLite 任务/会话、本地审批、Agent Discovery/Connectivity，以及 Apache-2.0 许可证；但具体可复用模块边界仍需在 Phase 0 做源码与构建审计。
+- 目标 CodexBridge 上游是 `Fanch-hui/codex-bridge`。Phase 0 已对 `win` / `v1.3.4`、commit `7844bb608a9a4e96ed09c084589b7825db77aa3e` 的实际源码、LICENSE/NOTICE、模块边界、原样构建和 smoke 做审计；[capability/reuse matrix](evidence/phase0-upstream.md) 明确记录失败与限制，不把文档描述当成实现证明。
 
 ### 3.3 证据缺口
 
 | 缺口 | 阻塞 | 关闭方式 |
 | --- | --- | --- |
-| CodexBridge 上游 commit 与模块边界。仓库身份、分支体系和 Apache-2.0 许可证已经明确，但尚未固定 commit，也没有在本仓库中验证上游构建。 | 具体上游复用 | Phase 0：固定 commit、原样构建并产出 capability/reuse matrix |
+| CodexBridge 上游 commit 与模块边界 | 具体上游复用 | **CLOSED**：[Phase 0 源码/构建审计与 capability/reuse matrix](evidence/phase0-upstream.md)；未导入上游源码或类型 |
 | ChatGPT widget 沙箱（web、桌面、移动端）内的 WebRTC 及其 CSP 交互 | Phase 2 | Phase 0 技术验证（spike） |
 | LaunchAgent daemon 及其 harness 子进程的 TCC 归属；它们**不得**继承 CodeBridge.app 的授权（grant） | Phase 1 安全 | Phase 0 技术验证（spike）。如果归属发生泄漏，则在发布任何 `computer.input` 之前，让 daemon 以独立的签名身份发布，和/或以声明免责（disclaimed responsibility）的方式启动 harness |
 | `tunnel-client` 在 Streamable HTTP + Unix-domain socket MCP 目标模式下的受监管生命周期与重启行为 | Phase 1 入口（ingress） | Phase 0 技术验证（spike） |
 | 以编程方式进行的 Codex Cloud 交接 | Phase 5 | 在 Phase 5 重新评估 |
 
 本文档中没有任何架构规则依赖于未经验证的 CodexBridge 内部实现。
+
+Phase 0B 对上面 disclaimer 备用方案的证据限定：**CONTINGENCY_NOT_PUBLICLY_SUPPORTED**（[公开 API 调研](evidence/phase0b-responsibility.zh-CN.md)）。Launch environment constraints 校验 responsible process，不会让进程声明免责；`ppid = 1` 不是 TCC 隔离证明。未实现私有 API/SPI 或 entitlement 绕过。F2 保持冻结且 **NOT CLOSED**。先实测独立、真实签名的 launchd 身份；只有可复现的签名隔离失败才需要最小架构修订，缺少证书本身不构成修订理由。[当前阻塞](evidence/phase0b-closeout.zh-CN.md)。
 
 ## 4. 领域分解
 
@@ -555,7 +561,7 @@ V1 的 harness 带着各自的自动审批标志运行，因此 `agent.start` �
 
 ## 16. 上游策略
 
-CodexBridge 是实现来源，而不是拥有者。目标上游已经定位，但准确 commit 与模块复用仍未固定（§3.3）。复用模式、适配层、补丁队列与同步流程在 [迁移方案](migration.zh-CN.md) §4 中定义。约束性规则：
+CodexBridge 是实现来源，而不是拥有者。Phase 0 已固定 `7844bb608a9a4e96ed09c084589b7825db77aa3e`（`win`、`v1.3.4`），并记录逐模块复用决策（[审计](evidence/phase0-upstream.md)）；未导入上游源码。复用模式、适配层、补丁队列与同步流程在 [迁移方案](migration.zh-CN.md) §4 中定义。约束性规则：
 
 - CodeBridge 拥有 MCP 接口面、Policy、Runtime 与 Computer 契约；上游代码绝不注册或路由 CodeBridge 工具。
 - 上游代码由 CodeBridge 自有的适配层包裹；上游类型绝不进入 CodeBridge 领域代码或 Host IPC，CodeBridge 类型也绝不进入上游代码。
@@ -608,7 +614,7 @@ CodexBridge 是实现来源，而不是拥有者。目标上游已经定位，�
 | D8 | 通过 tunnel 做 OAuth 以实现多用户访问 | 一个 tunnel 必须服务不止一个人 |
 | D9 | 沙箱执行 | Phase 7 |
 | D10 | 孤儿进程是 reattach 还是终止 | 按 provider 逐个推进，Phase 3 |
-| D11 | 每个上游模块的复用模式 | Phase 0 完成上游固定之后 |
+| D11 | 每个上游模块的复用模式 | 已由 [Phase 0 审计](evidence/phase0-upstream.md) 关闭；实际导入仍需遵循适配层与署名流程 |
 
 ## 20. 架构不变量
 

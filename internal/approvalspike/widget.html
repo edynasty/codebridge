@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CodeBridge Phase 0 approval</title>
+<style>body{font:15px system-ui;margin:20px;color:#20252b;background:#f5f7fa}section{max-width:560px;padding:22px;background:white;border:1px solid #d6dce3;border-radius:12px}button,select{font:inherit;padding:8px;margin:6px 8px 6px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}button:disabled{opacity:.5}</style>
+<section><h1>Approval transport probe</h1><p>This experiment does not create permissions, ComputerSessions, or Grants.</p><p id="request">Waiting for ChatGPT widget metadata. Approval is unavailable outside its host.</p><label>Scope <select id="scope"><option value="once">Once</option><option value="session">Session</option></select></label><div><button id="allow" disabled>Approve probe</button><button id="deny" disabled>Deny probe</button></div><hr><button id="rtc">Test widget WebRTC</button><p>Local data-channel + UI-only SDP round trip. No desktop, STUN, TURN, or external media traffic.</p><pre id="result" aria-live="polite"></pre></section>
+<script>
+let active=false;
+const el=id=>document.getElementById(id);
+function state(){
+ const host=window.openai;
+ const envelope=host?.toolResponseMetadata;
+ const meta=envelope?.mcp_tool_result?._meta??envelope?.call_tool_result?._meta??envelope?._meta??envelope;
+ const out=host?.toolOutput;
+ return {host,token:meta?.approval_token,id:out?.approval_id,out};
+}
+function render(){const s=state();active=!!(s.token&&s.id&&s.host?.callTool);el('allow').disabled=!active;el('deny').disabled=!active;if(active)el('request').textContent=`${s.out.verb}: ${s.out.status}; expires ${s.out.expires_at}`;}
+async function decide(decision){
+ const s=state(); if(!active)return;
+ el('allow').disabled=el('deny').disabled=true;
+ try{const r=await s.host.callTool('phase0_approval_decide',{approval_id:s.id,token:s.token,decision,scope:el('scope').value});
+ const out=r.structuredContent;el('result').textContent=r.isError?'Approval rejected by server.':JSON.stringify(out,null,2);if(!r.isError)active=false;
+ }catch{el('result').textContent='Approval transport failed; no permission was granted.';}
+ if(active){el('allow').disabled=el('deny').disabled=false;}
+}
+el('allow').onclick=()=>decide('allow');el('deny').onclick=()=>decide('deny');
+el('rtc').onclick=async()=>{
+ let a,b,timer;
+ try{
+ if(typeof RTCPeerConnection!=='function')throw Error('RTCPeerConnection unavailable');
+ a=new RTCPeerConnection({iceServers:[]});b=new RTCPeerConnection({iceServers:[]});
+ a.onicecandidate=e=>{if(e.candidate)b.addIceCandidate(e.candidate).catch(()=>{});};b.onicecandidate=e=>{if(e.candidate)a.addIceCandidate(e.candidate).catch(()=>{});};
+ const channel=a.createDataChannel('phase0');
+ const received=new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(Error('Data-channel timeout')),10000);b.ondatachannel=e=>{e.channel.onmessage=m=>{if(m.data==='codebridge-phase0')resolve();else reject(Error('Unexpected data-channel payload'));};};channel.onopen=()=>channel.send('codebridge-phase0');});
+ await a.setLocalDescription(await a.createOffer());
+ const s=state();let signaling='unavailable: not a mounted approval widget';let sdp=a.localDescription.sdp;
+ if(active){const r=await s.host.callTool('phase0_signal',{approval_id:s.id,token:s.token,sdp});if(r.isError||r.structuredContent?.sdp!==sdp)throw Error('UI-only signaling rejected');sdp=r.structuredContent.sdp;signaling='passed';}
+ await b.setRemoteDescription({type:'offer',sdp});await b.setLocalDescription(await b.createAnswer());await a.setRemoteDescription(b.localDescription);
+ await received;el('result').textContent=JSON.stringify({rtc:'local data channel passed',signaling,host:window.openai?'widget bridge present':'not ChatGPT widget',stun:'not tested',turn:'not tested',csp:'actual host CSP must be checked on each ChatGPT surface'},null,2);
+ }catch(e){el('result').textContent='WebRTC probe failed: '+e.message;}finally{clearTimeout(timer);a?.close();b?.close();}
+};
+window.addEventListener('openai:set_globals',render);render();
+</script></html>

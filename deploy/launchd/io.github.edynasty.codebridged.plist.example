@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Per-user LaunchAgent for codebridged (CodeBridge V2 Phase 0).
+
+  Install (per user, no root):
+    cp deploy/launchd/io.github.edynasty.codebridged.plist.example \
+       ~/Library/LaunchAgents/io.github.edynasty.codebridged.plist
+    # replace __CODEBRIDGED_PATH__ with the absolute binary path
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.github.edynasty.codebridged.plist
+    launchctl print gui/$(id -u)/io.github.edynasty.codebridged
+
+  The daemon is the per-user authority: it owns the two Unix sockets in
+  ~/Library/Application Support/CodeBridge/run (0700), the runtime store in
+  ~/Library/Application Support/CodeBridge/runtime.db and the tunnel-client
+  child. It opens no TCP listener.
+
+  The app-role code requirement is configuration, not a bypass:
+    -app-team-id <TEAMID> -app-bundle-id <bundle.id>
+  Without both, every app-role connection is refused with -32010.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.edynasty.codebridged</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__CODEBRIDGED_PATH__</string>
+        <string>run</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <!-- Interactive: the daemon must be able to reach the login keychain and
+         the user's TCC-attributed capabilities when it launches children. -->
+    <key>ProcessType</key>
+    <string>Interactive</string>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/Library/Logs/CodeBridge/codebridged.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__HOME__/Library/Logs/CodeBridge/codebridged.err.log</string>
+</dict>
+</plist>

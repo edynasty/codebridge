@@ -1,0 +1,1094 @@
+{
+  "contract_version": {
+    "major": 1,
+    "minor": 0
+  },
+  "phase": "Phase 1 contract definitions only; not available in Phase 0",
+  "provider_capability_schema": "provider.schema.json",
+  "tools": [
+    {
+      "name": "computer_start",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "target": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "display"
+              },
+              "display_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "display_id"
+            ],
+            "additionalProperties": false
+          },
+          "input": {
+            "type": "boolean"
+          },
+          "app_selectors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "idempotency_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "target",
+          "input",
+          "idempotency_key"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "computer_session_id": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "starting",
+                  "active",
+                  "suspended",
+                  "closed",
+                  "failed"
+                ]
+              },
+              "controller": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "agent",
+                      "human",
+                      "none"
+                    ]
+                  },
+                  "holder": {
+                    "type": "string"
+                  },
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "local",
+                      "remote",
+                      "none"
+                    ]
+                  },
+                  "epoch": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "kind",
+                  "holder",
+                  "channel",
+                  "epoch"
+                ],
+                "additionalProperties": false
+              },
+              "fresh_observation_required": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "computer_session_id",
+              "state",
+              "controller",
+              "fresh_observation_required"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "unavailable",
+                      "permission_denied",
+                      "approval_required",
+                      "unsupported",
+                      "invalid_state",
+                      "conflict",
+                      "transient",
+                      "terminal",
+                      "cancelled"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "approval_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "category",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "permission": {
+        "verb": "computer.observe",
+        "selector_extractor": {
+          "target": "args.target.display_id",
+          "apps": "args.app_selectors",
+          "additional_permission_when_input": "computer.input requires nonempty app_selectors"
+        }
+      },
+      "risk_class": "control",
+      "allowed_caller_classes": [
+        "remote_ai",
+        "local_ui",
+        "agent_internal"
+      ],
+      "scope_requirements": [
+        "session"
+      ],
+      "result_visibility": {
+        "model": [
+          "content",
+          "structuredContent"
+        ],
+        "widget_only": [
+          "_meta"
+        ]
+      },
+      "idempotency": "requires_key",
+      "availability": "unavailable_until_provider_handshake_and_policy",
+      "local_mcp": "disabled_unless_explicit_opt_in"
+    },
+    {
+      "name": "computer_observe",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "computer_session_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "computer_session_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "computer_session_id": {
+                "type": "string"
+              },
+              "frame": {
+                "type": "object",
+                "properties": {
+                  "frame_id": {
+                    "type": "string"
+                  },
+                  "display_id": {
+                    "type": "string"
+                  },
+                  "image_width": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "image_height": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "logical_width": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "logical_height": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "scale_factor": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "origin_x": {
+                    "type": "number"
+                  },
+                  "origin_y": {
+                    "type": "number"
+                  },
+                  "captured_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "arbiter_instance": {
+                    "type": "string"
+                  },
+                  "controller_epoch": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "geometry_generation": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "excluded_windows": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "frame_id",
+                  "display_id",
+                  "image_width",
+                  "image_height",
+                  "logical_width",
+                  "logical_height",
+                  "scale_factor",
+                  "origin_x",
+                  "origin_y",
+                  "captured_at",
+                  "arbiter_instance",
+                  "controller_epoch",
+                  "geometry_generation",
+                  "excluded_windows"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "computer_session_id",
+              "frame"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "unavailable",
+                      "permission_denied",
+                      "approval_required",
+                      "unsupported",
+                      "invalid_state",
+                      "conflict",
+                      "transient",
+                      "terminal",
+                      "cancelled"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "approval_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "category",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "permission": {
+        "verb": "computer.observe",
+        "selector_extractor": {
+          "computer_session": "args.computer_session_id"
+        }
+      },
+      "risk_class": "read",
+      "allowed_caller_classes": [
+        "remote_ai",
+        "local_ui",
+        "agent_internal"
+      ],
+      "scope_requirements": [
+        "computer_session"
+      ],
+      "result_visibility": {
+        "model": [
+          "content",
+          "structuredContent"
+        ],
+        "widget_only": [
+          "_meta"
+        ]
+      },
+      "idempotency": "safe_to_retry",
+      "availability": "unavailable_until_provider_handshake_and_policy",
+      "local_mcp": "disabled_unless_explicit_opt_in"
+    },
+    {
+      "name": "computer_action",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "computer_session_id": {
+            "type": "string"
+          },
+          "frame_id": {
+            "type": "string"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "move"
+                    },
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "x",
+                    "y"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "click"
+                    },
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "button": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "right",
+                        "middle"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "x",
+                    "y",
+                    "button"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "double_click"
+                    },
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "button": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "right",
+                        "middle"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "x",
+                    "y",
+                    "button"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "drag"
+                    },
+                    "from_x": {
+                      "type": "number"
+                    },
+                    "from_y": {
+                      "type": "number"
+                    },
+                    "to_x": {
+                      "type": "number"
+                    },
+                    "to_y": {
+                      "type": "number"
+                    },
+                    "button": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "right",
+                        "middle"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "from_x",
+                    "from_y",
+                    "to_x",
+                    "to_y",
+                    "button"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "scroll"
+                    },
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "delta_x": {
+                      "type": "number"
+                    },
+                    "delta_y": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "x",
+                    "y",
+                    "delta_x",
+                    "delta_y"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "type"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "text"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "keypress"
+                    },
+                    "keys": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "keys"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "wait"
+                    },
+                    "duration_ms": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "duration_ms"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 64
+          },
+          "observe_after": {
+            "type": "boolean"
+          },
+          "idempotency_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "computer_session_id",
+          "frame_id",
+          "actions",
+          "observe_after",
+          "idempotency_key"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "computer_session_id": {
+                "type": "string"
+              },
+              "results": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "index": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "applied",
+                        "rejected"
+                      ]
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "index",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "frame": {
+                "type": "object",
+                "properties": {
+                  "frame_id": {
+                    "type": "string"
+                  },
+                  "display_id": {
+                    "type": "string"
+                  },
+                  "image_width": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "image_height": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "logical_width": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "logical_height": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "scale_factor": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "origin_x": {
+                    "type": "number"
+                  },
+                  "origin_y": {
+                    "type": "number"
+                  },
+                  "captured_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "arbiter_instance": {
+                    "type": "string"
+                  },
+                  "controller_epoch": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "geometry_generation": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "excluded_windows": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "frame_id",
+                  "display_id",
+                  "image_width",
+                  "image_height",
+                  "logical_width",
+                  "logical_height",
+                  "scale_factor",
+                  "origin_x",
+                  "origin_y",
+                  "captured_at",
+                  "arbiter_instance",
+                  "controller_epoch",
+                  "geometry_generation",
+                  "excluded_windows"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "computer_session_id",
+              "results"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "unavailable",
+                      "permission_denied",
+                      "approval_required",
+                      "unsupported",
+                      "invalid_state",
+                      "conflict",
+                      "transient",
+                      "terminal",
+                      "cancelled"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "approval_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "category",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "permission": {
+        "verb": "computer.input",
+        "selector_extractor": {
+          "computer_session": "args.computer_session_id",
+          "apps": "computer_session.granted_app_selectors"
+        }
+      },
+      "risk_class": "control",
+      "allowed_caller_classes": [
+        "remote_ai",
+        "local_ui",
+        "agent_internal"
+      ],
+      "scope_requirements": [
+        "computer_session"
+      ],
+      "result_visibility": {
+        "model": [
+          "content",
+          "structuredContent"
+        ],
+        "widget_only": [
+          "_meta"
+        ]
+      },
+      "idempotency": "requires_key",
+      "availability": "unavailable_until_provider_handshake_and_policy",
+      "local_mcp": "disabled_unless_explicit_opt_in"
+    },
+    {
+      "name": "computer_status",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "computer_session_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "computer_session_id"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "computer_session_id": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "starting",
+                  "active",
+                  "suspended",
+                  "closed",
+                  "failed"
+                ]
+              },
+              "controller": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "agent",
+                      "human",
+                      "none"
+                    ]
+                  },
+                  "holder": {
+                    "type": "string"
+                  },
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "local",
+                      "remote",
+                      "none"
+                    ]
+                  },
+                  "epoch": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "kind",
+                  "holder",
+                  "channel",
+                  "epoch"
+                ],
+                "additionalProperties": false
+              },
+              "fresh_observation_required": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "computer_session_id",
+              "state",
+              "controller",
+              "fresh_observation_required"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "unavailable",
+                      "permission_denied",
+                      "approval_required",
+                      "unsupported",
+                      "invalid_state",
+                      "conflict",
+                      "transient",
+                      "terminal",
+                      "cancelled"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "approval_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "category",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "permission": {
+        "verb": "computer.observe",
+        "selector_extractor": {
+          "computer_session": "args.computer_session_id"
+        }
+      },
+      "risk_class": "read",
+      "allowed_caller_classes": [
+        "remote_ai",
+        "local_ui",
+        "agent_internal"
+      ],
+      "scope_requirements": [
+        "computer_session"
+      ],
+      "result_visibility": {
+        "model": [
+          "content",
+          "structuredContent"
+        ],
+        "widget_only": [
+          "_meta"
+        ]
+      },
+      "idempotency": "safe_to_retry",
+      "availability": "unavailable_until_provider_handshake_and_policy",
+      "local_mcp": "disabled_unless_explicit_opt_in"
+    },
+    {
+      "name": "computer_stop",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "computer_session_id": {
+            "type": "string"
+          },
+          "idempotency_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "computer_session_id",
+          "idempotency_key"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "computer_session_id": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "starting",
+                  "active",
+                  "suspended",
+                  "closed",
+                  "failed"
+                ]
+              },
+              "controller": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "agent",
+                      "human",
+                      "none"
+                    ]
+                  },
+                  "holder": {
+                    "type": "string"
+                  },
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "local",
+                      "remote",
+                      "none"
+                    ]
+                  },
+                  "epoch": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "kind",
+                  "holder",
+                  "channel",
+                  "epoch"
+                ],
+                "additionalProperties": false
+              },
+              "fresh_observation_required": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "computer_session_id",
+              "state",
+              "controller",
+              "fresh_observation_required"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "unavailable",
+                      "permission_denied",
+                      "approval_required",
+                      "unsupported",
+                      "invalid_state",
+                      "conflict",
+                      "transient",
+                      "terminal",
+                      "cancelled"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "approval_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "category",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "permission": {
+        "verb": "computer.observe",
+        "selector_extractor": {
+          "computer_session": "args.computer_session_id"
+        }
+      },
+      "risk_class": "control",
+      "allowed_caller_classes": [
+        "remote_ai",
+        "local_ui",
+        "agent_internal"
+      ],
+      "scope_requirements": [
+        "computer_session"
+      ],
+      "result_visibility": {
+        "model": [
+          "content",
+          "structuredContent"
+        ],
+        "widget_only": [
+          "_meta"
+        ]
+      },
+      "idempotency": "requires_key",
+      "availability": "unavailable_until_provider_handshake_and_policy",
+      "local_mcp": "disabled_unless_explicit_opt_in"
+    }
+  ],
+  "observation_payload": "Frame metadata in structuredContent; bounded image bytes exclusively MCP image content, never base64 text or persisted frames",
+  "input_gate": [
+    "TCC checked on every use",
+    "listen-only monitor running",
+    "signed app peer handshake",
+    "valid policy and lease",
+    "fresh frame and geometry",
+    "per-event app scope and protected surface checks",
+    "unknown state fails closed"
+  ],
+  "agent_flags": "Every provider explicitly declares all six flags; no inference from name/OS; legacy adapters not upgraded in Phase 0"
+}

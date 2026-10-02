@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codebridge.local/schema/hostipc/v1/runtime.json",
+  "title": "Host IPC v1 runtime service (app role / local_ui only)",
+  "$defs": {
+    "healthParams": { "type": "object", "additionalProperties": true },
+    "healthResult": {
+      "type": "object",
+      "required": ["store_wired"],
+      "properties": {
+        "store_wired": { "type": "boolean" },
+        "schema_version": { "type": "integer" },
+        "runs_active": { "type": "integer" },
+        "sessions_open": { "type": "integer" }
+      }
+    },
+    "eventsParams": {
+      "type": "object",
+      "properties": {
+        "stream": { "type": "string" },
+        "after_seq": { "type": "integer", "minimum": 0 },
+        "after_pos": { "type": "integer", "minimum": 0 },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 500 }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": ["stream", "seq", "pos", "kind", "at"],
+      "properties": {
+        "stream": { "type": "string" },
+        "seq": { "type": "integer" },
+        "pos": { "type": "integer" },
+        "kind": { "type": "string" },
+        "at": { "type": "string", "format": "date-time" },
+        "payload": { "type": "object" }
+      }
+    },
+    "eventsResult": {
+      "type": "object",
+      "required": ["events"],
+      "properties": {
+        "events": { "type": "array", "items": { "$ref": "#/$defs/event" } },
+        "next_seq": { "type": "integer" },
+        "next_pos": { "type": "integer" }
+      }
+    },
+    "commandParams": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": { "type": "string", "enum": ["ping", "status"] },
+        "args": { "type": "object" }
+      }
+    },
+    "commandResult": {
+      "type": "object",
+      "required": ["command", "ok"],
+      "properties": {
+        "command": { "type": "string" },
+        "ok": { "type": "boolean" },
+        "detail": { "type": "object" }
+      }
+    }
+  }
+}

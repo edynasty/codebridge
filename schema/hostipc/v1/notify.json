@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codebridge.local/schema/hostipc/v1/notify.json",
+  "title": "Host IPC v1 notify service",
+  "description": "Daemon -> app. notify.post is a notification (no id) sent by the daemon; an app must not call it (the daemon answers -32601 unsupported).",
+  "$defs": {
+    "postParams": {
+      "type": "object",
+      "required": ["notification_id", "kind", "title"],
+      "properties": {
+        "notification_id": { "type": "string" },
+        "kind": { "type": "string", "enum": ["run", "approval", "computer", "system"] },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "run_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "computer_session_id": { "type": "string" },
+        "urgency": { "type": "string", "enum": ["passive", "active", "time_sensitive"] }
+      },
+      "additionalProperties": true
+    }
+  }
+}

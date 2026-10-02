@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codebridge.local/schema/hostipc/v1/computer.json",
+  "title": "Host IPC v1 computer service (frozen contract, unimplemented in Phase 0)",
+  "description": "Mirrors Provider Contracts §6. Phase 0 returns -32601 unsupported for every method; the shapes are fixed now so Phase 1 does not renegotiate the wire.",
+  "$defs": {
+    "describeParams": { "type": "object", "additionalProperties": true },
+    "permissionState": { "type": "string", "enum": ["granted", "denied", "unknown", "not_applicable"] },
+    "describeResult": {
+      "type": "object",
+      "required": ["platform", "capabilities", "permissions"],
+      "properties": {
+        "platform": { "type": "string" },
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "observe": { "type": "boolean" },
+            "input": { "type": "boolean" },
+            "preview": { "type": "boolean" },
+            "ax_tree": { "type": "boolean" },
+            "targets": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "permissions": {
+          "type": "object",
+          "properties": {
+            "screen_recording": { "$ref": "#/$defs/permissionState" },
+            "accessibility": { "$ref": "#/$defs/permissionState" },
+            "input_monitoring": { "$ref": "#/$defs/permissionState" }
+          }
+        },
+        "arbiter_instance": { "type": "string" }
+      }
+    },
+    "targetsResult": {
+      "type": "object",
+      "required": ["targets"],
+      "properties": {
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["target_id", "kind"],
+            "properties": {
+              "target_id": { "type": "string" },
+              "kind": { "type": "string", "enum": ["display", "window", "application"] },
+              "label": { "type": "string" },
+              "geometry": {
+                "type": "object",
+                "properties": {
+                  "width": { "type": "integer" },
+                  "height": { "type": "integer" },
+                  "scale": { "type": "number" },
+                  "origin_x": { "type": "number" },
+                  "origin_y": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "geometry_generation": { "type": "string" }
+      }
+    },
+    "openSessionParams": {
+      "type": "object",
+      "required": ["computer_session_id"],
+      "properties": {
+        "computer_session_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "run_id": { "type": "string" },
+        "target_id": { "type": "string" },
+        "grants": {
+          "type": "object",
+          "properties": {
+            "verbs": { "type": "array", "items": { "type": "string" } },
+            "app_selectors": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "lease": {
+          "type": "object",
+          "properties": {
+            "holder": { "type": "string" },
+            "expires_at": { "type": "string", "format": "date-time" }
+          }
+        }
+      }
+    },
+    "sessionState": {
+      "type": "object",
+      "required": ["computer_session_id", "state", "controller"],
+      "properties": {
+        "computer_session_id": { "type": "string" },
+        "state": { "type": "string", "enum": ["open", "suspended", "closed"] },
+        "controller": { "type": "string", "enum": ["none", "agent", "human"] },
+        "controller_epoch": { "type": "integer" },
+        "arbiter_instance": { "type": "string" },
+        "geometry_generation": { "type": "string" }
+      }
+    },
+    "observeParams": {
+      "type": "object",
+      "required": ["computer_session_id"],
+      "properties": { "computer_session_id": { "type": "string" } }
+    },
+    "observeResult": {
+      "type": "object",
+      "required": ["frame_id", "geometry_generation", "controller_epoch", "attachment_id"],
+      "properties": {
+        "frame_id": { "type": "string" },
+        "geometry_generation": { "type": "string" },
+        "controller_epoch": { "type": "integer" },
+        "arbiter_instance": { "type": "string" },
+        "attachment_id": { "type": "string", "description": "attachment_id of the image frame that follows as a binary attachment frame." },
+        "image": {
+          "type": "object",
+          "properties": {
+            "mime": { "type": "string" },
+            "width": { "type": "integer" },
+            "height": { "type": "integer" },
+            "bytes": { "type": "integer" }
+          }
+        },
+        "cursors": { "type": "array" }
+      }
+    },
+    "actParams": {
+      "type": "object",
+      "required": ["computer_session_id", "frame_id", "actions"],
+      "properties": {
+        "computer_session_id": { "type": "string" },
+        "frame_id": { "type": "string" },
+        "observe_after": { "type": "boolean" },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["move", "click", "double_click", "drag", "scroll", "type", "keypress", "wait"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "actResult": {
+      "type": "object",
+      "required": ["results"],
+      "properties": {
+        "results": { "type": "array", "items": { "type": "object" } },
+        "frame": { "$ref": "#/$defs/observeResult" }
+      }
+    },
+    "controlParams": {
+      "type": "object",
+      "required": ["computer_session_id", "op"],
+      "properties": {
+        "computer_session_id": { "type": "string" },
+        "op": { "type": "string", "enum": ["acquire_agent", "pause", "takeover", "resume_agent", "release"] },
+        "actor": { "type": "object" }
+      }
+    },
+    "closeSessionParams": {
+      "type": "object",
+      "required": ["computer_session_id"],
+      "properties": { "computer_session_id": { "type": "string" } }
+    }
+  }
+}

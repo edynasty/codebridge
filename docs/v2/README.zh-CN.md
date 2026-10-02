@@ -1,6 +1,6 @@
 # CodeBridge V2 设计
 
-状态：**ARCHITECTURE FROZEN —— 2026-10-02；Phase 0 READY**
+状态：**ARCHITECTURE FROZEN —— 2026-10-02；PHASE_0_BLOCKED；Phase 1 NOT READY**
 
 CodeBridge V2 通过三个一等领域（domain）把 AI client 连接到用户的真实开发环境：
 
@@ -20,6 +20,8 @@ Computer Use 是最高功能优先级，并且它与 files、shell 和 agents �
 - [迁移方案](migration.zh-CN.md) —— V1 代码处置、CodexBridge 复用流程、数据迁移。
 - [Kimi K3 架构审查记录 — 2026-10-02](reviews/2026-10-02-kimi-k3-architecture-audit.zh-CN.md) —— 独立 P0/P1 Challenge 与整改记录。
 - [GLM 5.3 最终 Freeze Gate — 2026-10-02](reviews/2026-10-02-glm-5.3-freeze-gate.zh-CN.md) —— 最终 Gate：`READY_TO_FREEZE`，P0=0，P1=0。
+- [Phase 0 实施收尾](evidence/phase0-closeout.zh-CN.md) —— 实际检查、逐项结果、缺失前提与完整文件清单；代码可运行不等于 Evidence Gap 已关闭。
+- [Phase 0B 阻塞关闭 / 真实签名原生验收](evidence/phase0b-closeout.zh-CN.md) —— **PHASE0_BLOCKED**：真实签名与 ChatGPT/Tunnel 外部前提缺失；F2 未关闭，Phase 1 未就绪。
 
 英文版：
 
@@ -36,7 +38,7 @@ Computer Use 是最高功能优先级，并且它与 files、shell 和 agents �
 - **领域模型**：Project、Session、Run、ProviderSession、ComputerSession、Event、Artifact。Turn 是一个关联字段，而不是实体。
 - **Computer 输入安全**：每个 action 都引用它规划时所用的帧（frame）；arbiter 在同一进程内完成校验与注入；用户的物理输入会抢占 agent；只有人才能恢复 agent。
 - **任何模型可见的路径都不能授予权限。**
-- **CodexBridge 是位于 adapter 之后的实现来源**；目标上游已经定位，但准确 commit / 模块复用尚未固定，关键路径上没有任何东西依赖它。
+- **CodexBridge 是位于 adapter 之后的实现来源**；已审计 `win` / `v1.3.4`，commit `7844bb608a9a4e96ed09c084589b7825db77aa3e`（[上游证据](evidence/phase0-upstream.md)）。未将上游类型或源码引入 CodeBridge domain、Host IPC 或 store。
 
 ## 架构规则
 

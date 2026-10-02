@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codebridge.local/schema/hostipc/v1/hello.json",
+  "title": "Host IPC v1 handshake",
+  "$defs": {
+    "protocol": {
+      "type": "object",
+      "required": ["major", "minor"],
+      "properties": {
+        "major": { "type": "integer", "minimum": 0 },
+        "minor": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "role": {
+      "type": "string",
+      "enum": ["app", "diagnostics", "harness"],
+      "description": "app requires a verified live code signature; diagnostics and harness require peer UID only and never receive local_ui or computer powers."
+    },
+    "capability": {
+      "type": "string",
+      "enum": ["host", "computer", "approval", "notify", "runtime", "native_host_smoke"]
+    },
+    "helloRequest": {
+      "type": "object",
+      "required": ["protocol", "role"],
+      "properties": {
+        "protocol": { "$ref": "#/$defs/protocol" },
+        "app_version": { "type": "string" },
+        "role": { "$ref": "#/$defs/role" },
+        "capabilities": { "type": "array", "items": { "$ref": "#/$defs/capability" } },
+        "bundle_id": { "type": "string", "description": "Diagnostic hint only. Never used for authentication." },
+        "team_id": { "type": "string", "description": "Diagnostic hint only. Never used for authentication." },
+        "pid": { "type": "integer", "description": "Diagnostic hint only. Never used for authentication; the daemon reads the live peer PID." }
+      },
+      "additionalProperties": true
+    },
+    "helloResult": {
+      "type": "object",
+      "required": ["accepted", "protocol", "daemon_version", "role"],
+      "properties": {
+        "accepted": { "const": true },
+        "protocol": { "$ref": "#/$defs/protocol" },
+        "daemon_version": { "type": "string" },
+        "capabilities": { "type": "array", "items": { "$ref": "#/$defs/capability" } },
+        "role": { "$ref": "#/$defs/role" },
+        "signature_verified": { "type": "boolean", "description": "True only when the daemon validated the live peer process code signature. False for diagnostics/harness." },
+        "peer_uid": { "type": "integer" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

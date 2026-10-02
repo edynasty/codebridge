@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>__LABEL__</string>
+	<!-- BundleProgram is an app-bundle relative path to the executable (launchd.plist(5)). -->
+	<key>BundleProgram</key>
+	<string>Contents/MacOS/codebridged</string>
+	<!-- KeepAlive: launchd restarts the daemon if it exits non-zero; the app never spawns it. -->
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>ProcessType</key>
+	<string>Interactive</string>
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
+__ENVIRONMENT_SECTION__
+</dict>
+</plist>

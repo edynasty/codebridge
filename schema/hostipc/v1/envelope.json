@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codebridge.local/schema/hostipc/v1/envelope.json",
+  "title": "Host IPC v1 envelope",
+  "description": "Length-prefixed JSON-RPC 2.0 envelope for the codebridged <-> CodeBridge.app socket. Framing is defined in README.md §2.",
+  "$defs": {
+    "id": {
+      "description": "JSON-RPC 2.0 request id. Echoed verbatim by the responder.",
+      "oneOf": [{ "type": "string" }, { "type": "integer" }]
+    },
+    "request": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "method"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "$ref": "#/$defs/id" },
+        "method": { "type": "string", "minLength": 1 },
+        "params": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "notification": {
+      "type": "object",
+      "required": ["jsonrpc", "method"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "method": { "type": "string", "minLength": 1 },
+        "params": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "integer" },
+        "message": { "type": "string" },
+        "data": {
+          "type": "object",
+          "properties": {
+            "reason": { "type": "string" },
+            "detail": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "response": {
+      "type": "object",
+      "required": ["jsonrpc", "id"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "$ref": "#/$defs/id" },
+        "result": {},
+        "error": { "$ref": "#/$defs/error" }
+      },
+      "oneOf": [{ "required": ["result"] }, { "required": ["error"] }],
+      "additionalProperties": true
+    },
+    "attachment": {
+      "type": "object",
+      "description": "Meta block of a binary attachment frame. The frame payload is u32be metaLen || meta || raw bytes.",
+      "required": ["attachment_id", "mime", "bytes"],
+      "properties": {
+        "attachment_id": { "type": "string", "minLength": 1 },
+        "mime": { "type": "string", "minLength": 1 },
+        "bytes": { "type": "integer", "minimum": 0, "maximum": 16777216 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "role": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "errorCode": {
+      "type": "integer",
+      "enum": [
+        -32700, -32600, -32601, -32602, -32603,
+        -32000, -32001, -32002, -32010, -32011, -32020
+      ]
+    }
+  }
+}

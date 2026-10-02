@@ -1,6 +1,6 @@
 # CodeBridge V2 开发路线
 
-状态：**实现路线 —— 由 2026-10-02 架构评审修订**
+状态：**实现路线 —— PHASE_0_BLOCKED；Phase 1 NOT READY**（[收尾](evidence/phase0-closeout.zh-CN.md)）；冻结架构决策保持不变。
 
 架构是 Bridge-first；开发路线是 Computer-first。**Computer Use 是 V2 的第一个重大功能。**
 
@@ -20,11 +20,11 @@
 上游（upstream）：
 
 - [x] 定位 CodexBridge 上游：`Fanch-hui/codex-bridge`，公开 `win` 开发主线，Apache-2.0。
-- [ ] 固定准确的上游 commit，并审计语言/技术栈/模块边界。
-- [ ] 为每个复用模块记录 Apache-2.0 LICENSE / NOTICE 义务。
-- [ ] 原样构建上游。
-- [ ] 填写能力矩阵（[迁移方案](migration.zh-CN.md) §4.2），并为每个模块选择复用模式。
-- [ ] 如果上游无法固定或不适用，记录该结论并在没有上游的情况下继续；没有任何 Phase 1 条目依赖上游。
+- [x] 固定准确的上游 commit，并审计语言/技术栈/模块边界：`win` / `v1.3.4`，`7844bb608a9a4e96ed09c084589b7825db77aa3e`（[审计](evidence/phase0-upstream.md)）。
+- [x] 记录每种计划复用的 Apache-2.0 LICENSE / NOTICE 义务；Phase 0 未导入上游模块。
+- [x] 原样构建上游：SwiftPM core + 原生 service smoke PASS；`.app` Xcode 构建停滞，**未验证**；文档中的测试命令返回没有 test target。
+- [x] 填写能力矩阵（[迁移方案](migration.zh-CN.md) §4.2），并为每个模块选择复用模式（[完整实测矩阵](evidence/phase0-upstream.md)）。
+- [x] 已记录上游决策：Phase 0 未导入源码；逐模块记录 package/copy/vendor/不复用选择；没有任何 Phase 1 条目依赖上游。
 
 技术验证（spike）：
 
@@ -32,17 +32,21 @@
 - [ ] 生命周期：带 `KeepAlive` 的 `SMAppService` LaunchAgent；退出 App 后 daemon 仍在运行；daemon 崩溃后自动重启。
 - [ ] TCC 归属：确认 daemon 及其 harness 子进程**不会**被归属到 CodeBridge.app 的屏幕录制 / 辅助功能授权。
 - [ ] Daemon 受保护 Root TCC：使用 `~/Documents`（以及等价受保护目录）中的 Project 实测按用户 LaunchAgent 能否在重建/更新后保持稳定的 Files-and-Folders 授权，并明确 v1 二选一结果：支持且给出 `host_permission_required` 指引，或明确不支持。
-- [ ] 原生宿主：shell、git、Docker Desktop、SSH 和 kubectl 都能从 daemon 运行。
+- [x] 原生宿主：真实 launchd daemon 执行 shell、git、Docker Desktop **Server**、SSH 和 kubectl（[父进程冒烟证据](evidence/phase0-parent-smoke.json)）；cwd `/`，记录真实 PATH/HOME，未经过 Manager 或容器执行。
 - [ ] 锁定状态行为：实测 screen lock、screen saver、wake、fast user switching 下的 ScreenCaptureKit / CGEvent 行为；确认排队输入不会在解锁后重放，并把结果写回 §5.5 故障矩阵。
 - [ ] Widget 审批可行性（只作为 Phase 1 远程审批的门槛）：在支持的 ChatGPT surface 上完成 UI-only 审批工具往返，并通过 tool-result `_meta` 下发审批 token；不要求 WebRTC。
 - [ ] widget 媒体可行性（仅作为 Phase 2 的门槛）：在 web、desktop 和 mobile 上的 ChatGPT widget 内使用 `RTCPeerConnection`；通过 UI-only 工具完成一次 signaling 往返。
 
 定义：
 
-- [ ] App 身份：bundle id、Team ID、开发构建的 Developer ID 签名（TCC 授权必须在重新构建后依然有效）。
-- [ ] Host IPC v1 schema：`host`、`computer`、`approval`、`notify`。
-- [ ] Store schema v1：projects、sessions、runs、provider_sessions、computer_sessions、events（`stream`、`seq`、`pos`）、artifacts、policy rules、grants、approvals、`schema_version`。
-- [ ] Phase 1 工具的能力描述符。
+- [ ] App 身份：稳定的 bundle/signing identifier 与真实 Team ID；开发优先 Apple Development，也接受 Developer ID Application（TCC 授权必须在重新构建后依然有效）。
+- [x] Host IPC v1 schema：`host`、`computer`、`approval`、`notify`；真实 Go/Swift UDS 握手及版本/安全负路径通过（[IPC](evidence/phase0-ipc.md)）；Phase 0 只实现 hello/health 最小面。
+- [x] Store schema v1：projects、sessions、runs、provider_sessions、computer_sessions、events（`stream`、`seq`、`pos`）、artifacts、policy rules、grants、approvals、`schema_version`（[事务与重启冒烟证据](evidence/phase0-store.md)）。
+- [x] Phase 1 工具的能力描述符（[Schema 冒烟证据](evidence/phase0-capabilities.md)）；仅完成定义，Phase 0 不提供 Computer 工具。
+
+Phase 0 结果：上游审计、原生宿主、IPC、Store 和能力定义通过。手动 LaunchAgent 重启及本地 MCP/widget 冒烟**不能**替代签名 SMAppService 或真实 ChatGPT 验收。F2 是架构阻塞：真实 daemon harness 已在 daemon 归属的 TCC 授权下截图；原始 App 授权因果关系未知（[TCC](evidence/phase0-tcc.md) §7）。签名受保护目录授权保持、真实 lock/saver/sleep/FUS 切换及可靠物理输入抢占仍未验证；输入保持 unavailable。Widget 媒体仅因 **Phase 2 门槛**而 DEFERRED，不阻塞 Phase 1。见[完整逐项结果与前置条件](evidence/phase0-closeout.zh-CN.md)。
+
+Phase 0B：**PHASE0_BLOCKED**，F2 **NOT CLOSED**，Phase 1 **NOT READY**。当前主机有效签名 identity 为零（**SIGNED_TCC_BLOCKED_EXTERNAL**）；真实 ChatGPT/Tunnel 验收为 **BLOCKED_EXTERNAL_CHATGPT_CREDENTIALS**。本轮没有签名实验失败。Responsibility disclaimer 备用方案没有已建立的公开 API，未实现。[Phase 0B 证据与后续验收步骤](evidence/phase0b-closeout.zh-CN.md) 保留历史 daemon 截图发现，但不把它当作真实签名下 App 授权继承的证明。
 
 完成标准：
 

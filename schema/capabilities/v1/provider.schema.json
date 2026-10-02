@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:codebridge:capabilities:v1",
+  "title": "CodeBridge explicit provider capabilities v1",
+  "type": "object",
+  "properties": {
+    "contract_version": {
+      "type": "object",
+      "properties": {
+        "major": {
+          "const": 1
+        },
+        "minor": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "major",
+        "minor"
+      ],
+      "additionalProperties": false
+    },
+    "agent": {
+      "type": "object",
+      "properties": {
+        "resume": {
+          "type": "boolean"
+        },
+        "history": {
+          "type": "boolean"
+        },
+        "cancel": {
+          "type": "boolean"
+        },
+        "live_events": {
+          "type": "boolean"
+        },
+        "reattach": {
+          "type": "boolean"
+        },
+        "approval_routing": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "resume",
+        "history",
+        "cancel",
+        "live_events",
+        "reattach",
+        "approval_routing"
+      ],
+      "additionalProperties": false
+    },
+    "computer": {
+      "type": "object",
+      "properties": {
+        "computer.observe": {
+          "type": "boolean"
+        },
+        "computer.input": {
+          "type": "boolean"
+        },
+        "computer.preview": {
+          "type": "boolean"
+        },
+        "input_monitor": {
+          "type": "boolean"
+        },
+        "ax_tree": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "computer.observe",
+        "computer.input",
+        "computer.preview",
+        "input_monitor",
+        "ax_tree"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "contract_version",
+    "agent",
+    "computer"
+  ],
+  "additionalProperties": false
+}

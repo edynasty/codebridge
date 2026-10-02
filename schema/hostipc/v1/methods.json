@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codebridge.local/schema/hostipc/v1/methods.json",
+  "title": "Host IPC v1 method table",
+  "description": "Frozen method table: existence, direction, allowed roles and Phase 0 availability. The ComputerProvider lives INSIDE CodeBridge.app, so computer.* and approval.present/approval.cancel are requests the daemon sends to the app; the daemon never serves them. See README.md §6.",
+  "$defs": {
+    "direction": {
+      "type": "string",
+      "enum": ["app_to_daemon", "daemon_to_app", "daemon_to_app_notification"],
+      "description": "app_to_daemon: the app/CLI sends it and the daemon answers. daemon_to_app: the daemon sends it and the app answers (the app implements the provider). daemon_to_app_notification: one-way daemon -> app."
+    },
+    "phase0": {
+      "type": "string",
+      "enum": ["implemented", "unsupported"],
+      "description": "unsupported means the method is part of the frozen contract but answers error -32601 in Phase 0. The daemon never fakes an implementation."
+    },
+    "method": {
+      "type": "object",
+      "required": ["name", "direction", "roles", "phase0"],
+      "properties": {
+        "name": { "type": "string" },
+        "direction": { "$ref": "#/$defs/direction" },
+        "roles": {
+          "type": "array",
+          "description": "Roles allowed to call (app_to_daemon) or to answer (daemon_to_app). Only an app connection implements the ComputerProvider.",
+          "items": { "type": "string", "enum": ["app", "diagnostics", "harness"] }
+        },
+        "request": { "type": "string", "description": "$defs reference for the params shape" },
+        "result": { "type": "string", "description": "$defs reference for the result shape" },
+        "phase0": { "$ref": "#/$defs/phase0" },
+        "note": { "type": "string" }
+      }
+    }
+  },
+  "methods": [
+    {
+      "name": "host.hello",
+      "direction": "app_to_daemon",
+      "roles": ["app", "diagnostics", "harness"],
+      "request": "hello.json#/$defs/helloRequest",
+      "result": "hello.json#/$defs/helloResult",
+      "phase0": "implemented"
+    },
+    {
+      "name": "host.health",
+      "direction": "app_to_daemon",
+      "roles": ["app", "diagnostics", "harness"],
+      "request": "host.json#/$defs/healthParams",
+      "result": "host.json#/$defs/healthResult",
+      "phase0": "implemented"
+    },
+    {
+      "name": "host.native_host_smoke",
+      "direction": "app_to_daemon",
+      "roles": ["app", "diagnostics", "harness"],
+      "request": "host.json#/$defs/nativeHostSmokeParams",
+      "result": "host.json#/$defs/nativeHostSmokeResult",
+      "phase0": "implemented",
+      "note": "Runs the daemon's own fixed, harmless check set inside the daemon process. No caller-supplied argv."
+    },
+    {
+      "name": "host.phase0_probe",
+      "direction": "app_to_daemon",
+      "roles": ["app", "diagnostics"],
+      "request": "host.json#/$defs/phase0ProbeParams",
+      "result": "host.json#/$defs/phase0ProbeResult",
+      "phase0": "unsupported",
+      "note": "Debug only: registered when CODEBRIDGE_PHASE0_DEBUG=1 and CODEBRIDGE_PHASE0_PROBE is an absolute path. Spawns <probe> <name> --json with no shell and no caller argv."
+    },
+    {
+      "name": "host.prepare_restart",
+      "direction": "app_to_daemon",
+      "roles": ["app"],
+      "request": "host.json#/$defs/prepareRestartParams",
+      "result": "host.json#/$defs/prepareRestartResult",
+      "phase0": "unsupported",
+      "note": "Frozen contract; Phase 0 does not implement the restart handshake and must not return a fake prepared=false."
+    },
+    {
+      "name": "runtime.health",
+      "direction": "app_to_daemon",
+      "roles": ["app"],
+      "request": "runtime.json#/$defs/healthParams",
+      "result": "runtime.json#/$defs/healthResult",
+      "phase0": "unsupported",
+      "note": "Served only when a runtime store is wired (registered at startup); otherwise unsupported."
+    },
+    {
+      "name": "runtime.events",
+      "direction": "app_to_daemon",
+      "roles": ["app"],
+      "request": "runtime.json#/$defs/eventsParams",
+      "result": "runtime.json#/$defs/eventsResult",
+      "phase0": "unsupported",
+      "note": "Served only when a runtime store is wired (registered at startup); otherwise unsupported."
+    },
+    {
+      "name": "runtime.command",
+      "direction": "app_to_daemon",
+      "roles": ["app"],
+      "request": "runtime.json#/$defs/commandParams",
+      "result": "runtime.json#/$defs/commandResult",
+      "phase0": "unsupported",
+      "note": "Frozen contract; Phase 0 registers no handler and does not fake a no-op command."
+    },
+    {
+      "name": "approval.decision",
+      "direction": "app_to_daemon",
+      "roles": ["app"],
+      "request": "approval.json#/$defs/decisionParams",
+      "result": "approval.json#/$defs/decisionResult",
+      "phase0": "unsupported",
+      "note": "The human decision is made in the app and reported to the daemon."
+    },
+    {
+      "name": "computer.describe",
+      "direction": "daemon_to_app",
+      "roles": ["app"],
+      "request": "computer.json#/$defs/describeParams",
+      "result": "computer.json#/$defs/describeResult",
+      "phase0": "unsupported"
+    },
+    {
+      "name": "computer.targets",
+      "direction": "daemon_to_app",
+      "roles": ["app"],
+      "result": "computer.json#/$defs/targetsResult",
+      "phase0": "unsupported"
+    },
+    {
+      "name": "computer.open_session",
+      "direction": "daemon_to_app",
+      "roles": ["app"],
+      "request": "computer.json#/$defs/openSessionParams",
+      "result": "computer.json#/$defs/sessionState",
+      "phase0": "unsupported"
+    },
+    {
+      "name": "computer.observe",
+      "direction": "daemon_to_app",
+      "roles": ["app"],
+      "request": "computer.json#/$defs/observeParams",
+      "result": "computer.json#/$defs/observeResult",
+      "phase0": "unsupported"
+    },
+    {
+      "name": "computer.act",
+      "direction": "daemon_to_app",
+      "roles": ["app"],
+      "request": "computer.json#/$defs/actParams",
+      "result": "computer.json#/$defs/actResult",
+      "phase0": "unsupported"
+    },
+    {
+      "name": "computer.control",
+      "direction": "daemon_to_app",
+      "roles": ["app"],
+      "request": "computer.json#/$defs/controlParams",
+      "result": "computer.json#/$defs/sessionState",
+      "phase0": "unsupported"
+    },
+    {
+      "name": "computer.close_session",
+      "direction": "daemon_to_app",
+      "roles": ["app"],
+      "request": "computer.json#/$defs/closeSessionParams",
+      "result": "computer.json#/$defs/sessionState",
+      "phase0": "unsupported"
+    },
+    {
+      "name": "approval.present",
+      "direction": "daemon_to_app",
+      "roles": ["app"],
+      "request": "approval.json#/$defs/presentParams",
+      "result": "approval.json#/$defs/presentResult",
+      "phase0": "unsupported"
+    },
+    {
+      "name": "approval.cancel",
+      "direction": "daemon_to_app",
+      "roles": ["app"],
+      "request": "approval.json#/$defs/cancelParams",
+      "phase0": "unsupported"
+    },
+    {
+      "name": "notify.post",
+      "direction": "daemon_to_app_notification",
+      "roles": ["app"],
+      "request": "notify.json#/$defs/postParams",
+      "phase0": "implemented",
+      "note": "One-way notification from the daemon to the app. A client sending it receives unsupported."
+    }
+  ]
+}

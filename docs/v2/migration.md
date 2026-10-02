@@ -66,13 +66,15 @@ Keep the code until V2 proves the replacement path (§10), then archive or remov
 
 ## 4. CodexBridge reuse
 
-### 4.1 Status: upstream identified, not yet pinned
+### 4.1 Status: upstream pinned and audited; no source imported
 
-The intended upstream has been externally identified as `Fanch-hui/codex-bridge`, whose public `win` branch documents the expected native desktop/service architecture, Secure MCP Tunnel integration, tasks/sessions, approvals, agent discovery/connectivity and Apache-2.0 licensing. This repository still contains no vendored copy or pinned upstream commit, and CodeBridge has not yet built the upstream unchanged. Phase 0 therefore verifies concrete module boundaries before any reuse decision.
+Phase 0 audited `Fanch-hui/codex-bridge` at `win` / `v1.3.4`, exact commit `7844bb608a9a4e96ed09c084589b7825db77aa3e`. The [audit evidence](evidence/phase0-upstream.md) records Apache-2.0 LICENSE/NOTICE obligations, source/module inventory, unchanged builds and smoke, test/build failures, and per-module reuse decisions. No vendored copy, upstream dependency or upstream domain/IPC/store type was added to CodeBridge.
 
 Secure MCP Tunnel itself is OpenAI's `tunnel-client`. CodeBridge supervises it from `codebridged` and targets the daemon's Streamable HTTP MCP endpoint over a Unix-domain socket, so the critical path does not depend on CodexBridge and does not require an extra stdio shim.
 
-### 4.2 Capability matrix (filled in Phase 0)
+### 4.2 Capability matrix (Phase 0 audit recorded)
+
+The complete observed matrix (existence, location, dependencies, reusability, reuse mode, patch, risk and fallback) is in the [upstream evidence](evidence/phase0-upstream.md). The table below retains the design's preferred reuse priorities; it does not override the audited decisions.
 
 | Claimed upstream capability | Needed by | Preferred reuse | Fallback |
 | --- | --- | --- | --- |
