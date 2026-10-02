@@ -1,317 +1,228 @@
 # CodeBridge V2 Provider Contracts
 
-Status: **contract baseline**
+Status: **contract baseline — revised by the 2026-10-02 architecture review**
 
-The contracts in this document define where future functionality plugs into V2. They are conceptual interfaces; exact language-level signatures may evolve during implementation, but responsibilities and dependency direction should remain stable.
+This document defines where functionality plugs into V2, which contracts are frozen now, and which are intentionally left undefined. Exact language-level signatures are written in Phase 0/1; responsibilities, dependency direction and the rules below are binding.
 
-## 1. Dependency rule
+## 1. Contract tiers
 
-```text
-Bridge Core
-   |
-   +--> Provider interface
-           ^
-           |
-     concrete provider
-```
+| Tier | Meaning | Contracts |
+| --- | --- | --- |
+| **Frozen v1** | only additive changes inside V2 | AgentProvider; ComputerProvider (Host IPC `computer` service); Host IPC envelope and handshake; capability descriptor; event emission; artifact; error model |
+| **Internal port** | Go interfaces inside `codebridged`; may change freely | ingress adapters, SecretStore, ApprovalPresenter, Notifier, TunnelSupervisor |
+| **Deferred** | named, intentionally undefined; only binding constraints | CloudProvider, workspace checkpoint, standalone MediaProvider, SkillProvider, ControlPlane / Fleet, sandbox execution |
 
-Concrete providers may depend on platform SDKs and third-party projects. Bridge Core must not.
+Why fewer frozen families than the previous nine: only AgentProvider and ComputerProvider have an implementation today or in Phase 1. Freezing an interface without an implementation freezes guesses — for example, an upload-a-snapshot CloudProvider does not match Codex Cloud's GitHub-based environments, and a TransportProvider duplicates what `tunnel-client` and MCP transports already are.
 
-## 2. TransportProvider
-
-Purpose: connect an AI client or local caller to Bridge Core.
-
-Responsibilities:
-
-- start/stop transport;
-- expose capability/tool metadata;
-- deliver authenticated requests;
-- stream supported responses/events;
-- report transport health.
-
-Planned implementations:
-
-- `SecureMCPTunnelTransport` — default personal remote path;
-- `LocalMCPTransport` — local development and testing;
-- optional future HTTP/other transports.
-
-Transport must not contain business routing or provider-specific execution logic.
-
-## 3. AgentProvider
-
-Purpose: adapt one local or remote agent harness into the unified Runtime.
-
-Conceptual operations:
+## 2. Dependency rules
 
 ```text
-Capabilities
-Start
-Resume
-Cancel
-Status
-Sessions
-Events
-Artifacts
-Health
+Bridge kernel ──> domain services ──> provider ports <── provider implementations
+                                      (Go interface or Host IPC schema)
 ```
 
-Planned implementations:
+1. A provider imports only its port, the event-emission contract and the error model.
+2. **No provider calls another provider.** Composition belongs to domain services (for example Runtime coordinating checkpoint and cloud) or to Bridge requests (an agent that needs the computer calls CodeBridge tools as `agent_internal`).
+3. Out-of-process providers are reached only through versioned Host IPC. The IPC schema is language-neutral and lives in the repository; it is never generated from Swift or Go structs.
+4. Providers never decide policy. They report capabilities and autonomy so Policy can decide.
+5. Providers never persist CodeBridge lifecycle truth. They emit events; Runtime commits them.
+6. The Bridge kernel and domain services never import a concrete provider, platform SDK or upstream module.
 
-- OMPProvider
-- CodexProvider
-- OpenCodeProvider
-- future OpenAIAgentsProvider
-- future custom providers
+## 3. Common provider elements
 
-The provider preserves harness-native history and exposes only stable normalized concepts to Core.
+Every provider exposes:
 
-## 4. ComputerProvider
+- **Describe** — provider id, implementation version, contract version, explicit capability flags, limits;
+- **Health** — `ok | degraded | unavailable` with a reason;
+- **Errors** — the categories in §11;
+- **Cancellation** — honored promptly;
+- **Idempotency key** — accepted on mutating operations that a caller may retry.
 
-Purpose: expose a controllable computer target.
+## 4. Capability descriptor (frozen v1)
 
-Conceptual operations:
+Every tool the Bridge exposes declares:
+
+- **name** — stable; a breaking change takes a new name;
+- **input and output schema** — output schemas are mandatory (V1 already declares them in `internal/manager/tool_output.go`);
+- **permission verb and selector extractor** — how the resource is derived from the arguments;
+- **risk class** — `read | write | execute | control | egress`;
+- **allowed caller classes** — for example UI-only tools;
+- **scope requirements** — project, session or computer session;
+- **result visibility** — model-visible content versus widget-only `_meta`;
+- **idempotency** — safe to retry, or requires a key.
+
+Tools are registered by domain services into the Bridge kernel's capability registry. There is no separate ToolProvider family.
+
+## 5. AgentProvider (frozen v1)
+
+Purpose: adapt one agent harness into Runtime Runs.
 
 ```text
-Capabilities
-Targets
-StartSession
-Observe
-Execute
-Pause
-Takeover
-ResumeAgent
-Stop
-Health
+Describe        -> capabilities {resume, history, live_events, cancel, reattach, approval_routing},
+                   autonomy modes, models
+Start(run_id, project root, task, model, role?, autonomy, provider_session_ref?)
+                -> Execution
+Execution
+  Events        stream of ProviderEvent {normalized kind?, turn_ref?, raw (local only),
+                                         provider_session_ref when bound}
+  Wait          -> Outcome {status, final output, error category}
+  Cancel
+  Process       -> process identity {pid, start time, process group}
+Reattach(provider_session_ref, process identity) -> Execution      [optional: reattach]
+ListSessions / ReadSession(ref, cursor)                             [optional: history]
 ```
 
-Target types are extensible:
+Rules:
 
-- display
-- window
-- application
-- browser
-- virtual
+- **Bind early.** The provider binds the provider-native session id as soon as live output reveals it. Time/task heuristics are a fallback and must be marked as such.
+- **Resume** is `Start` with `provider_session_ref`. Runtime guarantees at most one active Run per ProviderSession.
+- **Normalized vs. raw.** Core relies only on normalized kinds (`message`, `tool_call`, `tool_result`, `file_change`, `command`, `error`, `runtime`). Raw records stay local.
+- **Truthful autonomy.** The provider declares what each autonomy mode means on this harness (for example OMP `--auto-approve` = full host access; Codex `--full-auto` = Codex's own sandboxed workspace-write mode) and never runs more permissively than the granted mode.
+- **Process hygiene.** Harnesses run in their own process group; process identity is reported so recovery can find orphans.
+- **Integration mechanism is private.** CLI `exec`, Codex `app-server` JSON-RPC or an SDK is a provider-internal choice that never changes this contract.
 
-Planned implementation:
+V1 mapping: the launch code in `internal/agentops/subagent.go` and the `HarnessSessionAdapter` implementations (`List` / `Discover` / `Read` / `NormalizeLive`) merge into one AgentProvider per harness.
 
-- MacComputerProvider first;
-- WindowsComputerProvider later;
-- LinuxComputerProvider later.
+Implementations: OMP, Codex and OpenCode (Phase 3); others later.
 
-ComputerProvider owns OS interaction, not MCP transport.
+## 6. ComputerProvider (frozen v1)
 
-## 5. MediaProvider
-
-Purpose: deliver human-facing live media separately from model observation.
-
-Conceptual operations:
+Purpose: expose computer targets behind an authoritative input arbiter. On macOS this is the Host IPC `computer` service implemented by CodeBridge.app.
 
 ```text
-StartPreview
-CreateViewerGrant
-Signal
-UpdateQuality
-StopPreview
-Health
+describe          -> platform, capabilities {observe, input, preview, ax_tree, targets[]},
+                     permission states (screen recording, accessibility, input monitoring)
+targets           -> displays (Phase 1); windows and applications as filters / scope
+open_session(cmp, target, grants {verbs, app selectors}, lease)        -> session state
+observe(cmp)      -> frame {frame_id, image, geometry, arbiter_instance,
+                            controller_epoch, geometry_generation}
+act(cmp, frame_id, actions[], observe_after)  -> per-action results, optional frame
+control(cmp, op, actor)                       -> controller state
+    op ∈ acquire_agent | pause | takeover | resume_agent | release
+close_session(cmp)
+notifications     -> controller.changed, preempted, permission.changed,
+                     display.changed, session.state
 ```
 
-Planned implementation:
+Preview (Phase 2) is an optional capability of the same service: `preview.start`, `preview.signal`, `preview.stop`, with remote human input over the preview data channel.
 
-- WebRTCMediaProvider
+Every implementation must:
 
-Normal video bytes must not pass through Bridge Core event persistence or MCP model results.
+- run the arbiter and the injector in the same process, with a single serialized injector;
+- stamp and validate frames as specified in [Architecture](architecture.md) §11.5;
+- implement local-input preemption, protected surfaces and held-input release;
+- accept `resume_agent` (leaving a human hold) only from a human actor — the local UI or a remote control grant — never from the model path;
+- fail closed on unknown state; a restart is a new `arbiter_instance` with `controller = none`;
+- never persist frames.
 
-## 6. CloudProvider
+Implementations: MacComputerProvider (Swift, in CodeBridge.app) in Phase 1; Windows and Linux later, in any language, behind the same IPC contract.
 
-Purpose: continue work outside the local host.
+## 7. Host IPC v1 (frozen envelope)
 
-Conceptual operations:
+- **Transport:** Unix domain socket (named pipe on Windows) in a `0700` per-user directory. `codebridged` listens; CodeBridge.app connects.
+- **Framing:** length-prefixed JSON-RPC 2.0, bidirectional, with binary attachment frames for images. Control messages stay JSON.
+- **Handshake:** `host.hello {protocol: {major, minor}, app_version, role, capabilities[]}` → `{accepted, protocol, daemon_version}`.
+- **Services:** `host` (hello, health, prepare_restart), `computer` (§6), `approval` (present, decision), `notify` (post), `runtime` (read models by cursor and user commands, issued as `local_ui` caller).
+- **Compatibility:** additive minor changes; N and N-1 minor versions interoperate; unknown fields are ignored; unknown methods return `unsupported`; a major mismatch disables the app's services.
+- **Authentication:** peer UID check; code-signature verification of a peer claiming the app role.
+- **Schema location:** language-neutral schema in the repository (Phase 0 decides the format); Go and Swift bindings are generated from it or hand-written against it.
+
+## 8. Internal ports
+
+These are Go interfaces inside `codebridged`, not public extension points:
+
+- **Ingress adapters** — remote MCP through `tunnel-client` to Streamable HTTP over the daemon's Unix-domain socket; optional local adapters; Host IPC for `local_ui`.
+- **SecretStore** — Keychain on macOS.
+- **ApprovalPresenter** — CodeBridge.app over Host IPC; the widget for `remote_human` approvals.
+- **Notifier** — local notifications through the app.
+- **TunnelSupervisor** — starts, monitors and restarts `tunnel-client`.
+
+## 9. Event emission (frozen v1)
+
+Providers emit events; Runtime assigns `stream`, `seq` and `pos` and commits them. Out-of-process providers emit through IPC notifications, which the daemon journals. No provider maintains a competing history. The envelope is defined in [Architecture](architecture.md) §8.
+
+## 10. Artifact contract (frozen v1)
+
+Kinds: `file`, `patch`, `commit`, `branch_ref`, `report`, `test_result`, `log_bundle`, `cloud_result`, `saved_screenshot` (only after an explicit user action).
+
+Fields: id, producer (run or computer session), kind, reference, digest, size, sensitivity, retention class. Large payloads live in the local artifact directory or behind an external reference.
+
+## 11. Failure semantics (frozen v1)
+
+| Category | Meaning |
+| --- | --- |
+| `unavailable` | provider or host capability not reachable |
+| `permission_denied` | policy or OS permission denies the operation; stable reasons include `host_permission_required` for missing host/TCC access |
+| `approval_required` | policy says `ask`; carries an approval id, never an approval token, in model-visible output |
+| `unsupported` | capability or action kind not offered |
+| `invalid_state` | operation not valid now; carries a reason: `controller_changed`, `stale_frame`, `geometry_changed`, `lease_expired`, `protected_surface`, `out_of_scope`, … |
+| `conflict` | result cannot be applied cleanly (for example a cloud diff) |
+| `transient` | retry may succeed |
+| `terminal` | retry will not succeed |
+| `cancelled` | cancelled by caller, user or policy |
+
+Core decides retry and recovery. Providers do not run hidden infinite retry loops.
+
+## 12. Capability discovery
+
+Every provider returns explicit capability flags. Core never infers capability from provider type or operating system, because permissions can disable capture or input at runtime.
 
 ```text
-Capabilities
-Prepare
-UploadSnapshot
-Start
-Status
-Events
-FetchArtifacts
-Cancel
-ResumeLocal
+Computer:  observe=true  input=true  preview=false  ax_tree=false  input_monitor=true
+Agent:     resume=true   history=true  reattach=false  approval_routing=false
 ```
 
-Potential implementations:
+Unsupported high-impact capabilities fail explicitly; they never silently downgrade.
 
-- CodexCloudProvider
-- OpenAIHostedProvider
-- SelfHostedProvider
-- future VPSProvider
+## 13. Versioning
 
-Core must not assume SSH access, VM semantics or a specific Git host.
+- Provider contracts carry a contract version.
+- Host IPC negotiates `major.minor` and capability flags (§7).
+- The store carries `schema_version` with forward-only migrations.
+- Optional fields are backward compatible; required-field changes need a new major version.
 
-## 7. SnapshotProvider
+## 14. Deferred contracts and their binding constraints
 
-Purpose: create and materialize portable workspace checkpoints.
+### 14.1 CloudProvider
 
-Conceptual snapshot:
+Not defined until Phase 5. Binding now:
 
-```text
-WorkspaceSnapshot
-  id
-  project_id
-  base_revision
-  dirty_patch
-  untracked_manifest
-  environment_manifest
-  runtime_checkpoint
-  artifact_refs
-```
+- continuation is a new Run with `continues_run_id`, never a migrated run;
+- no SSH, VM or uploaded-environment assumption;
+- results return as artifacts and are applied locally by explicit action;
+- upload is separately permissioned;
+- Codex Cloud is GitHub-repository based: handoff means pushing a checkpoint branch, submitting a task and fetching a diff.
 
-Possible implementations:
+### 14.2 Workspace checkpoint (formerly SnapshotProvider)
 
-- Git-backed checkpoint;
-- local content-addressed store;
-- object-storage-backed snapshot;
-- provider-native cloud snapshot.
+A Runtime/Project internal service, git-based (base commit + WIP commit on a private ref, allowlisted untracked files, sensitive paths excluded). It becomes a provider only if a real cloud target requires a second checkpoint format.
 
-Snapshot generation should be incremental so a ready checkpoint exists before a laptop sleeps.
+### 14.3 MediaProvider
 
-## 8. ToolProvider
+Phase 2 preview is a capability of ComputerProvider, because video comes from the same capture pipeline and human input must reach the same arbiter. A standalone MediaProvider is defined only when a second media source exists.
 
-Purpose: register executable capabilities that Bridge Core can expose to AI clients.
+### 14.4 SkillProvider
 
-Examples:
+Removed from the baseline. Skills belong to agent harnesses.
 
-- filesystem
-- shell
-- git
-- database
-- project-specific custom tools
+### 14.5 ControlPlane / Fleet
 
-Tools declare:
+Removed. A future fleet is an optional outbound connector; managed policy can only restrict.
 
-- name;
-- input/output schema;
-- permission verb;
-- project/session scope;
-- capability requirements.
+### 14.6 Sandbox execution
 
-## 9. SkillProvider
+Phase 7. Expressed as an autonomy/environment capability of AgentProvider and of shell tools (container or VM), never as the default.
 
-Purpose: discover and normalize reusable AI instructions/skills without inventing a CodeBridge-only skill format.
+### 14.7 TransportProvider
 
-Potential sources:
+Removed. MCP transports and `tunnel-client` already are the transport; CodeBridge needs only ingress adapters (§8). A non-MCP transport would be a new ingress adapter, not a provider family.
 
-- Agent Skills / SKILL.md;
-- Codex skills;
-- OMP project skills;
-- MCP-backed skill bundles.
+## 15. Architectural constraints
 
-The provider returns normalized metadata while preserving the source package.
-
-## 10. ControlPlaneProvider
-
-Purpose: abstract personal-local control from future fleet management.
-
-Implementations:
-
-- `LocalControlPlane` — default;
-- `FleetControlPlane` — future.
-
-Fleet may manage inventory, health, policy, version and audit. It must not become a required hop for normal personal execution.
-
-## 11. EventSink
-
-Every provider publishes lifecycle events through a common sink rather than owning a separate history mechanism.
-
-Examples:
-
-```text
-agent.started
-agent.message
-computer.observed
-computer.action
-computer.controller.changed
-cloud.handoff.started
-artifact.created
-provider.health.changed
-```
-
-Runtime assigns ordered run sequence numbers and persists the canonical journal.
-
-## 12. Artifact contract
-
-Artifacts are provider-independent references.
-
-Kinds may include:
-
-- file
-- patch
-- commit
-- report
-- test_result
-- screenshot_ref
-- recording_ref
-- cloud_result
-- log_bundle
-
-Artifact metadata may be persisted locally; large/sensitive payload storage is provider-specific.
-
-## 13. Capability discovery
-
-Every provider returns explicit capabilities. Core must not infer capability solely from provider type or operating system.
-
-Examples:
-
-```text
-Computer:
-  observe=true
-  input=true
-  preview=false
-
-Agent:
-  durable_session=true
-  resume=true
-  tool_events=true
-
-Cloud:
-  incremental_upload=true
-  remote_shell=false
-```
-
-This allows graceful degradation.
-
-## 14. Versioning
-
-Provider contracts and local IPC require version negotiation.
-
-At minimum:
-
-- protocol version;
-- provider API version;
-- feature/capability flags;
-- backward-compatible optional fields.
-
-Unsupported capabilities fail explicitly; they must not silently downgrade high-impact operations.
-
-## 15. Failure semantics
-
-Providers return errors in stable categories:
-
-- unavailable
-- permission_denied
-- unsupported
-- invalid_state
-- transient
-- terminal
-- cancelled
-
-Core decides retry/recovery policy. Providers should not invent independent infinite-retry loops that Core cannot observe.
-
-## 16. Architectural constraints
-
-1. Providers cannot bypass local permission evaluation for externally initiated operations.
-2. Providers publish events through Runtime rather than maintaining competing lifecycle truth.
-3. TransportProvider never directly invokes OS/agent/cloud implementations.
-4. ComputerProvider never owns authentication to ChatGPT.
-5. CloudProvider never becomes the local source of truth for a run unless an explicit handoff occurs.
-6. Provider-specific raw data may be retained locally, but Core only relies on stable normalized fields.
+1. Providers cannot bypass Policy for externally initiated operations.
+2. Providers publish events through Runtime and never hold competing lifecycle truth.
+3. Ingress adapters never call providers directly.
+4. ComputerProvider never authenticates to ChatGPT and never decides policy; it enforces controller, frame and scope rules.
+5. A cloud provider never becomes the local source of truth for a run; it returns artifacts.
+6. Provider raw data may be retained locally; Core relies only on normalized fields.
+7. Upstream-derived code implements CodeBridge ports through adapters; it never defines them.

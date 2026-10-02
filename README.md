@@ -2,6 +2,8 @@
 
 Self-hosted bridge from ChatGPT Web / any MCP client to source code on machines you control.
 
+> This README describes V1 (Manager + Client). The V2 native-host architecture — Bridge, Persistent Runtime and Computer — is defined in [docs/v2](docs/v2/README.md) ([中文](docs/v2/README.zh-CN.md)).
+
 ```text
 ChatGPT Web / MCP client
         |

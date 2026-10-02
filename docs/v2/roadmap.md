@@ -1,261 +1,227 @@
 # CodeBridge V2 Roadmap
 
-Status: **implementation roadmap**
+Status: **implementation roadmap — revised by the 2026-10-02 architecture review**
 
-The architecture is Bridge-first; the implementation roadmap is Computer-first.
+The architecture is Bridge-first; the roadmap is Computer-first. **Computer Use is the first major V2 feature.**
 
-This roadmap deliberately separates a short architecture/baseline prerequisite from feature priority. **Computer Use is the first major V2 feature.**
+Each phase builds the long-term skeleton it needs and nothing more. Phase 1 builds the daemon, policy and journal foundation that Computer Use itself requires, so Computer Use never ships through a temporary architecture.
 
-## Phase 0 — Architecture freeze and upstream baseline
+## Phase 0 — Baseline, decisions and spikes
 
-Goal: establish stable boundaries before adding new feature code.
+Goal: close the evidence gaps that the architecture depends on, before feature code.
 
-- [x] Define V2 architecture baseline.
-- [x] Define Provider contracts.
-- [x] Define migration strategy.
-- [ ] Audit current CodexBridge upstream structure and extension points.
-- [ ] Confirm reuse/licensing/NOTICE obligations.
-- [ ] Build the upstream macOS application unchanged.
-- [ ] Run Secure MCP Tunnel smoke.
-- [ ] Run native workspace/shell/Docker smoke.
-- [ ] Define versioned Native Service ↔ Go Runtime IPC.
-- [ ] Define shared IDs and schema versioning for Project/Session/Run/Event/Artifact.
+Documents:
 
-Exit condition:
+- [x] V2 architecture baseline.
+- [x] Provider contracts.
+- [x] Migration strategy.
+- [x] Architecture review and revision (2026-10-02).
 
-- CodeBridge can reuse upstream without broad invasive patches.
-- A native macOS process can receive a Bridge request and run a real host command.
+Upstream:
+
+- [x] Identify CodexBridge upstream: `Fanch-hui/codex-bridge`, public `win` development branch, Apache-2.0.
+- [ ] Pin the exact upstream commit and audit language/stack/module boundaries.
+- [ ] Record Apache-2.0 LICENSE/NOTICE obligations for each reused module.
+- [ ] Build upstream unchanged.
+- [ ] Fill the capability matrix ([Migration](migration.md) §4.2) and choose a reuse mode per module.
+- [ ] If upstream cannot be pinned or is unsuitable, record that and proceed without it; no Phase 1 item depends on upstream.
+
+Spikes:
+
+- [ ] Ingress: `tunnel-client` → Streamable HTTP MCP over Unix-domain socket → `codebridged` → a `ping` tool answered in a real ChatGPT developer-mode conversation.
+- [ ] Lifecycle: `SMAppService` LaunchAgent with `KeepAlive`; quitting the app leaves the daemon running; daemon crash restarts.
+- [ ] TCC attribution: confirm the daemon and its harness subprocesses are **not** attributed to CodeBridge.app's Screen Recording / Accessibility grants.
+- [ ] Daemon protected-root TCC: test a Project under `~/Documents` (and equivalent protected roots), establish whether the per-user LaunchAgent can hold a stable Files-and-Folders authorization across rebuild/update, and choose one documented v1 outcome: supported with `host_permission_required` guidance, or explicitly unsupported.
+- [ ] Native host: shell, git, Docker Desktop, SSH and kubectl work from the daemon.
+- [ ] Lock-state behavior: measure ScreenCaptureKit/CGEvent behavior for screen lock, screen saver, wake and fast user switching; verify queued input cannot replay after unlock and feed the observed behavior into the §5.5 failure matrix.
+- [ ] Widget approval feasibility (gates Phase 1 remote approval only): UI-only approval tool round trip plus an approval token delivered through tool-result `_meta` on the supported ChatGPT surfaces; no WebRTC required.
+- [ ] Widget media feasibility (gates Phase 2 only): `RTCPeerConnection` inside the ChatGPT widget on web, desktop and mobile; signaling round trip through a UI-only tool.
+
+Definitions:
+
+- [ ] App identity: bundle id, Team ID, Developer ID signing for development builds (TCC grants must survive rebuilds).
+- [ ] Host IPC v1 schema: `host`, `computer`, `approval`, `notify`.
+- [ ] Store schema v1: projects, sessions, runs, provider_sessions, computer_sessions, events (`stream`, `seq`, `pos`), artifacts, policy rules, grants, approvals, `schema_version`.
+- [ ] Capability descriptors for the Phase 1 tools.
+
+Exit:
+
+- ChatGPT → Secure MCP Tunnel → `codebridged` runs a real host command natively, without Manager or Docker.
+- The daemon survives app quit; the Host IPC handshake works.
+- The upstream decision is recorded, even if it is "not used".
 
 ## Phase 1 — Computer Use MVP (**highest feature priority**)
 
 Goal: ChatGPT can safely observe and control the real Mac.
 
-### Computer foundation
+### 1A. Daemon foundation (only what Computer Use needs)
 
-- [ ] Implement MacComputerProvider.
-- [ ] Detect Screen Recording permission.
-- [ ] Detect Accessibility permission.
-- [ ] Enumerate displays.
-- [ ] Reserve window/application target model.
-- [ ] Normalize Retina/logical coordinates.
-- [ ] Add frame IDs and display-change invalidation.
+- [ ] `codebridged` skeleton with the Bridge kernel: ingress, caller classes, capability registry, dispatch, audit events.
+- [ ] Runtime store and journal: V2 schema in Application Support; transactional state + event; per-stream `seq` and global `pos` (lifting V1 journal code).
+- [ ] Policy v2 minimum: verbs + selectors, allow/deny/ask, `once` / `session` / `always` scopes, approvals presented by CodeBridge.app plus an opt-in approval-only `remote_human` widget path (`once` / `session` only). No model-callable grant tool.
+- [ ] Project registration probes TCC-protected roots and surfaces `permission_denied: host_permission_required` instead of opaque I/O failure.
+- [ ] Session resolution.
+- [ ] `tunnel-client` supervision.
 
-### Observation
+### 1B. Native computer engine (CodeBridge.app)
 
-- [ ] `computer_start`
-- [ ] `computer_observe`
-- [ ] still-image capture through ScreenCaptureKit
-- [ ] image dimension/byte bounds
-- [ ] permission enforcement
-- [ ] explicit unchanged-frame semantics
+- [ ] Menu-bar app skeleton and Host IPC client.
+- [ ] Permission detection: Screen Recording, Accessibility, Input Monitoring; re-checked on use.
+- [ ] Display enumeration and geometry; `geometry_generation` driven by display reconfiguration, sleep and lock.
+- [ ] ScreenCaptureKit still capture with CodeBridge windows excluded; dimension and byte bounds.
+- [ ] Frame stamping: `frame_id`, `arbiter_instance`, `controller_epoch`, `geometry_generation`; image-space → logical → global coordinate mapping (Retina).
+- [ ] InputArbiter: controller state machine, epoch, lease, one input holder per host.
+- [ ] Single serialized CGEvent injector with per-event revalidation and held-input release.
+- [ ] Local physical-input preemption (listen-only event tap); `computer.input` unavailable if the monitor cannot run.
+- [ ] Emergency stop: menu bar and global shortcut.
+- [ ] App-scope enforcement with per-event pointer hit-test and per-key focused/frontmost-app checks; protected surfaces (CodeBridge windows, OS security surfaces, configured apps) are re-checked immediately before injection.
 
-### Input
+### 1C. Tools and end-to-end
 
-- [ ] move
-- [ ] click
-- [ ] double click
-- [ ] drag
-- [ ] scroll
-- [ ] type
-- [ ] keypress
-- [ ] wait
-- [ ] ordered batches stop on first failure
-- [ ] controller_epoch validation
+- [ ] `computer_start`, `computer_observe`, `computer_action`, `computer_status`, `computer_stop`.
+- [ ] Observations as MCP image content plus frame metadata.
+- [ ] Action primitives: move, click, double_click, drag, scroll, type, keypress, wait; ordered batches stop on first failure; every batch cites `frame_id`.
+- [ ] Metadata-only computer events in the journal.
 
-### Lifecycle
+Required E2E (real ChatGPT through the tunnel):
 
-- [ ] `computer_status`
-- [ ] `computer_stop`
-- [ ] lease/expiry
-- [ ] local approval integration
-- [ ] metadata-only events
+- [ ] observe → act → observe on the real Mac.
+- [ ] permission denied and approval-required paths; approval can come only from explicit local UI action or the opt-in `remote_human` widget path; the model cannot approve.
+- [ ] remote-started session can obtain a `once` / `session` approval through the approval-only widget without WebRTC.
+- [ ] stale frame rejected after a controller change.
+- [ ] resolution/arrangement change invalidates frames.
+- [ ] physical mouse/keyboard use preempts the agent immediately.
+- [ ] pointer and keyboard input into a protected surface or out-of-scope/focused app is rejected.
+- [ ] screen lock / screen saver / fast-user-switch behavior matches the Phase 0 decision and cannot replay queued input after return.
+- [ ] app quit and daemon restart leave `controller = none`.
 
-### Required E2E
+Exit:
 
-- [ ] ChatGPT → Secure MCP Tunnel → CodeBridge → observe Mac
-- [ ] act → observe
-- [ ] permission denied path
-- [ ] display resolution change path
-- [ ] stale controller epoch rejection
+> A real ChatGPT conversation can observe, click, type, scroll and drag on the user's Mac through Secure MCP Tunnel — without Manager, Docker Client or public MCP infrastructure — and every negative path above fails closed.
 
-Exit condition:
+Phase 1 exit review: re-check positioning against first-party ChatGPT Computer Use ([Architecture](architecture.md) §1.1).
 
-> A real ChatGPT conversation can observe, click, type and scroll on the user's Mac without Manager, Docker Client or public MCP infrastructure.
+## Phase 2 — Live preview and remote takeover
 
-## Phase 2 — Live Computer and Human Takeover
+Goal: the user watches from the ChatGPT widget and safely takes control.
 
-Goal: the user can watch and safely take control.
+Prerequisite: Phase 0 widget-media spike passed; otherwise choose the stateless rendezvous fallback before starting.
 
-- [ ] MediaProvider baseline.
-- [ ] WebRTCMediaProvider.
-- [ ] signaling service with short-lived grants.
-- [ ] STUN/direct path.
-- [ ] TURN fallback.
-- [ ] adaptive FPS/resolution/bitrate.
-- [ ] ChatGPT Computer widget.
-- [ ] Pause.
-- [ ] Take Over.
-- [ ] input barrier.
-- [ ] increment `controller_epoch`.
-- [ ] Human control.
-- [ ] Resume Agent.
-- [ ] mandatory fresh observation after resume.
-- [ ] loss-of-human-link returns controller to `none`, never silently to agent.
+- [ ] Preview capability in the computer engine (same capture pipeline).
+- [ ] View/control grants minted by the daemon, delivered in tool-result `_meta`, bound to the ComputerSession and widget instance.
+- [ ] UI-only signaling tools through the tunnel.
+- [ ] STUN; TURN with locally minted time-limited credentials.
+- [ ] Adaptive resolution / FPS / bitrate; pause when the widget is hidden.
+- [ ] ChatGPT Computer widget: Pause, Take over, Resume agent, Stop.
+- [ ] Remote human input through the data channel into the arbiter (`controller = human(remote)`).
+- [ ] Reuse the Phase 1 `remote_human` approval channel; adding live preview/control must not widen its scopes or trust level.
+- [ ] Loss of the human link → `controller = none`, never back to agent.
+- [ ] Resume requires a human action; old frames are invalid by epoch.
 
-Exit condition:
+Exit:
 
-> Human and agent can never inject input concurrently, and preview failure does not corrupt model control.
+> Human and agent never inject input concurrently, preview failure never affects model control, and no Manager or stateful public service is involved.
 
-## Phase 3 — Runtime V2 migration
+## Phase 3 — Runtime and agents on V2
 
-Goal: carry forward the valuable current Runtime foundation into the new native architecture.
+Goal: long agent work runs under `codebridged` with the same Session, Policy and Journal as Computer Use.
 
-Migrate/reuse from the current Go codebase:
+Lift from V1:
 
-- [ ] RunStore.
-- [ ] ordered RunEvent journal.
-- [ ] subscriptions.
-- [ ] RunManager.
-- [ ] OMP session adapter.
-- [ ] Codex session adapter.
-- [ ] OpenCode adapter.
-- [ ] recovery/replay.
-- [ ] terminal result persistence.
-
-Refactor to the V2 model:
-
-- [ ] Project.
-- [ ] Session.
-- [ ] Run.
-- [ ] Turn.
-- [ ] RuntimeEvent.
-- [ ] Artifact.
-- [ ] AgentContext.
-- [ ] ComputerContext.
-- [ ] CloudContext.
+- [ ] RunManager state machine, concurrency, cancellation, timeouts.
+- [ ] Subscriptions and cursor replay over the V2 journal.
+- [ ] OMP, Codex and OpenCode as AgentProviders (launch code + session adapters merged).
+- [ ] Sensitive-path, patch and checkpoint file tools behind Project.
 
 Add:
 
-- [ ] Runtime UI.
-- [ ] Conversation/Activity/Artifacts/Computer/Raw views.
-- [ ] asynchronous completion notification.
-- [ ] provider health.
+- [ ] ProviderSession binding from live output; resume as a new Run on the same ProviderSession.
+- [ ] Process identity and orphan handling; per-provider reattach decision (D10).
+- [ ] Autonomy modes per provider; `agent.start` granted per autonomy ceiling.
+- [ ] `agent_start`, `agent_status`, `agent_result`, `agent_cancel`, `runs_list`; UI-only `events_wait`.
+- [ ] Completion delivery: widget long-poll + follow-up message; local notifications.
+- [ ] Runtime views in CodeBridge.app: Conversation, Activity, Artifacts, Computer, Raw.
+- [ ] Raw-event retention limits.
+- [ ] One-time read-only import of V1 `runs.db`.
+- [ ] Evaluate Codex `app-server` for approval routing (D7).
 
-Exit condition:
+Exit:
 
-> Long work continues independently of ChatGPT/Tunnel/UI lifetime and reconnects from the durable local journal.
+> Long work continues across ChatGPT, tunnel, UI and daemon restarts; state is recoverable from the local journal; the model never polls.
 
-## Phase 4 — OMP and cross-provider orchestration
+## Phase 4 — Orchestration (minimal)
 
-Goal: turn CodeBridge from an agent gateway into a provider-independent local agent runtime.
+Goal: cross-provider work without CodeBridge re-implementing multi-agent protocols.
 
-- [ ] Orchestrator interface.
-- [ ] project-level main agent.
-- [ ] Role model.
-- [ ] planner/coder/reviewer/operator roles.
-- [ ] Delegation.
-- [ ] TaskGraph.
-- [ ] ReviewLoop.
-- [ ] ModelPolicy.
-- [ ] BudgetPolicy.
-- [ ] cross-provider Event correlation.
-- [ ] OMP-first implementation.
-- [ ] preserve Codex/OpenCode as independent providers.
-- [ ] evaluate OpenAI Agents provider instead of duplicating its multi-agent protocol.
+- [ ] Run tree: `parent_run_id`, `role`; children created by `agent_internal` callers are linked automatically.
+- [ ] Permission attenuation and budget inheritance across the tree.
+- [ ] ModelPolicy: role → provider / model / autonomy.
+- [ ] BudgetPolicy: wall-clock, token and cost ceilings.
+- [ ] Cross-provider correlation in the journal.
+- [ ] OMP-first orchestrator working through CodeBridge tools.
+- [ ] Decide on CodeBridge-native TaskGraph / ReviewLoop only with evidence (D4).
 
-Exit condition:
+Exit:
 
-> A project can route different roles to different provider/model combinations without Bridge Core changes.
+> A project routes planner / coder / reviewer / operator roles to different providers and models without Bridge kernel changes.
 
 ## Phase 5 — Local ↔ Cloud handoff
 
-Goal: local work can continue when the laptop sleeps without turning CodeBridge into a cloud platform.
+Goal: work continues while the laptop sleeps, without making CodeBridge a cloud platform.
 
-### Contracts first
+- [ ] Git-based checkpoints on private refs, prepared incrementally while awake.
+- [ ] Untracked-file allowlist; sensitive paths excluded.
+- [ ] Define CloudProvider from the first real integration (D1).
+- [ ] Codex Cloud path: push checkpoint branch → `codex cloud exec` → status → `codex apply` diff as artifact.
+- [ ] Continuation chain: new Run `kind = cloud`, `continues_run_id`, single writer.
+- [ ] Explicit local apply into a new branch/worktree; conflicts surfaced, never silently resolved.
 
-- [ ] WorkspaceSnapshot.
-- [ ] SnapshotProvider.
-- [ ] CloudProvider.
-- [ ] EnvironmentManifest.
-- [ ] RunCheckpoint.
-- [ ] Artifact return contract.
+Exit:
 
-### Incremental readiness
-
-- [ ] base revision tracking.
-- [ ] dirty patch.
-- [ ] untracked manifest.
-- [ ] environment manifest.
-- [ ] ready checkpoint while laptop is awake.
-
-### Initial cloud provider
-
-- [ ] evaluate Codex Cloud handoff path.
-- [ ] start cloud continuation.
-- [ ] retrieve diff/artifacts.
-- [ ] reconcile return to local.
-- [ ] explicit conflicts; never overwrite local changes silently.
-
-Later providers:
-
-- OpenAI hosted.
-- self-hosted.
-- user VPS.
-
-Exit condition:
-
-> A run can explicitly hand off to one supported cloud provider and return artifacts/diffs safely.
+> A run hands off to one real cloud provider and returns a diff that the user applies locally without overwriting local changes.
 
 ## Phase 6 — Additional platforms
 
-- [ ] Windows native Bridge.
+- [ ] `codebridged` on Windows and Linux.
 - [ ] Windows ComputerProvider.
-- [ ] Linux native Bridge.
 - [ ] Linux X11/Wayland ComputerProvider.
-- [ ] platform-specific permission models.
+- [ ] Platform permission models mapped to the same verbs.
 
 ## Phase 7 — Optional sandbox execution
 
-- [ ] Sandbox execution policy/provider.
-- [ ] Docker/VM isolation.
-- [ ] explicit capability differences from native host.
-- [ ] never make sandbox the default personal developer environment.
+- [ ] Sandbox as an autonomy/environment capability of agent and shell tools.
+- [ ] Docker / VM isolation with explicit capability differences from the native host.
+- [ ] Never the default personal developer environment.
 
-## Phase 8 — Fleet / enterprise control plane
+## Phase 8 — Fleet (only with demonstrated demand)
 
-Only start after demonstrated demand.
+- [ ] Optional outbound fleet connector.
+- [ ] Inventory, health, version metadata.
+- [ ] Managed policy layer that can only restrict.
+- [ ] Never in the request data path.
 
-- [ ] FleetControlPlane.
-- [ ] inventory.
-- [ ] centralized policy.
-- [ ] version management.
-- [ ] health.
-- [ ] audit metadata.
-
-Fleet must remain optional and outside the default personal request data path.
-
-## Work explicitly stopped from the mainline
-
-Do not spend V2 critical-path time on:
+## Work explicitly stopped on the mainline
 
 - public Manager MCP ingress;
 - mandatory VPS;
 - Caddy/Nginx MCP routing;
-- self-built OAuth ingress;
+- self-built OAuth ingress for the personal path;
 - Docker Client as the default Mac execution environment;
 - Manager→Client gRPC routing as the personal execution path;
-- duplicating mature CodexBridge desktop/updater/credential features;
-- adding agent adapters only to compete on adapter count.
+- model-callable permission grants;
+- duplicating mature desktop/updater/credential features that a pinned upstream already provides;
+- adding agent adapters only to increase adapter count.
 
 ## Priority rule
 
 When priorities conflict:
 
-1. architecture/security correctness;
-2. Computer Use;
-3. native Bridge reliability;
-4. Runtime durability;
-5. orchestration;
-6. cloud handoff;
-7. additional platforms;
-8. Fleet.
+1. correctness and security;
+2. long-term maintainability of the boundaries in [Architecture](architecture.md) §19;
+3. upstream syncability;
+4. Computer Use;
+5. Runtime durability;
+6. orchestration;
+7. cloud handoff;
+8. additional platforms;
+9. fleet.
