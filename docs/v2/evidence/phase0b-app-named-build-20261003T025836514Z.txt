@@ -1,0 +1,302 @@
+ok  	github.com/edynasty/codebridge/cmd/client	(cached)
+?   	github.com/edynasty/codebridge/cmd/codebridged	[no test files]
+?   	github.com/edynasty/codebridge/cmd/doctor	[no test files]
+ok  	github.com/edynasty/codebridge/cmd/manager	(cached)
+?   	github.com/edynasty/codebridge/cmd/store-smoke	[no test files]
+ok  	github.com/edynasty/codebridge/internal/agentops	(cached)
+ok  	github.com/edynasty/codebridge/internal/approvalspike	(cached)
+ok  	github.com/edynasty/codebridge/internal/auditlog	(cached)
+ok  	github.com/edynasty/codebridge/internal/authserver	2.327s
+ok  	github.com/edynasty/codebridge/internal/authstore	(cached)
+ok  	github.com/edynasty/codebridge/internal/clientconfig	(cached)
+ok  	github.com/edynasty/codebridge/internal/clientcred	(cached)
+ok  	github.com/edynasty/codebridge/internal/config	(cached)
+ok  	github.com/edynasty/codebridge/internal/daemon	(cached)
+ok  	github.com/edynasty/codebridge/internal/doctor	(cached)
+ok  	github.com/edynasty/codebridge/internal/hostipc	(cached)
+ok  	github.com/edynasty/codebridge/internal/manager	(cached)
+?   	github.com/edynasty/codebridge/internal/mcpcallstore	[no test files]
+ok  	github.com/edynasty/codebridge/internal/oauthresource	(cached)
+?   	github.com/edynasty/codebridge/internal/pb	[no test files]
+?   	github.com/edynasty/codebridge/internal/protocol	[no test files]
+ok  	github.com/edynasty/codebridge/internal/runtime	(cached)
+?   	github.com/edynasty/codebridge/internal/ui	[no test files]
+?   	github.com/edynasty/codebridge/schema/store/v1	[no test files]
+ok  	github.com/edynasty/codebridge/tools/pluginpack	(cached)
+Building for production...
+[Computing dependencies]
+[Using on-disk description]
+[1 / 3]
+[2 / 4] CodeBridgeComputerSpike
+[3 / 5] CodeBridgeComputerSpike
+[8 / 10] CodeBridgeNativeProbe
+[9 / 11] CodeBridgeNativeProbe
+[13 / 15] CodeBridge-product
+[14 / 16] CodeBridge-product
+[19 / 20] CodeBridgeNativeProbe
+[20 / 20] CodeBridge-product
+[22 / 24] codebridge-probe-product
+[23 / 25] codebridge-probe-product
+[25 / 25] codebridge-probe-product
+[26 / 26] codebridge-probe-product
+[29 / 29] CodeBridge-product
+Build complete! (34.99秒)
+Building for debugging...
+[Computing dependencies]
+[5 / 35] CodeBridgeIPC
+[8 / 30] CodeBridgeComputerSpike
+[10 / 32] CodeBridgeComputerSpike
+[16 / 40] CodeBridgeNativeProbe
+[21 / 45] CodeBridgeNativeProbe
+[27 / 43] CodeBridgeNativeProbe
+[35 / 48] CodeBridgeComputerSpike
+[38 / 47] codebridge-probe-product
+[40 / 47] CodeBridge-product
+[45 / 48] CodeBridge-product
+[47 / 50] CodeBridge-product
+[48 / 51] CodeBridge-product
+[52 / 52] codebridge-probe-product
+[53 / 54] CodeBridge-product
+Build complete! (6.00秒)
+Test Suite 'All tests' started at 2026-10-03 10:59:25.136.
+Test Suite 'CodeBridgeIPCTests.xctest' started at 2026-10-03 10:59:25.142.
+Test Suite 'FramingTests' started at 2026-10-03 10:59:25.142.
+Test Case '-[CodeBridgeIPCTests.FramingTests testAttachmentFramesAreBoundedAtSixteenMiB]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testAttachmentFramesAreBoundedAtSixteenMiB]' passed (0.006 seconds).
+Test Case '-[CodeBridgeIPCTests.FramingTests testBinaryAttachmentFrameRoundTrip]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testBinaryAttachmentFrameRoundTrip]' passed (0.001 seconds).
+Test Case '-[CodeBridgeIPCTests.FramingTests testControlFramesOverOneMiBillionAreRejected]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testControlFramesOverOneMiBillionAreRejected]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.FramingTests testDecoderHandlesTwoFramesInOneBuffer]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testDecoderHandlesTwoFramesInOneBuffer]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.FramingTests testDecoderWaitsForCompleteFrames]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testDecoderWaitsForCompleteFrames]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.FramingTests testJSONFrameRoundTrip]' started.
+Test Case '-[CodeBridgeIPCTests.FramingTests testJSONFrameRoundTrip]' passed (0.000 seconds).
+Test Suite 'FramingTests' passed at 2026-10-03 10:59:25.151.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.008 (0.009) seconds
+Test Suite 'PeerTrustPolicyTests' started at 2026-10-03 10:59:25.151.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testAConfiguredExpectationAlwaysApplies]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testAConfiguredExpectationAlwaysApplies]' passed (0.002 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testDiagnosticsMaySkipItsPreCheckOnlyWithExplicitOptIn]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testDiagnosticsMaySkipItsPreCheckOnlyWithExplicitOptIn]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testEmptyIdentifierCannotProduceARequirement]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testEmptyIdentifierCannotProduceARequirement]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testHarnessMaySkipPeerCheckOnlyWithExplicitOptIn]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testHarnessMaySkipPeerCheckOnlyWithExplicitOptIn]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppCannotBypassVerificationEvenWithTheOptIn]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppCannotBypassVerificationEvenWithTheOptIn]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppRequiresANonEmptyTeamIdentifier]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppRequiresANonEmptyTeamIdentifier]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppWithAFullExpectationRequiresALiveVerifiedPeer]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testRoleAppWithAFullExpectationRequiresALiveVerifiedPeer]' passed (0.001 seconds).
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testUnknownRoleRequiresAConfiguredIdentity]' started.
+Test Case '-[CodeBridgeIPCTests.PeerTrustPolicyTests testUnknownRoleRequiresAConfiguredIdentity]' passed (0.000 seconds).
+Test Suite 'PeerTrustPolicyTests' passed at 2026-10-03 10:59:25.157.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'ProtocolNegotiationTests' started at 2026-10-03 10:59:25.157.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testIdenticalVersionsAreAccepted]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testIdenticalVersionsAreAccepted]' passed (0.001 seconds).
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testJSONValueRoundTripsThroughJSON]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testJSONValueRoundTripsThroughJSON]' passed (0.002 seconds).
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testMajorMismatchIsRejected]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testMajorMismatchIsRejected]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testMinorTwoAheadIsRejected]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testMinorTwoAheadIsRejected]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testNewerClientAgainstOlderDaemonIsRejected]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testNewerClientAgainstOlderDaemonIsRejected]' passed (0.000 seconds).
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testOlderClientAgainstNewerDaemonIsAcceptedWithLowerMinor]' started.
+Test Case '-[CodeBridgeIPCTests.ProtocolNegotiationTests testOlderClientAgainstNewerDaemonIsAcceptedWithLowerMinor]' passed (0.000 seconds).
+Test Suite 'ProtocolNegotiationTests' passed at 2026-10-03 10:59:25.163.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.004 (0.006) seconds
+Test Suite 'CodeBridgeIPCTests.xctest' passed at 2026-10-03 10:59:25.163.
+	 Executed 20 tests, with 0 failures (0 unexpected) in 0.017 (0.021) seconds
+Test Suite 'All tests' passed at 2026-10-03 10:59:25.163.
+	 Executed 20 tests, with 0 failures (0 unexpected) in 0.017 (0.027) seconds
+Test Suite 'All tests' started at 2026-10-03 10:59:25.543.
+Test Suite 'CodeBridgeComputerSpikeTests.xctest' started at 2026-10-03 10:59:25.545.
+Test Suite 'InputClassifierTests' started at 2026-10-03 10:59:25.545.
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testInputAvailabilityFollowsTheMonitorState]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testInputAvailabilityFollowsTheMonitorState]' passed (0.001 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testOnlyEngineOriginatedEventsAreIgnored]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testOnlyEngineOriginatedEventsAreIgnored]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testSecureInputBlocksAnOtherwiseVerifiedMonitor]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testSecureInputBlocksAnOtherwiseVerifiedMonitor]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testUnknownOriginNeverResolvesToSafe]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.InputClassifierTests testUnknownOriginNeverResolvesToSafe]' passed (0.000 seconds).
+Test Suite 'InputClassifierTests' passed at 2026-10-03 10:59:25.548.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'SuspensionModelTests' started at 2026-10-03 10:59:25.548.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testAcquisitionBumpsTheEpochSoTheAcquisitionFrameCannotBeReused]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testAcquisitionBumpsTheEpochSoTheAcquisitionFrameCannotBeReused]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testArbiterRestartInvalidatesForeignFrames]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testArbiterRestartInvalidatesForeignFrames]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testControllerEpochChangeInvalidatesFrames]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testControllerEpochChangeInvalidatesFrames]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testEnqueueIsRefusedWithoutAgentControl]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testEnqueueIsRefusedWithoutAgentControl]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testGeometryChangeInvalidatesFramesPlannedAgainstTheOldGeometry]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testGeometryChangeInvalidatesFramesPlannedAgainstTheOldGeometry]' passed (0.001 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testHumanHoldRequiresAHumanActorToResume]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testHumanHoldRequiresAHumanActorToResume]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testQueuedInputIsDiscardedOnSuspensionAndCannotReplay]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testQueuedInputIsDiscardedOnSuspensionAndCannotReplay]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testResumeRequiresAFreshObservationFrame]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testResumeRequiresAFreshObservationFrame]' passed (0.000 seconds).
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testStaleFrameIsRejectedAfterTheAgeBound]' started.
+Test Case '-[CodeBridgeComputerSpikeTests.SuspensionModelTests testStaleFrameIsRejectedAfterTheAgeBound]' passed (0.000 seconds).
+Test Suite 'SuspensionModelTests' passed at 2026-10-03 10:59:25.551.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'CodeBridgeComputerSpikeTests.xctest' passed at 2026-10-03 10:59:25.551.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.004 (0.006) seconds
+Test Suite 'All tests' passed at 2026-10-03 10:59:25.551.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.004 (0.009) seconds
+◇ Test run started.
+↳ Testing Library Version: 2084
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+◇ Test run started.
+↳ Testing Library Version: 2084
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+== observed code-signing identities ==
+  1) B1DB75FAC36735E9BE6B1D0FA7A96BB60FD79649 "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)"
+     1 valid identities found
+/var/folders/cq/047kqj3x70bg9s6c6vpv4wxh0000gn/T//codebridge-signing.6bZSto/identity-check: replacing existing signature
+
+== build ==
+Building for production...
+[Computing dependencies]
+[1 / 14] CodeBridgeComputerSpike
+[4 / 17]
+[5 / 18] CodeBridgeIPC
+[7 / 19] CodeBridgeIPC
+[10 / 20] CodeBridgeComputerSpike
+[12 / 21] CodeBridgeComputerSpike
+[15 / 22] CodeBridgeNativeProbe
+[17 / 23] CodeBridgeNativeProbe
+Build complete! (17.30秒)
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/Info.plist: OK
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/Library/LaunchAgents/com.codebridge.daemon.plist: OK
+
+== sign (nested first) ==
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridge-probe: replacing existing signature
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged: replacing existing signature
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app: replacing existing signature
+
+== signing tree (observed) ==
+-- /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridge-probe
+Executable=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridge-probe
+Identifier=com.codebridge.probe
+Format=Mach-O thin (arm64)
+CodeDirectory v=20500 size=3008 flags=0x10000(runtime) hashes=88+2 location=embedded
+VersionPlatform=1
+VersionMin=851968
+VersionSDK=851968
+Hash type=sha256 size=32
+CandidateCDHash sha256=303f567c6cc831b61b5ed3c8c019d733809e7771
+CandidateCDHashFull sha256=303f567c6cc831b61b5ed3c8c019d733809e7771c37ccf24dd2c6f8e79590cc1
+Hash choices=sha256
+CMSDigest=303f567c6cc831b61b5ed3c8c019d733809e7771c37ccf24dd2c6f8e79590cc1
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=442368
+Executable Segment flags=0x1
+Page size=16384
+CDHash=303f567c6cc831b61b5ed3c8c019d733809e7771
+Signature size=9100
+Authority=Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)
+Authority=Apple Worldwide Developer Relations Certification Authority
+Authority=Apple Root CA
+Timestamp=Oct 3, 2026 at 10:59:48
+Info.plist=not bound
+TeamIdentifier=HXAV5ALQQG
+Runtime Version=13.0.0
+Sealed Resources=none
+Internal requirements count=1 size=192
+Total signatures=1
+Chosen signature=1
+Executable=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridge-probe
+designated => identifier "com.codebridge.probe" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridge-probe: valid on disk
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridge-probe: satisfies its Designated Requirement
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridge-probe: explicit requirement satisfied
+d0178b304b263c64f6f26c085569616bd723cd44393c94df51d57458d0fe52f9  /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridge-probe
+-- /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged
+Executable=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged
+Identifier=com.codebridge.daemon
+Format=Mach-O thin (arm64)
+CodeDirectory v=20500 size=24993 flags=0x10000(runtime) hashes=775+2 location=embedded
+VersionPlatform=1
+VersionMin=1769472
+VersionSDK=1769472
+Hash type=sha256 size=32
+CandidateCDHash sha256=eb401909883fd5f502a5600be6e5f7a4a9355603
+CandidateCDHashFull sha256=eb401909883fd5f502a5600be6e5f7a4a9355603780dbde972426db0b5e1eec8
+Hash choices=sha256
+CMSDigest=eb401909883fd5f502a5600be6e5f7a4a9355603780dbde972426db0b5e1eec8
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=10895360
+Executable Segment flags=0x1
+Page size=16384
+CDHash=eb401909883fd5f502a5600be6e5f7a4a9355603
+Signature size=9100
+Authority=Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)
+Authority=Apple Worldwide Developer Relations Certification Authority
+Authority=Apple Root CA
+Timestamp=Oct 3, 2026 at 10:59:49
+Info.plist=not bound
+TeamIdentifier=HXAV5ALQQG
+Runtime Version=27.0.0
+Sealed Resources=none
+Internal requirements count=1 size=196
+Total signatures=1
+Chosen signature=1
+Executable=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged
+designated => identifier "com.codebridge.daemon" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged: valid on disk
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged: satisfies its Designated Requirement
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged: explicit requirement satisfied
+749b476c0d34b3f37c13ef4ef092d19e3067200053c4376c67d09888935d2d6f  /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged
+-- /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+Executable=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge
+Identifier=com.codebridge.app
+Format=app bundle with Mach-O thin (arm64)
+CodeDirectory v=20500 size=3326 flags=0x10000(runtime) hashes=97+3 location=embedded
+VersionPlatform=1
+VersionMin=851968
+VersionSDK=851968
+Hash type=sha256 size=32
+CandidateCDHash sha256=3ea4930142e254fae781f6f2176d167794b05fa2
+CandidateCDHashFull sha256=3ea4930142e254fae781f6f2176d167794b05fa2cc51f3a38aa96fb2a8bad109
+Hash choices=sha256
+CMSDigest=3ea4930142e254fae781f6f2176d167794b05fa2cc51f3a38aa96fb2a8bad109
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=524288
+Executable Segment flags=0x1
+Page size=16384
+CDHash=3ea4930142e254fae781f6f2176d167794b05fa2
+Signature size=9099
+Authority=Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)
+Authority=Apple Worldwide Developer Relations Certification Authority
+Authority=Apple Root CA
+Timestamp=Oct 3, 2026 at 10:59:50
+Info.plist entries=19
+TeamIdentifier=HXAV5ALQQG
+Runtime Version=13.0.0
+Sealed Resources version=2 rules=13 files=3
+Internal requirements count=1 size=192
+Total signatures=1
+Chosen signature=1
+Executable=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge
+designated => identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */
+--prepared:/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridge-probe
+--validated:/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridge-probe
+--prepared:/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged
+--validated:/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app: valid on disk
+/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app: satisfies its Designated Requirement
+
+[Showing lines 1-300 of 367. Use :301 to continue]

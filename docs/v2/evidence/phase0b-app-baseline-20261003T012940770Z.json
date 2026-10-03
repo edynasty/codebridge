@@ -1,0 +1,526 @@
+{
+  "schema": "codebridge.phase0b.app_baseline_acceptance.v1",
+  "runId": "20261003T012940770Z",
+  "startedAt": "2026-10-03T01:29:40.770Z",
+  "recordedAt": "2026-10-03T02:08:50.833Z",
+  "scope": "A signed App positive baseline only; B/C/D/E and F2 persistence not run",
+  "status": "FAIL",
+  "decision": "APP_TCC_BASELINE_NOT_ESTABLISHED",
+  "phase0": "BLOCKED",
+  "phase1": "NOT_READY",
+  "f2": "NOT_CLOSED",
+  "appPath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+  "identifier": "com.codebridge.app",
+  "actualTeam": "HXAV5ALQQG",
+  "identityBeforeReset": {
+    "observedBeforeReset": true,
+    "command": "codesign -dv --verbose=4 desktop/macos/build/CodeBridge.app && codesign --verify --deep --strict --verbose=4 desktop/macos/build/CodeBridge.app && codesign -d -r- desktop/macos/build/CodeBridge.app",
+    "identifier": "com.codebridge.app",
+    "team": "HXAV5ALQQG",
+    "adhoc": false,
+    "flags": "0x10000(runtime)",
+    "cdhash": "4f1bfc56019090b942554a1015f14dd7efbf5f17",
+    "strictDeepVerification": "PASS",
+    "designatedRequirement": "identifier \"com.codebridge.app\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */"
+  },
+  "identityAfterPreparation": {
+    "identifier": "com.codebridge.app",
+    "team": "HXAV5ALQQG",
+    "adhoc": false,
+    "flags": "0x10000(runtime)",
+    "cdhash": "b7525cda835942ab7cf29360396f4508fc57497b",
+    "strictDeepVerification": "PASS",
+    "sameDesignatedRequirement": true,
+    "rawBuildArtifact": "artifact://724",
+    "designatedRequirement": "identifier \"com.codebridge.app\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */",
+    "portableRawBuildLog": "docs/v2/evidence/phase0b-app-baseline-build-20261003T012940770Z.txt"
+  },
+  "inputResetService": {
+    "source": "actual local TCC logs phase0b-tcc-signed-2026-10-03.txt, request 35517.4; manual does not enumerate services",
+    "systemService": "kTCCServiceListenEvent",
+    "tccutilService": "ListenEvent",
+    "supportConfirmed": true
+  },
+  "resetScope": "Exactly com.codebridge.app: ScreenCapture, Accessibility, ListenEvent. No global/other-identity reset, TCC database read/write or private API.",
+  "commands": [
+    {
+      "time": "2026-10-03T01:29:59.153Z",
+      "argv": [
+        "/usr/bin/tccutil",
+        "reset",
+        "ScreenCapture",
+        "com.codebridge.app"
+      ],
+      "exitCode": 0,
+      "stdout": "Successfully reset ScreenCapture approval status for com.codebridge.app\n",
+      "stderr": ""
+    },
+    {
+      "time": "2026-10-03T01:29:59.266Z",
+      "argv": [
+        "/usr/bin/tccutil",
+        "reset",
+        "Accessibility",
+        "com.codebridge.app"
+      ],
+      "exitCode": 0,
+      "stdout": "Successfully reset Accessibility approval status for com.codebridge.app\n",
+      "stderr": ""
+    },
+    {
+      "time": "2026-10-03T01:29:59.372Z",
+      "argv": [
+        "/usr/bin/tccutil",
+        "reset",
+        "ListenEvent",
+        "com.codebridge.app"
+      ],
+      "exitCode": 0,
+      "stdout": "Successfully reset ListenEvent approval status for com.codebridge.app\n",
+      "stderr": ""
+    },
+    {
+      "time": "2026-10-03T01:35:08.485Z",
+      "argv": [
+        "/usr/bin/open",
+        "-n",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+        "--args",
+        "--phase0b-request-permissions",
+        "--output",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-requests-20261003T012940770Z.json"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "time": "2026-10-03T01:36:29.965Z",
+      "argv": [
+        "/usr/bin/osascript",
+        "-e",
+        "tell application \"System Events\" to tell process \"System Settings\"\nset results to {\"window=\" & name of window 1}\nrepeat with itemRef in entire contents of window 1\ntry\nif role of itemRef is \"AXCheckBox\" then\nset itemName to name of itemRef\nignoring case\nif itemName contains \"codebridge\" then set end of results to itemName & \"=\" & value of itemRef\nend ignoring\nend if\nend try\nend repeat\nreturn results\nend tell"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "95:99: execution error: “System Events”遇到一个错误：不能获得“window 1 of process \"System Settings\"”。无效的索引。 (-1719)\n",
+      "readOnly": true
+    },
+    {
+      "time": "2026-10-03T01:52:35.443Z",
+      "argv": [
+        "/usr/bin/osascript",
+        "-e",
+        "tell application \"System Events\" to tell process \"System Settings\"\nset results to {\"window=\" & name of window 1}\nrepeat with itemRef in entire contents of window 1\ntry\nif role of itemRef is \"AXCheckBox\" then\nset itemName to name of itemRef\nignoring case\nif itemName contains \"codebridge\" then set end of results to itemName & \"=\" & value of itemRef\nend ignoring\nend if\nend try\nend repeat\nreturn results\nend tell"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "95:99: execution error: 不能将“name of window 1 of «class prcs» \"System Settings\" of application \"System Events\"”转换为“Unicode text”类型。 (-1700)\n",
+      "readOnly": true
+    },
+    {
+      "time": "2026-10-03T01:52:36.563Z",
+      "argv": [
+        "/usr/bin/open",
+        "-n",
+        "-W",
+        "--stdout",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-positive-api-20261003T012940770Z.json.stdout",
+        "--stderr",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-positive-api-20261003T012940770Z.json.stderr",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+        "--args",
+        "--phase0b-probe",
+        "permissions",
+        "--roots",
+        "",
+        "--output",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-positive-api-20261003T012940770Z.json"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "open",
+        "-n",
+        "-W",
+        "--stdout",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-positive-input-20261003T012940770Z.json.stdout",
+        "--stderr",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-positive-input-20261003T012940770Z.json.stderr",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+        "--args",
+        "--phase0b-probe",
+        "input-monitor",
+        "--duration",
+        "30",
+        "--output",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-positive-input-20261003T012940770Z.json"
+      ],
+      "classification": "actual background LaunchServices invocation; completion recorded separately",
+      "completionObserved": {
+        "exitCode": 0,
+        "durationSeconds": 31.03,
+        "source": "background launch completion bg_111; report completed 2026-10-03T01:54:14.367Z"
+      }
+    },
+    {
+      "time": "2026-10-03T01:55:01.203Z",
+      "argv": [
+        "/usr/bin/osascript",
+        "-e",
+        "tell application \"System Events\"\nset results to {}\nrepeat with p in (every application process whose bundle identifier is \"com.apple.systempreferences\")\nset end of results to {name of p, unix id of p, count of windows of p}\nend repeat\nreturn results\nend tell"
+      ],
+      "exitCode": 0,
+      "stdout": "System Settings, 8381, 1\n",
+      "stderr": "",
+      "readOnly": true
+    },
+    {
+      "time": "2026-10-03T01:55:30.815Z",
+      "argv": [
+        "/usr/bin/osascript",
+        "-e",
+        "tell application \"System Events\" to tell process \"System Settings\"\nset results to {\"window=\" & name of window 1}\nrepeat with itemRef in entire contents of window 1\ntry\nif role of itemRef is \"AXCheckBox\" then\nset itemName to name of itemRef\nignoring case\nif itemName contains \"codebridge\" then set end of results to itemName & \"=\" & value of itemRef\nend ignoring\nend if\nend try\nend repeat\nreturn results\nend tell"
+      ],
+      "exitCode": 0,
+      "stdout": "window=录屏与系统录音\n",
+      "stderr": "",
+      "readOnly": true
+    },
+    {
+      "time": "2026-10-03T01:56:34.847Z",
+      "argv": [
+        "/usr/bin/osascript",
+        "-e",
+        "tell application \"System Events\" to tell process \"System Settings\" to get entire contents of window 1"
+      ],
+      "exitCode": 0,
+      "stdout": "group 1 of window 录屏与系统录音 of application process System Settings, splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 1 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 1 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of UI element 1 of row 1 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 2 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 2 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 2 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 3 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 3 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 3 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 4 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 4 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of UI element 1 of row 4 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 5 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 5 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 5 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 6 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 6 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of UI element 1 of row 6 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 7 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 7 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 7 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 8 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 8 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 8 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 9 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 9 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 9 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 10 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 10 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 10 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 11 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 11 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 11 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 12 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 12 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of UI element 1 of row 12 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 13 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 13 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 13 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 14 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 14 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 14 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 15 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 15 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 15 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 16 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 16 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 16 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 17 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 17 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 17 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 18 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 18 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 18 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 19 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 19 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 19 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 20 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 20 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 20 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 21 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 21 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 21 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 22 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 22 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of UI element 1 of row 22 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 23 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 23 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 23 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 24 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 24 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 24 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 25 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 25 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 25 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 26 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 26 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 26 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 27 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 27 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of UI element 1 of row 27 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 28 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 28 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 28 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 29 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 29 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 29 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 30 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 30 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 30 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 31 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 31 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 31 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 32 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 32 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of UI element 1 of row 32 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 33 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 33 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 33 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 34 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 34 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 34 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 35 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 35 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 35 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 36 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 36 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 36 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 37 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 37 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of UI element 1 of row 37 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 38 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 38 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 38 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 39 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 39 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 39 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 40 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 40 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 40 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 41 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 41 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 41 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 42 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 42 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of UI element 1 of row 42 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 43 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 43 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of UI element 1 of row 43 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text Flash Player of button 1 of UI element 1 of row 43 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, column 1 of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, scroll bar 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, value indicator 1 of scroll bar 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of scroll bar 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 2 of scroll bar 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 3 of scroll bar 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 4 of scroll bar 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 2 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, text field 1 of group 2 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of text field 1 of group 2 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, splitter 1 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text 录屏与系统录音 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text 即使正在使用其他应用程序，也允许下面的应用程序录制屏幕内容和音频。 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 1 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 1 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text 贝锐向日葵.app of UI element 1 of row 1 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox 贝锐向日葵.app of UI element 1 of row 1 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 2 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 2 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text 企业微信.app of UI element 1 of row 2 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox 企业微信.app of UI element 1 of row 2 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 3 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 3 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text 腾讯会议.app of UI element 1 of row 3 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox 腾讯会议.app of UI element 1 of row 3 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 4 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 4 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text 微信.app of UI element 1 of row 4 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox 微信.app of UI element 1 of row 4 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 5 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 5 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text ChatGPT.app of UI element 1 of row 5 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox ChatGPT.app of UI element 1 of row 5 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 6 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 6 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text CodeBridge of UI element 1 of row 6 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox CodeBridge of UI element 1 of row 6 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 7 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 7 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text codebridge-probe of UI element 1 of row 7 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox codebridge-probe of UI element 1 of row 7 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 8 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 8 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text CodeBridge.app of UI element 1 of row 8 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox CodeBridge.app of UI element 1 of row 8 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 9 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 9 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text codebridged of UI element 1 of row 9 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox codebridged of UI element 1 of row 9 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 10 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 10 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text Codex Computer Use.app of UI element 1 of row 10 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox Codex Computer Use.app of UI element 1 of row 10 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 11 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 11 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text Filmage Screen.app of UI element 1 of row 11 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox Filmage Screen.app of UI element 1 of row 11 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 12 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 12 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text Google Chrome.app of UI element 1 of row 12 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox Google Chrome.app of UI element 1 of row 12 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 13 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 13 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text OBS.app of UI element 1 of row 13 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox OBS.app of UI element 1 of row 13 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 14 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 14 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text Parallels Desktop.app of UI element 1 of row 14 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox Parallels Desktop.app of UI element 1 of row 14 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 15 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 15 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text QQ.app of UI element 1 of row 15 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox QQ.app of UI element 1 of row 15 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 16 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 16 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text QQ音乐.app of UI element 1 of row 16 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox QQ音乐.app of UI element 1 of row 16 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 17 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 17 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text ShareMax.app of UI element 1 of row 17 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox ShareMax.app of UI element 1 of row 17 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 18 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 18 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text SogouInput.app of UI element 1 of row 18 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox SogouInput.app of UI element 1 of row 18 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 19 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 19 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text SunloginClient_Desktop of UI element 1 of row 19 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox SunloginClient_Desktop of UI element 1 of row 19 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 20 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 20 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text Visual Studio Code.app of UI element 1 of row 20 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox Visual Studio Code.app of UI element 1 of row 20 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 21 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 21 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text WPS Office.app of UI element 1 of row 21 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, checkbox WPS Office.app of UI element 1 of row 21 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, column 1 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 2 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text 仅系统录音 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text 允许下面的应用程序访问和录制系统音频。 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, scroll area 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, row 1 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, UI element 1 of row 1 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, static text 无项目 of UI element 1 of row 1 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, column 1 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 2 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, scroll bar 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, value indicator 1 of scroll bar 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 1 of scroll bar 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 2 of scroll bar 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 3 of scroll bar 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, button 4 of scroll bar 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings, toolbar 1 of window 录屏与系统录音 of application process System Settings, group 1 of toolbar 1 of window 录屏与系统录音 of application process System Settings, group 1 of group 1 of toolbar 1 of window 录屏与系统录音 of application process System Settings, button 1 of group 1 of group 1 of toolbar 1 of window 录屏与系统录音 of application process System Settings, menu button 1 of group 1 of group 1 of toolbar 1 of window 录屏与系统录音 of application process System Settings, button 1 of window 录屏与系统录音 of application process System Settings, button 2 of window 录屏与系统录音 of application process System Settings, group 1 of button 2 of window 录屏与系统录音 of application process System Settings, button 3 of window 录屏与系统录音 of application process System Settings, static text 录屏与系统录音 of window 录屏与系统录音 of application process System Settings\n",
+      "stderr": "",
+      "readOnly": true
+    },
+    {
+      "time": "2026-10-03T01:58:12.234Z",
+      "argv": [
+        "/usr/bin/osascript",
+        "-e",
+        "tell application \"System Events\" to tell process \"System Settings\"\nset holder to outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"录屏与系统录音\"\nreturn {properties of checkbox \"CodeBridge\" of UI element 1 of row 6 of holder, properties of checkbox \"CodeBridge.app\" of UI element 1 of row 8 of holder}\nend tell"
+      ],
+      "exitCode": 0,
+      "stdout": "minimum value:missing value, orientation:missing value, position:1361, 597, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:1, subrole:AXSwitch, selected:missing value, name:CodeBridge, description:转换, minimum value:missing value, orientation:missing value, position:1361, 677, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:0, subrole:AXSwitch, selected:missing value, name:CodeBridge.app, description:转换\n",
+      "stderr": "",
+      "readOnly": true
+    },
+    {
+      "time": "2026-10-03T02:01:56.270Z",
+      "argv": [
+        "/usr/bin/open",
+        "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": "",
+      "navigationOnly": true
+    },
+    {
+      "time": "2026-10-03T02:02:07.523Z",
+      "argv": [
+        "/usr/bin/open",
+        "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": "",
+      "navigationOnly": true
+    },
+    {
+      "time": "2026-10-03T02:06:45.941Z",
+      "argv": [
+        "/usr/bin/osascript",
+        "-e",
+        "tell application \"System Events\" to get name of window 1 of application process \"System Settings\""
+      ],
+      "exitCode": 0,
+      "stdout": "输入监控\n",
+      "stderr": "",
+      "readOnly": true
+    }
+  ],
+  "manualAction": {
+    "time": "2026-10-03T01:52:07.456Z",
+    "userResponse": "已仅授权当前 App 并退出",
+    "reportedFullQuit": true,
+    "classification": "USER_REPORTED_ACTION_NOT_API_PASS"
+  },
+  "requestReceipt": {
+    "accessibilityPromptTrusted": false,
+    "bundlePath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+    "listenRequestReturned": false,
+    "note": "Request returns are not positive API acceptance. Human authorization and App restart are required.",
+    "pid": 90964,
+    "schema": "codebridge.phase0b.permission_request.v1",
+    "screenRequestReturned": false,
+    "signingIdentifier": "com.codebridge.app",
+    "stage": "requests_returned_awaiting_human_authorization_and_restart",
+    "teamIdentifier": "HXAV5ALQQG"
+  },
+  "apiResults": {
+    "screen": {
+      "classification": "DENIED",
+      "pid": 7361,
+      "result": {
+        "capture_call": "skipped",
+        "pixels_persisted": false,
+        "preflight_granted": false,
+        "shareable_content_call": "denied",
+        "shareable_content_error": "com.apple.ScreenCaptureKit.SCStreamErrorDomain -3801: 用户拒绝了应用程序、窗口、显示器捕捉的TCC"
+      }
+    },
+    "accessibility": {
+      "classification": "ERROR",
+      "pid": 7361,
+      "result": {
+        "api_error_code": -25204,
+        "focused_application_call": "error",
+        "focused_application_error": "kAXErrorCannotComplete",
+        "trusted": false
+      }
+    },
+    "input": {
+      "classification": "UNPROVEN",
+      "pid": 8380,
+      "result": {
+        "delivery_proof": "preflight_false",
+        "event_counts_by_origin": {},
+        "hardware_events_observed": 0,
+        "injected_events": 0,
+        "input_available": false,
+        "monitor_state": "installedUnverified",
+        "note": "listen-only tap; input is reported available only when preflight allows it, the tap is installed, it was never disabled, at least one hardware event was observed, and Secure Input was not observed active. Synthetic events from other processes and events with unknown origin are classified as preempting (conservative: unknown never resolves to safe).",
+        "observation_seconds": 30,
+        "preemption_decisions": {},
+        "preflight": {
+          "preflight_listen_access": false,
+          "preflight_post_access": false,
+          "secure_input_enabled": false
+        },
+        "tap_created": true,
+        "tap_disabled_count": 0,
+        "unavailability_reason": "input_monitor_unverified_delivery"
+      }
+    }
+  },
+  "launches": {
+    "permissions": {
+      "adhoc_signed": false,
+      "bundle_identifier": "com.codebridge.app",
+      "bundle_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+      "cdhash": "b7525cda835942ab7cf29360396f4508fc57497b",
+      "executable_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge",
+      "launch_context": "launchd",
+      "parent_executable_path": "/sbin/launchd",
+      "parent_pid": 1,
+      "pid": 7361,
+      "signature_valid": true,
+      "signed": true,
+      "signing_identifier": "com.codebridge.app",
+      "team_identifier": "HXAV5ALQQG"
+    },
+    "input": {
+      "adhoc_signed": false,
+      "bundle_identifier": "com.codebridge.app",
+      "bundle_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+      "cdhash": "b7525cda835942ab7cf29360396f4508fc57497b",
+      "executable_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge",
+      "launch_context": "launchd",
+      "parent_executable_path": "/sbin/launchd",
+      "parent_pid": 1,
+      "pid": 8380,
+      "signature_valid": true,
+      "signed": true,
+      "signing_identifier": "com.codebridge.app",
+      "team_identifier": "HXAV5ALQQG"
+    }
+  },
+  "systemSettingsReadOnly": {
+    "screen": {
+      "time": "2026-10-03T01:58:12.234Z",
+      "argv": [
+        "/usr/bin/osascript",
+        "-e",
+        "tell application \"System Events\" to tell process \"System Settings\"\nset holder to outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"录屏与系统录音\"\nreturn {properties of checkbox \"CodeBridge\" of UI element 1 of row 6 of holder, properties of checkbox \"CodeBridge.app\" of UI element 1 of row 8 of holder}\nend tell"
+      ],
+      "exitCode": 0,
+      "stdout": "minimum value:missing value, orientation:missing value, position:1361, 597, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:1, subrole:AXSwitch, selected:missing value, name:CodeBridge, description:转换, minimum value:missing value, orientation:missing value, position:1361, 677, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:0, subrole:AXSwitch, selected:missing value, name:CodeBridge.app, description:转换\n",
+      "stderr": "",
+      "readOnly": true
+    },
+    "pages": [
+      {
+        "service": "Accessibility",
+        "title": "辅助功能",
+        "treeExit": 0,
+        "codebridgeReferences": [
+          "checkbox codebridge-probe of UI element 1 of row 10 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 设备控制和数据访问 of application process System Settings",
+          "checkbox CodeBridge.app of UI element 1 of row 11 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 设备控制和数据访问 of application process System Settings",
+          "checkbox codebridged of UI element 1 of row 12 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 设备控制和数据访问 of application process System Settings"
+        ],
+        "treeError": "",
+        "readOnly": true,
+        "detail": {
+          "argv": [
+            "/usr/bin/osascript",
+            "-e",
+            "tell application \"System Events\"\nreturn {properties of checkbox \"codebridge-probe\" of UI element 1 of row 10 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"设备控制和数据访问\" of application process \"System Settings\", properties of checkbox \"CodeBridge.app\" of UI element 1 of row 11 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"设备控制和数据访问\" of application process \"System Settings\", properties of checkbox \"codebridged\" of UI element 1 of row 12 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"设备控制和数据访问\" of application process \"System Settings\"}\nend tell"
+          ],
+          "exitCode": 0,
+          "stdout": "minimum value:missing value, orientation:missing value, position:1361, 769, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:0, subrole:AXSwitch, selected:missing value, name:codebridge-probe, description:转换, minimum value:missing value, orientation:missing value, position:1361, 809, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:0, subrole:AXSwitch, selected:missing value, name:CodeBridge.app, description:转换, minimum value:missing value, orientation:missing value, position:1361, 849, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:0, subrole:AXSwitch, selected:missing value, name:codebridged, description:转换\n",
+          "stderr": ""
+        },
+        "actualWindowTitle": "设备控制和数据访问"
+      },
+      {
+        "service": "ListenEvent",
+        "title": "输入监控",
+        "treeExit": 0,
+        "codebridgeReferences": [],
+        "treeError": "",
+        "readOnly": true,
+        "windowTitleRead": {
+          "time": "2026-10-03T02:06:45.941Z",
+          "argv": [
+            "/usr/bin/osascript",
+            "-e",
+            "tell application \"System Events\" to get name of window 1 of application process \"System Settings\""
+          ],
+          "exitCode": 0,
+          "stdout": "输入监控\n",
+          "stderr": "",
+          "readOnly": true
+        },
+        "actualWindowTitle": "输入监控"
+      }
+    ],
+    "limitation": "Labels/AX tree alone do not resolve a checkbox to an exact signing identity; no inspector authority is counted as App permission evidence."
+  },
+  "attribution": [
+    {
+      "messageId": "7361.1",
+      "service": "ScreenCapture",
+      "preflight": true,
+      "requesting": "com.codebridge.app",
+      "requestingPid": 7361,
+      "subject": "com.codebridge.app",
+      "authValue": 0,
+      "authReason": 4
+    },
+    {
+      "messageId": "60709.3",
+      "service": "ScreenCapture",
+      "preflight": false,
+      "requesting": "com.apple.replayd",
+      "requestingPid": 60709,
+      "accessing": "com.codebridge.app",
+      "accessingPid": 7361,
+      "subject": "com.codebridge.app",
+      "authValue": 0,
+      "authReason": 4
+    },
+    {
+      "messageId": "7361.2",
+      "service": "Accessibility",
+      "preflight": true,
+      "requesting": "com.codebridge.app",
+      "requestingPid": 7361,
+      "accessing": "com.codebridge.app",
+      "accessingPid": 7361,
+      "subject": "com.codebridge.app",
+      "authValue": 0,
+      "authReason": 4
+    },
+    {
+      "messageId": "8380.1",
+      "service": "ListenEvent",
+      "preflight": true,
+      "requesting": "com.codebridge.app",
+      "requestingPid": 8380,
+      "subject": "com.codebridge.app",
+      "authValue": 0,
+      "authReason": 4
+    }
+  ],
+  "observed": [
+    "Public request APIs ran in signed App PID 90964; all request return values false, not positive acceptance.",
+    "Human reported App-only authorization and full quit; subsequent new App processes retained the same genuine identity.",
+    "Current designated requirement matched in TCC with status 0; ScreenCapture and Accessibility remained Denied (System Set).",
+    "Screen Settings snapshot: CodeBridge=1, CodeBridge.app=0; Accessibility actual window 设备控制和数据访问: CodeBridge.app=0/probe=0/daemon=0. Input Monitoring window 输入监控 exposed no CodeBridge references in the recorded AX tree.",
+    "Live log dropped messages; bounded log show recovered actual request/result rows.",
+    "Strict deep signing and Swift release build/33 tests passed; actual App permission request and probe paths executed."
+  ],
+  "inference": [
+    "Display-name/selected-entry ambiguity remains a candidate explanation, not a proven cause of ineffective grants.",
+    "A matched current designated requirement means these current denial rows are not evidence of the earlier ad-hoc requirement mismatch.",
+    "anchor apple platform-only check status -67050 does not invalidate the separately verified Apple Development signature."
+  ],
+  "decisions": [
+    "APP_TCC_BASELINE_NOT_ESTABLISHED: stop conditional matrix and authorized-A persistence repeats.",
+    "Do not infer a leak from subject=com.codebridge.app. No ARCHITECTURE_AMENDMENT_REQUIRED finding asserted.",
+    "Do not add private TCC entitlement/disclaimer, automation entitlement workaround or weaken signing/acceptance.",
+    "No SMAppService mutation or ChatGPT/Tunnel/widget work in this iteration; Go unchanged/not rechecked."
+  ],
+  "implementation": {
+    "files": [
+      "desktop/macos/Sources/CodeBridgeApp/Phase0BAcceptance.swift",
+      "desktop/macos/Sources/CodeBridgeApp/AppDelegate.swift",
+      "desktop/macos/Sources/codebridge-probe/InputMonitorProbe.swift"
+    ],
+    "requestSwitch": "--phase0b-request-permissions",
+    "apis": [
+      "CGRequestScreenCaptureAccess",
+      "AXIsProcessTrustedWithOptions(prompt=true)",
+      "CGRequestListenEventAccess"
+    ],
+    "inputMaskAddition": "mouseMoved",
+    "contract": "Explicit signed App-only main-process request path; passive probes remain non-requesting, listen-only, no event content/input posting/persisted pixels."
+  },
+  "verification": {
+    "buildCommand": "swift build -c release --package-path desktop/macos && swift test --package-path desktop/macos && desktop/macos/Building/build-app.sh --sign-identity 'Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)' --team-id HXAV5ALQQG --daemon \"$PWD/bin/codebridged\" --embed-phase0-env && codesign --verify --deep --strict --verbose=4 desktop/macos/build/CodeBridge.app && codesign -d -r- desktop/macos/build/CodeBridge.app",
+    "buildExitCode": 0,
+    "finalWhitespaceCheck": {
+      "command": "git diff --check",
+      "beforeEOFTrim": {
+        "exitCode": 2,
+        "output": "docs/v2/evidence/phase0b-closeout.md:164: new blank line at EOF.\ndocs/v2/evidence/phase0b-closeout.zh-CN.md:164: new blank line at EOF.\ndocs/v2/evidence/phase0b-tcc.md:99: new blank line at EOF.\n"
+      },
+      "afterEOFTrim": {
+        "exitCode": 0,
+        "output": ""
+      },
+      "scope": "Observed after the three evidence-document appends and removal of their trailing blank lines; recorded here afterward. No permission/API experiment was rerun."
+    },
+    "swiftTests": {
+      "ipc": 20,
+      "computerSpike": 13,
+      "failures": 0
+    },
+    "smoke": "Actual LaunchServices App request PID90964, SCK/AX PID7361, 30-second listen-only tap PID8380; negative acceptance results preserved.",
+    "go": "UNCHANGED_NOT_RERUN"
+  },
+  "rawEvidence": {
+    "requestReceipt": "docs/v2/evidence/phase0b-app-requests-20261003T012940770Z.json",
+    "permissionsReport": "docs/v2/evidence/phase0b-app-positive-api-20261003T012940770Z.json",
+    "permissionsStdout": "docs/v2/evidence/phase0b-app-positive-api-20261003T012940770Z.json.stdout",
+    "permissionsStderr": "docs/v2/evidence/phase0b-app-positive-api-20261003T012940770Z.json.stderr",
+    "inputReport": "docs/v2/evidence/phase0b-app-positive-input-20261003T012940770Z.json",
+    "inputStdout": "docs/v2/evidence/phase0b-app-positive-input-20261003T012940770Z.json.stdout",
+    "inputStderr": "docs/v2/evidence/phase0b-app-positive-input-20261003T012940770Z.json.stderr",
+    "tccLiveStream": "docs/v2/evidence/phase0b-app-baseline-tcc-20261003T012940770Z.txt",
+    "tccLogShow": "docs/v2/evidence/phase0b-app-baseline-log-show-20261003T012940770Z.txt",
+    "build": "docs/v2/evidence/phase0b-app-baseline-build-20261003T012940770Z.txt"
+  },
+  "logShowCommand": "/usr/bin/log show --style compact --info --debug --start '2026-10-03 09:52:30' --end '2026-10-03 09:54:20' --predicate 'subsystem == \"com.apple.TCC\" AND (eventMessage CONTAINS \"7361.\" OR eventMessage CONTAINS \"8380.\" OR eventMessage CONTAINS \"60709.2\" OR eventMessage CONTAINS \"60709.3\" OR eventMessage CONTAINS \"com.codebridge.app\")'",
+  "minimumNextAction": "Human verify the exact current App path/entries for all three services, without changing other identities; full quit/relaunch and A-only real capture/AX/physical-delivery acceptance before considering C/D."
+}

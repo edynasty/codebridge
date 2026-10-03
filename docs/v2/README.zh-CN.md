@@ -21,7 +21,7 @@ Computer Use 是最高功能优先级，并且它与 files、shell 和 agents �
 - [Kimi K3 架构审查记录 — 2026-10-02](reviews/2026-10-02-kimi-k3-architecture-audit.zh-CN.md) —— 独立 P0/P1 Challenge 与整改记录。
 - [GLM 5.3 最终 Freeze Gate — 2026-10-02](reviews/2026-10-02-glm-5.3-freeze-gate.zh-CN.md) —— 最终 Gate：`READY_TO_FREEZE`，P0=0，P1=0。
 - [Phase 0 实施收尾](evidence/phase0-closeout.zh-CN.md) —— 实际检查、逐项结果、缺失前提与完整文件清单；代码可运行不等于 Evidence Gap 已关闭。
-- [Phase 0B 阻塞关闭 / 真实签名原生验收](evidence/phase0b-closeout.zh-CN.md) —— **PHASE0_BLOCKED**：真实签名与 ChatGPT/Tunnel 外部前提缺失；F2 未关闭，Phase 1 未就绪。
+- [Phase 0B 阻塞关闭 / 真实签名原生验收](evidence/phase0b-closeout.zh-CN.md) —— **PHASE_0_BLOCKED**：2026-10-03 已修复真实签名并通过 signed SMAppService 生命周期；F2 的 App 正向/干净归属证据及真实 ChatGPT/Tunnel 验收仍阻塞，Phase 1 未就绪。
 
 英文版：
 

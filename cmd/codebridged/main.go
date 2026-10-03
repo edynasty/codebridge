@@ -65,7 +65,7 @@ Usage:
   codebridged probe ingress [flags]       call the MCP ingress over its Unix socket (bearer-auth smoke)
   codebridged ctl health [flags]          ask a RUNNING daemon over Host IPC (role diagnostics)
   codebridged ctl smoke [flags]           ask a RUNNING daemon to run its native-host smoke
-  codebridged ctl probe [flags]           ask a RUNNING daemon to run a fixed probe subprocess
+  codebridged ctl probe [flags]           ask a RUNNING daemon to run a fixed harness or native probe
   codebridged ctl call -method M [flags]  ask a RUNNING daemon any Host IPC method (debugging)
   codebridged tunnel doctor [flags]       print the resolved tunnel-client configuration (no secrets)
   codebridged version

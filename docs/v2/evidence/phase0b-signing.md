@@ -1,8 +1,47 @@
 # Phase 0B — Signing / 签名
 
-Date: 2026-10-02. Result: **SIGNED_TCC_BLOCKED_EXTERNAL**.
+Date: 2026-10-03. Result: **IDENTITY VALID; SIGNING SMOKE PASS; SIGNED TREE VERIFIED**. F2 remains **NOT CLOSED**.
 
-## Observed / 实测
+## 2026-10-03 trust-chain repair / 本轮证书链修复
+
+**OBSERVED** — Initial matching identity was `B1DB75FAC36735E9BE6B1D0FA7A96BB60FD79649`, with zero valid identities. The target certificate already had a matching private key. The only WWDR candidate in the search list was the legacy certificate expiring 2023-02-07; no OU=G3 intermediate was present. Apple Root CA was present in `/System/Library/Keychains/SystemRootCertificates.keychain`. No Apple Development/WWDR/Apple Root trust override appeared in either user or administrator trust settings. Login was already the default user keychain and in the search list.
+
+| Target certificate field | OBSERVED |
+| --- | --- |
+| subject | UID=76VS5K9978; CN=Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6); OU=HXAV5ALQQG; O=星鹏 汤; C=US |
+| issuer | CN=Apple Worldwide Developer Relations Certification Authority; OU=G3; O=Apple Inc.; C=US |
+| notBefore | 2026-10-03 00:01:01 UTC |
+| notAfter | 2027-10-03 00:01:00 UTC |
+| SHA256 | F4:8D:DB:09:88:88:88:9F:59:F0:53:A9:26:2A:EB:E8:0C:99:77:7E:EE:69:2B:70:20:F6:8C:7C:7C:5F:69:2F |
+
+**OBSERVED** — System time at diagnosis was 2026-10-03 08:19:13 CST, within this validity interval. No time policy was changed. Downloaded [official Apple WWDR G3](https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer), linked by [Apple PKI](https://www.apple.com/certificateauthority/) and [Apple Developer's generation mapping](https://developer.apple.com/help/account/certificates/wwdr-intermediate-certificates). Verified the intermediate with the built-in trust store before importing **one certificate into login.keychain-db**. G3 SHA256: `DC:F2:18:78:C7:7F:41:98:E4:B4:61:4F:03:D6:96:D8:9C:66:C6:60:08:D4:24:4E:1B:99:16:1A:AC:91:60:1F`; validity ends 2030-02-20. G3 is the certificate's OU, not a suffix in its CN; the literal name query containing “Authority G3” alone is insufficient to identify installed generations.
+
+**OBSERVED** — Import returned `1 certificate imported`; target code-signing certificate verification succeeded; `security find-identity -v -p codesigning` then returned the exact target and **1 valid identities found**. No certificate/private key was deleted or regenerated; no Root CA, trust setting, Always Trust, search list or TCC database was changed. Initial curl calls returned 403; the official download succeeded with `curl -q --noproxy '*'`. No curl/network configuration was edited.
+
+**DECISION** — The requested display name's suffix `QC2AU8UDY6` is not the signed Team. Both certificate OU and the actual signed executable report **HXAV5ALQQG**. The user explicitly selected **使用实测 HXAV5ALQQG**. All subsequent builds/checks use that genuine Team; the original QC2AU8UDY6 Team expectation is not claimed satisfied.
+
+**OBSERVED** — Compiled the requested minimal C binary with clang, signed with the exact identity, strictly verified and executed it successfully. Authority was target Apple Development → WWDR → Apple Root CA; TeamIdentifier=HXAV5ALQQG; signature was not ad-hoc. Removed the smoke source/binary. **PASS under the user-approved actual-Team contract**.
+
+## 2026-10-03 actual signed tree / 真实签名树
+
+Stable bundle: `desktop/macos/build/CodeBridge.app`. Final source was rebuilt/signed after the Go/Swift checks. All three components passed metadata display, designated-requirement display, strict verification and explicit Apple-anchor/identifier/Team verification; App also passed deep verification. All carry hardened runtime and TeamIdentifier=HXAV5ALQQG.
+
+| Component | OBSERVED Identifier | OBSERVED Authority chain |
+| --- | --- | --- |
+| CodeBridge.app | com.codebridge.app | Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6) → WWDR → Apple Root CA |
+| bundled codebridged | com.codebridge.daemon | same genuine chain |
+| bundled codebridge-probe | com.codebridge.probe | same genuine chain |
+
+**OBSERVED Designated Requirements** — For each identifier above, exact output is `identifier "<identifier>" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */`. Full per-component output, CDHashes and signatures are preserved in [raw signed run](phase0b-signed-2026-10-03.json).
+
+**OBSERVED / fix** — The first genuine builder run failed: `anchor apple generic: No such file or directory; invalid requirement specification`. Both inline `--test-requirement` arguments lacked their required `=` prefix. Corrected only those arguments; the same genuine build then passed. No verification was suppressed.
+
+**BLOCKED** — Signing is no longer the blocker. [F2](phase0b-tcc.md) still lacks the App's real Computer ALLOWED condition and uncontaminated independent-subject evidence. No architecture cutover or private responsibility API was added.
+
+The remaining sections below preserve the **2026-10-02 historical preparation**, not the current signing result.
+
+
+## Historical 2026-10-02 observations / 历史实测
 
 - macOS 27.0 (26A428), arm64, GUI uid 501. Actual `security find-identity -v -p codesigning`: **0 valid identities found**. No certificate or private key was installed by this pass.
 - Real builder invocation exited 2 with the external-blocker classification before Swift compilation or bundle replacement; an owned existing-output marker remained unchanged. See [raw smoke](phase0b-smoke.json).

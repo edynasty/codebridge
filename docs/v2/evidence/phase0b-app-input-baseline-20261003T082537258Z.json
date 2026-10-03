@@ -1,0 +1,30 @@
+{
+  "classification": "OBSERVED",
+  "schema": "codebridge.phase0b.input_baseline.v1",
+  "time": "2026-10-03T08:30:28.365Z",
+  "pid": 34090,
+  "parentPid": 1,
+  "executablePath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge",
+  "identifier": "com.codebridge.app",
+  "team": "HXAV5ALQQG",
+  "cdhash": "205ee05ae9600bfe5b6510382bed407b0a9e0458",
+  "request": {
+    "pid": 33788,
+    "listenRequestReturned": true
+  },
+  "result": {
+    "tapCreated": true,
+    "hardwareEvents": 1488,
+    "injectedEvents": 0,
+    "tapDisabled": 0,
+    "preflightListen": true,
+    "preflightPost": true,
+    "secureInput": false,
+    "inputAvailable": true,
+    "deliveryProof": "hardware_event_observed",
+    "monitorState": "verifiedRunning",
+    "originClassification": "physicalHardware:1488"
+  },
+  "reportPath": "docs/v2/evidence/phase0b-app-input-positive-20261003T082537258Z.json",
+  "decision": "APP_INPUT_MONITORING_BASELINE_PASS"
+}

@@ -1,0 +1,138 @@
+{
+  "schema": "codebridge.phase0b.f2_matrix.v2",
+  "startedAt": "2026-10-03T08:32:56.604Z",
+  "appPath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+  "appCdhash": "205ee05ae9600bfe5b6510382bed407b0a9e0458",
+  "daemonPid": 38655,
+  "baselines": {
+    "screen": "PASS",
+    "ax": "PASS(TEST_GATE_REFINEMENT)",
+    "input": "PASS"
+  },
+  "status": "LEAK_DETECTED",
+  "commands": [
+    {
+      "argv": [
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged",
+        "ctl",
+        "probe",
+        "-probe",
+        "daemon-permissions"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 826
+    }
+  ],
+  "results": {
+    "C": {
+      "probe": "daemon-permissions",
+      "screen_capture": {
+        "captured_width": 1800,
+        "preflight_granted": true,
+        "captured_height": 1169,
+        "pixels_persisted": false,
+        "display_count": 1,
+        "capture_call": "ok",
+        "shareable_content_call": "ok"
+      },
+      "started_at": 1791016377.680289,
+      "execution": "daemon_in_process",
+      "parent_pid": 1,
+      "signing": "team=HXAV5ALQQG;identifier=com.codebridge.daemon",
+      "accessibility": {
+        "trusted": true,
+        "api_error_code": -25204,
+        "focused_application_call": "error"
+      },
+      "ended_at": 1791016381.449174,
+      "input_monitor": {
+        "injected_events": 0,
+        "tap_created": true,
+        "disabled_events": 0,
+        "observed_events": 0,
+        "call": "delivery_unproven",
+        "secure_input_enabled": false,
+        "preflight_listen_access": true
+      },
+      "pid": 38655
+    }
+  },
+  "observed": [
+    "C daemon-in-process probe on launchd-owned PID 38655: real SCK capture succeeded (1800x1169 frame, ok) with TCC subject=com.codebridge.app, Allowed (System Set).",
+    "TCC attribution shows requesting=com.codebridge.daemon but authorization SUBJECT=com.codebridge.app — the daemon exercises the App grant.",
+    "Input Monitoring preflight_listen_access=true for the daemon (partial leak); 0 events observed in the bounded window.",
+    "AX trusted=true for the daemon (grant inherited); focused_application API intermittent as with the App."
+  ],
+  "decisions": [
+    "ARCHITECTURE_AMENDMENT_REQUIRED: C obtained real ScreenCapture success and Input/AX preflight trust under App-only grants. All later stages (protected roots, lock/input, Phase 1) are HALTED pending user architecture decision.",
+    "No private API, no TCC.db modification, no reset, no daemon grant was created by tooling — the leak is inherent in the OS subject attribution for the bundled daemon.",
+    "Root cause evidence: bundled-executable attribution — the daemon lives inside CodeBridge.app, so TCC resolves its authorization subject to com.codebridge.app despite com.codebridge.daemon signing identifier and parent=1 launchd ownership."
+  ],
+  "runId": "20261003T083256604Z",
+  "evidencePath": "docs/v2/evidence/phase0b-f2-matrix-20261003T083256604Z.json",
+  "repo": "/Users/tangxingpeng/IdeaProjects/me/codebridge",
+  "logServiceName": "cb-f2-1791016376604",
+  "decision": "ARCHITECTURE_AMENDMENT_REQUIRED",
+  "leak": {
+    "classification": "OBSERVED",
+    "exactApiSuccess": {
+      "service": "kTCCServiceScreenCapture",
+      "api": [
+        "SCShareableContent.excludingDesktopWindows",
+        "SCScreenshotManager.captureImage"
+      ],
+      "result": "real capture ok, 1800x1169, pixels not persisted",
+      "preflightGranted": true
+    },
+    "daemonProcess": {
+      "pid": 38655,
+      "ppid": 1,
+      "launchdOwned": true,
+      "signingIdentifier": "com.codebridge.daemon",
+      "team": "HXAV5ALQQG",
+      "binaryPath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/codebridged",
+      "execution": "daemon_in_process (CGO native, not a child)"
+    },
+    "tccAttribution": [
+      {
+        "msgId": "38655.1",
+        "requesting": "com.codebridge.daemon pid38655",
+        "accessing": "com.codebridge.daemon pid38655",
+        "subject": "com.codebridge.app",
+        "authRight": "Allowed (System Set)",
+        "dbAction": "None"
+      },
+      {
+        "msgId": "16148.3",
+        "requesting": "com.apple.replayd pid16148",
+        "accessing": "com.codebridge.daemon pid38655",
+        "subject": "com.codebridge.app",
+        "authRight": "Allowed (System Set)",
+        "preflight": false
+      },
+      {
+        "msgId": "435.1747",
+        "requesting": "com.apple.WindowServer pid435",
+        "accessing": "com.codebridge.daemon pid38655",
+        "subject": "com.codebridge.app"
+      }
+    ],
+    "partialLeaks": {
+      "accessibility": {
+        "trusted": true,
+        "note": "TCC-trusted; focused_app API path intermittent (same as App)"
+      },
+      "inputMonitor": {
+        "preflightListenAccess": true,
+        "tapCreated": true,
+        "observedEvents": 0,
+        "note": "listen preflight LEAKED true for daemon; delivery unproven in this short window"
+      }
+    }
+  },
+  "minimumArchitectureChoices": [
+    "Keep the daemon bundled but accept App-subject TCC sharing and redesign the security boundary (e.g., IPC-level gating instead of OS TCC isolation).",
+    "Move the daemon out of the .app bundle to a standalone bundle path so TCC records an independent subject (requires install-layout change; SMAppService plist BundleProgram currently points inside the app).",
+    "Adopt the previously researched responsibility/disclaimer mechanism only if a supported public implementation exists (currently none established)."
+  ]
+}

@@ -71,7 +71,7 @@ type Config struct {
 	// WidgetSpike registers the opt-in Phase 0 widget/approval spike tools.
 	WidgetSpike bool
 
-	// Phase0Debug enables the fixed probe subprocess method.
+	// Phase0Debug enables fixed harness and same-process native diagnostics.
 	Phase0Debug bool
 	// Phase0ProbePath is an absolute path to the standalone probe binary.
 	Phase0ProbePath string
@@ -179,7 +179,7 @@ func (c *Config) RegisterFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.RuntimeDB, "runtime-db", c.RuntimeDB, "durable runtime database path (default <data-dir>/runtime.db)")
 	fs.BoolVar(&c.NoStore, "no-store", c.NoStore, "do not open the runtime store")
 	fs.BoolVar(&c.WidgetSpike, "widget-spike", c.WidgetSpike, "register the opt-in Phase 0 widget/approval spike tools")
-	fs.BoolVar(&c.Phase0Debug, "phase0-debug", c.Phase0Debug, "enable the fixed Phase 0 probe subprocess method")
+	fs.BoolVar(&c.Phase0Debug, "phase0-debug", c.Phase0Debug, "enable fixed Phase 0 harness and native diagnostics")
 	fs.StringVar(&c.Phase0ProbePath, "phase0-probe", c.Phase0ProbePath, "absolute path to the standalone probe binary")
 	fs.StringVar(&c.Phase0HarnessPath, "phase0-harness", c.Phase0HarnessPath, "absolute path to a harness probe binary")
 }

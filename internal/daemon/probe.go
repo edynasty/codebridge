@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// ProbeResult is the result of one fixed probe subprocess run.
+// ProbeResult reports one fixed harness or same-process native probe run.
 type ProbeResult struct {
 	Probe    string   `json:"probe"`
 	Argv     []string `json:"argv"`
@@ -34,10 +34,11 @@ var probeBinaryProbes = map[string]bool{
 
 // KnownProbes lists the accepted probe names.
 func KnownProbes() []string {
-	out := make([]string, 0, len(probeBinaryProbes))
+	out := make([]string, 0, len(probeBinaryProbes)+2)
 	for name := range probeBinaryProbes {
 		out = append(out, name)
 	}
+	out = append(out, "daemon-permissions", "daemon-files-folders")
 	return out
 }
 
@@ -55,15 +56,22 @@ func (d *Daemon) ProbeBinary(probe string) string {
 	return d.cfg.Phase0ProbePath
 }
 
-// RunPhase0Probe spawns the exact configured probe binary with a fixed argv
-// (<binary> <probe> --json). The caller cannot supply an executable or extra
-// argv, so this is a fixed probe, not a general exec surface.
+// RunPhase0Probe runs fixed native diagnostics in the daemon or spawns the
+// exact configured harness with fixed argv. Callers cannot supply executable
+// paths or extra argv; native calls never spawn a permission-test child.
 func (d *Daemon) RunPhase0Probe(ctx context.Context, probe string, timeoutMS int) (ProbeResult, error) {
-	if !probeBinaryProbes[probe] {
+	native := probe == "daemon-permissions" || probe == "daemon-files-folders"
+	if !probeBinaryProbes[probe] && !native {
 		return ProbeResult{}, fmt.Errorf("unknown probe %q", probe)
 	}
 	if !d.ProbeEnabled() {
 		return ProbeResult{}, fmt.Errorf("probe method is disabled (set CODEBRIDGE_PHASE0_DEBUG=1 and CODEBRIDGE_PHASE0_PROBE)")
+	}
+	if native {
+		if err := ctx.Err(); err != nil {
+			return ProbeResult{}, err
+		}
+		return runDaemonPermissionProbe(probe)
 	}
 	binary := d.ProbeBinary(probe)
 	if !filepath.IsAbs(binary) {

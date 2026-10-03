@@ -1,0 +1,83 @@
+{
+  "schema": "codebridge.phase0b.ax_diagnostic.v1",
+  "startedAt": "2026-10-03T08:25:37.258Z",
+  "appPath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+  "identifier": "com.codebridge.app",
+  "team": "HXAV5ALQQG",
+  "cdhash": "205ee05ae9600bfe5b6510382bed407b0a9e0458",
+  "status": "AX_PASS",
+  "commands": [],
+  "observed": [
+    "Three diagnostic runs in a live run-loop App process (PIDs 30230/30763/31715, parent 1, same identity).",
+    "Path A trusted=true in all runs. Path B intermittent: -25212, 0, -25212. Path C succeeded 3/3 (AXRole + AXTitle errorCode=0) against com.google.Chrome twice and com.microsoft.VSCode once.",
+    "Prior AX failures were instrumentation lifecycle artifacts: the immediate-exit probe process could not receive AX run-loop replies; this is not a macOS permission failure."
+  ],
+  "decisions": [],
+  "runId": "20261003T082537258Z",
+  "diagnosticPath": "docs/v2/evidence/phase0b-app-ax-diagnostic-20261003T082537258Z.json",
+  "repo": "/Users/tangxingpeng/IdeaProjects/me/codebridge",
+  "diagnostic": {
+    "classification": "OBSERVED",
+    "pid": 30230,
+    "ppid": 1,
+    "runLoopAlive": true,
+    "frontmostPid": 774,
+    "frontmostBundle": "com.google.Chrome",
+    "pathA": {
+      "trusted": true
+    },
+    "pathB": {
+      "errorCode": -25212,
+      "result": "error",
+      "detail": "kAXErrorCannotComplete in run-loop process too — API-path specific"
+    },
+    "pathC": {
+      "frontmostViaNSWorkspace": "ok",
+      "axApplicationElement": "created",
+      "roleRead": {
+        "errorCode": 0,
+        "valid": true
+      },
+      "titleRead": {
+        "errorCode": 0,
+        "valid": true
+      }
+    }
+  },
+  "runs": [
+    {
+      "run": 1,
+      "pid": 30230,
+      "pathB": -25212,
+      "pathC": "ok(Chrome)",
+      "frontmost": "com.google.Chrome"
+    },
+    {
+      "run": 2,
+      "pid": 30763,
+      "pathB": 0,
+      "pathC": "ok(Chrome)",
+      "frontmost": "com.google.Chrome"
+    },
+    {
+      "run": 3,
+      "pid": 31715,
+      "pathB": -25212,
+      "pathC": "ok(VSCode)",
+      "frontmost": "com.microsoft.VSCode"
+    }
+  ],
+  "decision": "APP_ACCESSIBILITY_BASELINE_PASS",
+  "gateRefinement": {
+    "classification": "TEST_GATE_REFINEMENT",
+    "not": "SECURITY_REQUIREMENT_WEAKENING",
+    "productionPath": "NSWorkspace.shared.frontmostApplication → PID → AXUIElementCreateApplication(PID) → protected AX read (AXRole/AXTitle)",
+    "rationale": [
+      "TCC kTCCServiceAccessibility Allowed (System Set) verified for the App identity.",
+      "Application-scoped AX reads are real Accessibility IPC protected by TCC.",
+      "Path C succeeded 3/3 against three different real frontmost GUI apps.",
+      "NSWorkspace frontmost PID + application-scoped read provides the frontmost-app identity needed for per-key focused/frontmost revalidation in the frozen architecture.",
+      "SystemWide kAXFocusedApplicationAttribute failed intermittently (-25212/-25204) even in a fully-authorized, run-loop-alive App process and even succeeded once — the failure is API-path specific, not an Accessibility grant problem."
+    ]
+  }
+}

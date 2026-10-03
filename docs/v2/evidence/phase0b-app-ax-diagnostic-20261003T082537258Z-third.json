@@ -1,0 +1,48 @@
+{
+  "bundleIdentifier" : "com.codebridge.app",
+  "cdhash" : "205ee05ae9600bfe5b6510382bed407b0a9e0458",
+  "endedAt" : "2026-10-03T08:27:07Z",
+  "executablePath" : "\/Users\/tangxingpeng\/IdeaProjects\/me\/codebridge\/desktop\/macos\/build\/CodeBridge.app\/Contents\/MacOS\/CodeBridge",
+  "isAdHoc" : false,
+  "notes" : [
+
+  ],
+  "observationSeconds" : 2,
+  "pathA" : {
+    "api" : "AXIsProcessTrusted",
+    "result" : "ok"
+  },
+  "pathB" : {
+    "api" : "AXUIElementCreateSystemWide + AXFocusedApplication",
+    "detail" : "kAXError raw -25212",
+    "elementValid" : false,
+    "errorCode" : -25212,
+    "result" : "error"
+  },
+  "pathC" : {
+    "createApplicationResult" : "created",
+    "frontmostBundleIdentifier" : "com.microsoft.VSCode",
+    "frontmostLocalizedName" : "Code",
+    "frontmostPid" : 5702,
+    "roleRead" : {
+      "api" : "AXUIElementCreateApplication(frontmost) + AXRole",
+      "detail" : "CFTypeID=7",
+      "elementValid" : true,
+      "errorCode" : 0,
+      "result" : "ok"
+    },
+    "titleRead" : {
+      "api" : "AXUIElementCreateApplication(frontmost) + AXTitle",
+      "detail" : "title length read (content not required for acceptance)",
+      "elementValid" : true,
+      "errorCode" : 0,
+      "result" : "ok"
+    }
+  },
+  "pid" : 31715,
+  "ppid" : 1,
+  "schema" : "codebridge.phase0b.ax_baseline_diagnostic.v1",
+  "startedAt" : "2026-10-03T08:27:07Z",
+  "teamIdentifier" : "HXAV5ALQQG",
+  "trusted" : true
+}

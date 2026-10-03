@@ -21,7 +21,7 @@ Computer Use is the highest feature priority, and it ships through the same Brid
 - [Kimi K3 Architecture Audit — 2026-10-02](reviews/2026-10-02-kimi-k3-architecture-audit.md) — independent P0/P1 challenge and remediation record.
 - [GLM 5.3 Final Freeze Gate — 2026-10-02](reviews/2026-10-02-glm-5.3-freeze-gate.md) — final gate: `READY_TO_FREEZE`, P0=0, P1=0.
 - [Phase 0 implementation closeout](evidence/phase0-closeout.md) — actual checks, per-task results, prerequisites and complete file manifest; code availability is not evidence-gap closure.
-- [Phase 0B blocker closure / signed native acceptance](evidence/phase0b-closeout.md) — **PHASE0_BLOCKED**: genuine signing and actual ChatGPT/Tunnel prerequisites absent; F2 not closed, Phase 1 not ready.
+- [Phase 0B blocker closure / signed native acceptance](evidence/phase0b-closeout.md) — **PHASE_0_BLOCKED**: genuine signing repaired and signed SMAppService lifecycle passed on 2026-10-03; F2 App-positive/clean-attribution evidence and actual ChatGPT/Tunnel acceptance remain blocked; Phase 1 not ready.
 
 Chinese versions:
 

@@ -1,0 +1,40 @@
+{
+  "schema": "codebridge.phase0b.fresh_entry_screen_acceptance.v1",
+  "startedAt": "2026-10-03T05:10:48.048Z",
+  "appPath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+  "displayName": "CodeBridge Phase0 Signed",
+  "identifier": "com.codebridge.app",
+  "team": "HXAV5ALQQG",
+  "cdhash": "3ea4930142e254fae781f6f2176d167794b05fa2",
+  "stage": "Screen",
+  "humanActions": [
+    {
+      "time": "<pre-run>",
+      "classification": "HUMAN ACTION",
+      "report": "User manually deleted ALL CodeBridge historical entries on the Screen Recording pane; no other software permissions changed; chose fresh-entry rebuild path."
+    }
+  ],
+  "commands": [],
+  "settings": [],
+  "resets": [],
+  "observed": [
+    "After reported GUI deletion + full quits, exact-path signed App PID 74528 screen-only request: receipt displayName=CodeBridge Phase0 Signed, com.codebridge.app, HXAV5ALQQG, screenRequestReturned=false.",
+    "TCC request 74528.3 (kTCCServiceScreenCapture): subject=com.codebridge.app, Auth Right: Denied (System Set), DB Action:None — a stored denial record still exists.",
+    "Fresh System Settings Screen pane: all four historical labels (CodeBridge, codebridge-probe, CodeBridge.app, codebridged) still present; CodeBridge Phase0 Signed absent; no new entry created (existing record matched)."
+  ],
+  "decisions": [],
+  "status": "STOPPED_NEW_EVIDENCE",
+  "runId": "20261003T051048048Z",
+  "evidencePath": "docs/v2/evidence/phase0b-app-fresh-screen-20261003T051048048Z.json",
+  "requestPath": "docs/v2/evidence/phase0b-app-fresh-screen-request-20261003T051048048Z.json",
+  "screenPath": "docs/v2/evidence/phase0b-app-screen-positive-20261003T051048048Z.json",
+  "logServiceName": "cb-fresh-screen-1791004248048",
+  "repo": "/Users/tangxingpeng/IdeaProjects/me/codebridge",
+  "decision": "FRESH_ENTRY_NOT_CREATED",
+  "inference": [
+    "The reported GUI deletion did not remove the underlying TCC records (rows persist for all four identities; DB Action:None on the new request). Either the deletion did not persist or it targeted different rows; labels alone cannot map rows to identities.",
+    "Because an existing denial record for com.codebridge.app matched, TCC did not create a fresh uniquely-named entry.",
+    "This satisfies the protocol condition for the single-service bundle-scoped reset question: unique display-name build confirmed running AND TCC still bound to historical state."
+  ],
+  "minimumNextAction": "Two options: (1) re-attempt GUI deletion with per-row before/after read-only verification; (2) explicit one-time approval for tccutil reset ScreenCapture com.codebridge.app (single service, single bundle, recorded). No reset executed without approval."
+}

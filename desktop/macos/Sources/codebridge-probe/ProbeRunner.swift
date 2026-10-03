@@ -5,6 +5,8 @@ import Foundation
 
 enum ProbeSelection: Hashable {
     case permissions
+    case screen
+    case accessibility
     case signing
     case nativeHost
     case lockState
@@ -21,6 +23,8 @@ enum ProbeRunner {
         let selection = selection(for: options.probe)
 
         var permissions: PermissionsSection?
+        var screen: ScreenCaptureProbeReport?
+        var accessibility: AccessibilityProbeReport?
         var signing: SigningExtraSection?
         var hostTools: HostToolsSection?
         var lockState: LockStateSection?
@@ -84,6 +88,13 @@ enum ProbeRunner {
             untested.append(
                 "TCC attribution comparison across launch contexts (app child / codebridged child / standalone)"
             )
+        }
+
+        if selection.contains(.screen) {
+            screen = ScreenCaptureProbe.run()
+        }
+        if selection.contains(.accessibility) {
+            accessibility = AccessibilityProbe.run()
         }
 
         if selection.contains(.signing) {
@@ -204,6 +215,8 @@ enum ProbeRunner {
             host: host,
             launch: launch,
             permissions: permissions,
+            screenCapture: screen,
+            accessibility: accessibility,
             signing: signing,
             hostTools: hostTools,
             lockState: lockState,
@@ -217,6 +230,10 @@ enum ProbeRunner {
         switch probe {
         case "permissions":
             return [.permissions]
+        case "screen":
+            return [.screen]
+        case "accessibility":
+            return [.accessibility]
         case "signing":
             return [.signing]
         case "native-host":

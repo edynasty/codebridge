@@ -1,0 +1,136 @@
+{
+  "schema": "codebridge.phase0b.ax_baseline_acceptance.v1",
+  "startedAt": "2026-10-03T07:51:14.032Z",
+  "appPath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+  "identifier": "com.codebridge.app",
+  "team": "HXAV5ALQQG",
+  "cdhash": "3ea4930142e254fae781f6f2176d167794b05fa2",
+  "stage": "Accessibility",
+  "protectedScreenBaseline": "PASS (run 20261003T061715868Z) — must not be disturbed",
+  "preFlight": {
+    "appQuit": true,
+    "settingsQuit": true,
+    "strictDeepVerify": "PASS",
+    "nonAdhoc": true,
+    "rebuild": false
+  },
+  "commands": [
+    {
+      "time": "2026-10-03T07:51:15.903Z",
+      "argv": [
+        "/usr/bin/open",
+        "-n",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+        "--args",
+        "--phase0b-request-permission",
+        "accessibility",
+        "--output",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-ax-request-20261003T075114032Z.json"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "resets": [],
+  "observed": [
+    "First AX request PID99272 hit stored denial (Denied (System Set), authValue=0, authReason=4, DB Action:None) — stale decision present.",
+    "System then opened the real Accessibility authorization UI; user granted it; TCC 99358.16 TCCAccessSetInternal granted=true wrote Allowed (System Set) for com.codebridge.app.",
+    "After full quits, fresh probe PID8198 (parent 1, same identity/CDHash): trusted=true but real AXFocusedApplication returned -25204 kAXErrorCannotComplete.",
+    "TCC handling row for PID8198 kTCCServiceAccessibility: Allowed (System Set) — authorization is effective at TCC level.",
+    "Frontmost process during the probe: Google Chrome PID774 (a normal GUI app, so a missing focused app is not the obvious cause)."
+  ],
+  "decisions": [],
+  "status": "FAIL",
+  "runId": "20261003T075114032Z",
+  "evidencePath": "docs/v2/evidence/phase0b-app-ax-request-20261003T075114032Z.json",
+  "positivePath": "docs/v2/evidence/phase0b-app-ax-positive-20261003T075114032Z.json",
+  "logServiceName": "cb-ax-1791013874032",
+  "repo": "/Users/tangxingpeng/IdeaProjects/me/codebridge",
+  "firstRequest": {
+    "time": "2026-10-03T15:51:16.858+08:00",
+    "classification": "OBSERVED",
+    "pid": 99272,
+    "ppid": 1,
+    "executablePath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge",
+    "identifier": "com.codebridge.app",
+    "team": "HXAV5ALQQG",
+    "requestReturn": false,
+    "tcc": [
+      {
+        "msgId": "99272.3",
+        "service": "kTCCServiceAccessibility",
+        "accessing": "com.codebridge.app pid99272",
+        "requesting": "com.codebridge.app pid99272",
+        "responsible": "com.codebridge.app pid99272",
+        "subject": "com.codebridge.app",
+        "authRight": "Denied (System Set)",
+        "authValue": 0,
+        "authReason": 4,
+        "dbAction": "None",
+        "promptType": 1
+      },
+      {
+        "msgId": "99272.4",
+        "same": true
+      }
+    ]
+  },
+  "staleDecisionObserved": {
+    "classification": "OBSERVED",
+    "note": "First AX request hit the stored denial (Denied (System Set), authValue=0, authReason=4, DB Action:None). Immediately after, the system opened the real Accessibility authorization UI (TCCAccessCheckIfDisclosurePromptIsNeeded; SecurityPrivacyExtension PID 99358) — a genuine new authorization opportunity appeared, so the ACCESSIBILITY_STALE_DECISION STOP branch was superseded by branch A."
+  },
+  "humanAuthorization": {
+    "time": "2026-10-03T15:51:37+08:00",
+    "classification": "HUMAN ACTION (observed via TCC log)",
+    "report": "User enabled Accessibility for the current App in the system UI",
+    "tccWrite": {
+      "msgId": "99358.16",
+      "function": "TCCAccessSetInternal",
+      "service": "kTCCServiceAccessibility",
+      "client": "com.codebridge.app",
+      "granted": true,
+      "bundleUrl": "file:///Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/",
+      "result": "Update Access Record: kTCCServiceAccessibility for com.codebridge.app to Allowed (System Set) (v1) at 2026-10-03 07:51:37 +0000",
+      "codeRequirement": "identifier \"com.codebridge.app\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */"
+    }
+  },
+  "probe": {
+    "time": "2026-10-03T08:03:48.767Z",
+    "classification": "OBSERVED",
+    "probe": "accessibility",
+    "pid": 8198,
+    "parentPid": 1,
+    "executablePath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge",
+    "identifier": "com.codebridge.app",
+    "team": "HXAV5ALQQG",
+    "cdhash": "3ea4930142e254fae781f6f2176d167794b05fa2",
+    "result": {
+      "trusted": true,
+      "focusedApplicationCall": "error",
+      "axError": -25204,
+      "axErrorDetail": "kAXErrorCannotComplete"
+    },
+    "frontmostProcess": {
+      "name": "Google Chrome",
+      "pid": 774
+    },
+    "tccDecision": {
+      "service": "kTCCServiceAccessibility",
+      "pid": 8198,
+      "authRight": "Allowed (System Set)",
+      "authValue": null,
+      "dbAction": "None",
+      "note": "Handling row shows Allowed (System Set) for pid 8198; earlier write 99358.16 granted=true"
+    },
+    "reportPath": "docs/v2/evidence/phase0b-app-ax-positive-20261003T075114032Z.json"
+  },
+  "decision": "APP_ACCESSIBILITY_BASELINE_FAIL",
+  "failureClass": "AX_REAL_API_FAILED_AFTER_TRUST",
+  "notes": [
+    "trusted=true alone was never counted as PASS; the real AX API failed.",
+    "No AX writes, no UI clicks, no keyboard input, no Input Monitoring, no B/C/D/E, no F2 judgment, no reset executed this round.",
+    "Screen baseline untouched: no Screen request or capture this round; prior PASS evidence preserved."
+  ],
+  "minimumNextAction": "Investigate why a TCC-Allowed signed App still gets kAXErrorCannotComplete from AXFocusedApplication: check for a second Accessibility decision surface (per-app AX trusted list vs TCC), WindowServer/AX runtime logs for pid 8198, and whether the App must be relaunched via LaunchServices after the grant. Collect AX subsystem logs before any retry; do not toggle or reset."
+}

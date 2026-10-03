@@ -144,11 +144,21 @@ daemon issues to the app.
 ## 7. `host.phase0_probe` (debug only)
 
 Gated by `CODEBRIDGE_PHASE0_DEBUG=1`. Absent the gate the method is `-32601 unsupported`.
-Requires `role:"app"` with a verified signature. Params:
-`{probe:"permissions"|"signing"|"native-host"|"lock-state"|"input-monitor", args?:["--json"], timeout_ms?}`.
-The daemon resolves the probe binary from `CODEBRIDGE_PHASE0_PROBE` (absolute path, executable) and
-spawns that exact binary with a fixed per-probe argv (no shell, no caller-supplied executable, no
-caller-supplied argv). Result: `{exit_code, stdout, stderr, timed_out}`.
+Allows `role:"app"` (live signature verified) or `role:"diagnostics"` (same UID), as in §6.
+Params: `{probe:string, args?:[string], timeout_ms?}`; caller argv is ignored.
+Harness names include `permissions`, `signing`, `native-host`, `harness`, `lock-state`, and
+`input-monitor`. The daemon resolves `CODEBRIDGE_PHASE0_PROBE` (absolute executable) and
+spawns that exact binary with fixed argv, without a shell or caller-selected executable.
+The additional `daemon-permissions` and `daemon-files-folders` names call read-only macOS
+native APIs **in the daemon PID**, without spawning a child. They require macOS/CGO and
+the same explicit debug/probe configuration; other platforms return an explicit error.
+Native ScreenCaptureKit calls have a 10s deadline each, folder reads 5s per root, and the
+listen-only event tap a 3s observation window. These native deadlines are fixed, not
+controlled by the harness `timeout_ms` override. An API timeout/error or an allocated tap
+without observed delivery is not proof of a TCC denial. No pixels, filenames or input
+content are reported. Result: `{exit_code, stdout, stderr, timed_out}`; `stdout` is the
+native JSON report for these names, including actual PID, parent PID and signing identity.
+`timed_out` describes a harness process deadline; inspect native API statuses separately.
 There is no general argv exec method and no computer injection method in Host IPC v1.
 
 ## 8. Error codes

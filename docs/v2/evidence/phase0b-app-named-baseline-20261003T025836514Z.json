@@ -1,0 +1,148 @@
+{
+  "schema": "codebridge.phase0b.unique_label_staged_acceptance.v1",
+  "startedAt": "2026-10-03T02:58:36.514Z",
+  "appPath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+  "displayName": "CodeBridge Phase0 Signed",
+  "identifier": "com.codebridge.app",
+  "team": "HXAV5ALQQG",
+  "stage": "Screen",
+  "status": "FAIL",
+  "before": {
+    "cdhash": "b7525cda835942ab7cf29360396f4508fc57497b",
+    "strictDeep": "PASS",
+    "nonAdhoc": true,
+    "designatedRequirement": "identifier \"com.codebridge.app\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */"
+  },
+  "commands": [
+    {
+      "time": "2026-10-03T03:00:15.747Z",
+      "argv": [
+        "/usr/bin/open",
+        "-n",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+        "--args",
+        "--phase0b-request-permission",
+        "screen",
+        "--output",
+        "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-screen-request-20261003T025836514Z.json"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "humanActions": [],
+  "settings": [
+    {
+      "time": "2026-10-03T04:46:21.892Z",
+      "classification": "OBSERVED",
+      "window": "录屏与系统录音",
+      "codebridgeReferences": [
+        "checkbox CodeBridge of UI element 1 of row 6 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings",
+        "checkbox codebridge-probe of UI element 1 of row 7 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings",
+        "checkbox CodeBridge.app of UI element 1 of row 8 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings",
+        "checkbox codebridged of UI element 1 of row 9 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings"
+      ],
+      "argv": [
+        "/usr/bin/osascript",
+        "-e",
+        "tell application \"System Events\" to tell application process \"System Settings\" to get {name of window 1, entire contents of window 1}"
+      ],
+      "exitCode": 0,
+      "readOnly": true,
+      "properties": {
+        "argv": [
+          "/usr/bin/osascript",
+          "-e",
+          "tell application \"System Events\"\nreturn {properties of checkbox \"CodeBridge\" of UI element 1 of row 6 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"录屏与系统录音\" of application process \"System Settings\", properties of checkbox \"codebridge-probe\" of UI element 1 of row 7 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"录屏与系统录音\" of application process \"System Settings\", properties of checkbox \"CodeBridge.app\" of UI element 1 of row 8 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"录屏与系统录音\" of application process \"System Settings\", properties of checkbox \"codebridged\" of UI element 1 of row 9 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"录屏与系统录音\" of application process \"System Settings\"}\nend tell"
+        ],
+        "exitCode": 0,
+        "stdout": "minimum value:missing value, orientation:missing value, position:1361, 597, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:1, subrole:AXSwitch, selected:missing value, name:CodeBridge, description:转换, minimum value:missing value, orientation:missing value, position:1361, 637, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:1, subrole:AXSwitch, selected:missing value, name:codebridge-probe, description:转换, minimum value:missing value, orientation:missing value, position:1361, 677, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:0, subrole:AXSwitch, selected:missing value, name:CodeBridge.app, description:转换, minimum value:missing value, orientation:missing value, position:1361, 717, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:1, subrole:AXSwitch, selected:missing value, name:codebridged, description:转换\n",
+        "stderr": ""
+      }
+    }
+  ],
+  "resets": [],
+  "decisions": [
+    "No B/C/D/E; no F2 closure or Phase1.",
+    "Screen must pass real capture before any AX request/query; AX must pass before Input request/tap.",
+    "No automatic reset or grant; no private API; stable genuine identifiers/Team/DR."
+  ],
+  "observed": [
+    "git diff --check clean after evidence append; acceptance JSON integrity verified."
+  ],
+  "inference": [],
+  "runId": "20261003T025836514Z",
+  "evidencePath": "docs/v2/evidence/phase0b-app-named-baseline-20261003T025836514Z.json",
+  "requestPath": "docs/v2/evidence/phase0b-app-screen-request-20261003T025836514Z.json",
+  "screenPath": "docs/v2/evidence/phase0b-app-screen-positive-20261003T025836514Z.json",
+  "logServiceName": "cb-named-screen-1790996316514",
+  "buildLogPath": "docs/v2/evidence/phase0b-app-named-build-20261003T025836514Z.txt",
+  "after": {
+    "cdhash": "3ea4930142e254fae781f6f2176d167794b05fa2",
+    "identifier": "com.codebridge.app",
+    "team": "HXAV5ALQQG",
+    "nonAdhoc": true,
+    "strictDeep": "PASS",
+    "designatedRequirement": "identifier \"com.codebridge.app\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */",
+    "sameDesignatedRequirement": true,
+    "displayName": "CodeBridge Phase0 Signed",
+    "bundleName": "CodeBridge Phase0 Signed",
+    "executable": "CodeBridge",
+    "daemonIdentifier": "com.codebridge.daemon",
+    "probeIdentifier": "com.codebridge.probe"
+  },
+  "checks": {
+    "fmtCheck": "PASS",
+    "goTest": "PASS:17 packages ok,8 no tests",
+    "goVet": "PASS",
+    "goBuild": "PASS",
+    "swiftReleaseBuild": "PASS",
+    "swiftTests": "PASS:33 tests,0 failures",
+    "signedBuilder": "PASS",
+    "rawBuildLog": "docs/v2/evidence/phase0b-app-named-build-20261003T025836514Z.txt"
+  },
+  "staleLabel": {
+    "classification": "LAUNCHSERVICES_TCC_LABEL_STALE",
+    "time": "2026-10-03T04:57:32.906Z",
+    "observed": {
+      "settingsPaneLabels": [
+        "CodeBridge",
+        "codebridge-probe",
+        "CodeBridge.app",
+        "codebridged"
+      ],
+      "uniqueLabelAbsent": "CodeBridge Phase0 Signed did not appear in the Screen Recording pane",
+      "requestIdentity": {
+        "pid": 33577,
+        "bundlePath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+        "signingIdentifier": "com.codebridge.app",
+        "teamIdentifier": "HXAV5ALQQG",
+        "displayName": "CodeBridge Phase0 Signed"
+      },
+      "tccAttribution": {
+        "requestMsgId": "33577.1",
+        "requesting": "com.codebridge.app",
+        "subject": "com.codebridge.app",
+        "screenCaptureRequest": "33577.3",
+        "screenCapturePreflight": false,
+        "authValue": 0,
+        "authReason": 4
+      },
+      "launchServices": {
+        "localizedShortNames": "CodeBridge Phase0 Signed",
+        "identifier": "com.codebridge.app",
+        "teamID": "HXAV5ALQQG",
+        "trustedCodeSignatures": "3ea4930142e254fae781f6f2176d167794b05fa2",
+        "cdhashMatchesCurrentBuild": true
+      }
+    },
+    "inference": [
+      "LaunchServices registration already reflects the unique display name and current CDHash; the TCC pane label comes from the stored TCC entry, not from current registration.",
+      "Refreshing lsregister metadata would not change the TCC pane label; the stale label lives in the TCC record."
+    ],
+    "decision": "No TCC.db modification, no global reset, no label guessing. Preserve LAUNCHSERVICES_TCC_LABEL_STALE and stop for human decision."
+  },
+  "decision": "LAUNCHSERVICES_TCC_LABEL_STALE",
+  "minimumNextAction": "Human choice: (1) delete the four historical CodeBridge entries on the Screen Recording pane (− only, other software untouched), fully quit System Settings and the App, relaunch the exact bundle with --phase0b-request-permission screen to create a fresh uniquely-named entry; or (2) stop. No TCC.db write, no reset, no label guessing."
+}

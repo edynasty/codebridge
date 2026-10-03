@@ -23,6 +23,9 @@ public struct Phase0ProbeReport: Codable, Sendable {
     public var host: ProbeHostInfo
     public var launch: ProbeLaunchIdentity
     public var permissions: PermissionsSection?
+    /// Single-capability acceptance never invokes the other Computer permission APIs.
+    public var screen_capture: ScreenCaptureProbeReport?
+    public var accessibility: AccessibilityProbeReport?
     public var signing: SigningExtraSection?
     public var host_tools: HostToolsSection?
     public var lock_state: LockStateSection?
@@ -41,6 +44,8 @@ public struct Phase0ProbeReport: Codable, Sendable {
         host: ProbeHostInfo,
         launch: ProbeLaunchIdentity,
         permissions: PermissionsSection? = nil,
+        screenCapture: ScreenCaptureProbeReport? = nil,
+        accessibility: AccessibilityProbeReport? = nil,
         signing: SigningExtraSection? = nil,
         hostTools: HostToolsSection? = nil,
         lockState: LockStateSection? = nil,
@@ -57,6 +62,8 @@ public struct Phase0ProbeReport: Codable, Sendable {
         self.host = host
         self.launch = launch
         self.permissions = permissions
+        self.screen_capture = screenCapture
+        self.accessibility = accessibility
         self.signing = signing
         self.host_tools = hostTools
         self.lock_state = lockState

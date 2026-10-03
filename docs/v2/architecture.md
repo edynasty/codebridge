@@ -194,7 +194,7 @@ Accepted cost: a versioned Host IPC and a second toolchain. Mitigation: the Host
 
 ### 5.3 Lifecycle ownership
 
-- **launchd owns `codebridged`**: CodeBridge.app registers it as a per-user LaunchAgent (`SMAppService`, `KeepAlive`). It is not a system LaunchDaemon: it must run as the user to reach the user's development environment, Keychain and harness homes.
+- **launchd owns `codebridged`, installed OUTSIDE CodeBridge.app** (2026-10-03 amendment, Phase 0C spike-verified): the daemon is a separately installed, separately signed per-user LaunchAgent at a path physically outside the app bundle. Rationale (OBSERVED, not theoretical): in the bundled topology, TCC resolved the daemon's Computer-permission authorization subject to `com.codebridge.app`, letting the daemon capture the screen under the App's grants ([Phase 0C evidence](evidence/phase0c-independent-daemon-tcc.md)). With the daemon at an external path, launchd-owned, TCC assigns it its own path-based subject and denies all Computer services by default ([spike](evidence/phase0c-independent-daemon-tcc.md)). The prior `SMAppService.agent` lifecycle acceptance remains recorded as **HISTORICAL_PASS_FOR_BUNDLED_TOPOLOGY**; the external topology requires a new lifecycle acceptance. Same product/version and release transaction as the App; no "same physical bundle" requirement. `SMAppService` may still be used for the App's own login-item registration.
 - **`codebridged` supervises `tunnel-client`**, because the tunnel must outlive the UI.
 - **CodeBridge.app is a login item.** Quitting it removes Computer and approval-UI capabilities (fail closed) and leaves runs untouched.
 - **Development mode**: `codebridged` may run in a foreground terminal with the same store and IPC.
@@ -224,7 +224,7 @@ CodeBridge.app keeps UI preferences only.
 
 ### 5.6 Version skew
 
-- Daemon and app ship in one bundle with one version.
+- Daemon and app share one product version and one release transaction, but the daemon is a separately signed component installed outside the app bundle and owned by launchd, to preserve the Computer TCC responsibility boundary (2026-10-03 amendment, see §5.3).
 - Host IPC handshake carries protocol `major.minor` and capability flags. A major mismatch disables Computer and UI services (fail closed). Minor versions N and N-1 interoperate to cover update windows.
 - The store carries `schema_version`; migrations are forward-only, preceded by a backup; downgrade is unsupported.
 - MCP tools change additively inside V2; a breaking change gets a new tool name.

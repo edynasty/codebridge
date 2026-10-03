@@ -1,0 +1,157 @@
+{
+  "schema": "codebridge.phase0c.independent_daemon_tcc_spike.v1",
+  "startedAt": "2026-10-03T08:43:13.615Z",
+  "externalDaemon": {
+    "path": "/Users/tangxingpeng/Library/Application Support/CodeBridge/Phase0C/bin/codebridged",
+    "realpath": "/Users/tangxingpeng/Library/Application Support/CodeBridge/Phase0C/bin/codebridged",
+    "identifier": "com.codebridge.daemon",
+    "team": "HXAV5ALQQG",
+    "cdhash": "eb401909883fd5f502a5600be6e5f7a4a9355603",
+    "designatedRequirement": "identifier \"com.codebridge.daemon\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */",
+    "strictVerify": "PASS",
+    "launchdOwnership": {
+      "label": "com.codebridge.phase0c.daemon",
+      "pid": 47186,
+      "ppid": 1,
+      "state": "running",
+      "bootstrapVia": "launchctl bootstrap gui/501"
+    }
+  },
+  "bundledDaemonUnregistered": true,
+  "appBaselines": {
+    "screen": "PASS",
+    "ax": "PASS",
+    "input": "PASS",
+    "note": "Not reset, not re-granted this round."
+  },
+  "status": "SPIKE_COMPLETE",
+  "commands": [],
+  "observed": [],
+  "decisions": [],
+  "runId": "20261003T084313615Z",
+  "evidencePath": "docs/v2/evidence/phase0c-independent-daemon-20261003T084313615Z.json",
+  "repo": "/Users/tangxingpeng/IdeaProjects/me/codebridge",
+  "logServiceName": "cb-p0c-1791016993615",
+  "externalDaemonResult": {
+    "probe": "daemon-permissions",
+    "screen_capture": {
+      "preflight_granted": false,
+      "pixels_persisted": false,
+      "shareable_content_error": {
+        "code": -3801,
+        "detail": "用户拒绝了应用程序、窗口、显示器捕捉的TCC",
+        "domain": "com.apple.ScreenCaptureKit.SCStreamErrorDomain"
+      },
+      "capture_call": "skipped",
+      "shareable_content_call": "denied"
+    },
+    "started_at": 1791016994.2714891,
+    "execution": "daemon_in_process",
+    "parent_pid": 1,
+    "signing": "team=HXAV5ALQQG;identifier=com.codebridge.daemon",
+    "accessibility": {
+      "trusted": false,
+      "api_error_code": -25204,
+      "focused_application_call": "error"
+    },
+    "ended_at": 1791016997.427443,
+    "input_monitor": {
+      "injected_events": 0,
+      "tap_created": true,
+      "disabled_events": 0,
+      "observed_events": 0,
+      "call": "delivery_unproven",
+      "secure_input_enabled": false,
+      "preflight_listen_access": false
+    },
+    "pid": 47186
+  },
+  "C": {
+    "classification": "OBSERVED",
+    "pid": 47186,
+    "execution": "daemon_in_process",
+    "signing": "team=HXAV5ALQQG;identifier=com.codebridge.daemon",
+    "atTimeOfProbe": {
+      "screen": {
+        "shareableContent": "denied -3801",
+        "capture": "skipped",
+        "preflight": false
+      },
+      "ax": {
+        "trusted": false,
+        "apiError": -25204
+      },
+      "input": {
+        "preflightListen": false,
+        "tapCreated": true,
+        "observedEvents": 0
+      }
+    },
+    "tccAttribution": {
+      "subject": "/Users/tangxingpeng/Library/Application Support/CodeBridge/Phase0C/bin/codebridged (own path, NOT com.codebridge.app)",
+      "requesting": "com.codebridge.daemon pid47186",
+      "handlingRows": "All services: Auth Right Unknown (None), promptType:1, UpdateVerifierData at 16:43:14",
+      "recordsWritten": [
+        "kTCCServiceScreenCapture → Denied (System Set) at 16:43:14.480",
+        "kTCCServiceAccessibility → Denied (System Set) at 16:43:14.543"
+      ]
+    }
+  },
+  "D": {
+    "classification": "OBSERVED",
+    "probePid": 48501,
+    "parentPid": 47186,
+    "launchContext": "codebridged_child",
+    "atTimeOfProbe": {
+      "screen": {
+        "preflightGranted": true,
+        "shareableContent": "ok",
+        "capture": "ok",
+        "dimensions": "1800x1169"
+      },
+      "ax": {
+        "trusted": false,
+        "apiError": -25204
+      },
+      "input": {
+        "preflightListen": false,
+        "preflightPost": false
+      }
+    },
+    "tccAttribution": {
+      "responsible": "com.codebridge.daemon pid47186 (external path)",
+      "requesting": "com.codebridge.probe pid48501",
+      "subject": "/Users/tangxingpeng/Library/Application Support/CodeBridge/Phase0C/bin/codebridged",
+      "screenCaptureHandling": "Allowed (System Set), authValue=2 (48501.1)",
+      "axHandling": "denied",
+      "inputHandling": "denied"
+    }
+  },
+  "unexpectedGrant": {
+    "classification": "OBSERVED — requires human clarification",
+    "finding": "At 16:43:27.171 (between C probe at 16:43:14 and D harness at 16:43:50), TCC wrote: Update Access Record: kTCCServiceScreenCapture for the external daemon path to Allowed (System Set). This is a separate grant to the external daemon subject (its own path), NOT an inheritance of com.codebridge.app. Most plausibly a system prompt triggered by the C probe SCK call was answered with Allow (HUMAN ACTION). The spike protocol required keeping any daemon entry OFF.",
+    "consequence": "D harness Screen showed Allowed (System Set) with a real 1800x1169 capture — via the daemon's own new grant, not the App grant. AX and Input remained denied for both C and D."
+  },
+  "inheritanceVerdict": "NO_APP_GRANT_INHERITANCE: the external daemon resolves to its own path-based TCC subject, never com.codebridge.app. Before any grant, C was denied on all three services. AX and Input stayed denied throughout C and D.",
+  "spikeStatus": "INDEPENDENT_DAEMON_TCC_BOUNDARY: PASS; F2_TOPOLOGY_SPIKE: PASS_WITH_D_SCREEN_CONTAMINATION.",
+  "grantSource": {
+    "classification": "OBSERVED",
+    "finding": "The 16:43:27.171 grant to the external daemon path was written by SecurityPrivacyExtension PID 48048 via TCCAccessSetInternal (msgID=48048.9, REPLY success). System Settings had been open since 16:43:17. This is a Settings-UI-driven write — i.e., a HUMAN ACTION in the Screen Recording pane answered a system prompt for the external codebridged entry with Allow (either automatically presented from the C probe SCK call, or toggled manually). It is NOT an inheritance of com.codebridge.app and NOT a tool/script write.",
+    "paneState": "Screen pane now shows five CodeBridge-related entries: CodeBridge=1, codebridge-probe=1, CodeBridge.app=1, codebridged(row9)=1, codebridged(row10)=1 — the two codebridged rows are the bundled path entry and the new external-path entry, both ON."
+  },
+  "summary": {
+    "inheritance": "NO_APP_GRANT_INHERITANCE — external daemon resolves to its own path-based TCC subject; before any grant, C was denied on all three services (real SCK -3801, AX trusted=false, Input preflight=false); AX and Input stayed denied throughout C and D.",
+    "anomaly": "A Screen Recording grant was written to the EXTERNAL daemon path itself at 16:43:27 (between C and D), making D's Screen probe succeed with Allowed (System Set) — via the daemon's own grant, not the App's. Per the spike protocol, the external daemon entry should have stayed OFF."
+  },
+  "humanConfirmation": {
+    "classification": "HUMAN ACTION (user-confirmed)",
+    "time": "2026-10-03T16:45+08:00",
+    "report": "弹出后我点了允许 — the user confirmed they clicked Allow on the system prompt for the external codebridged entry, explaining the 16:43:27 grant. This was an explicit human grant to the external daemon subject, not an inheritance and not a tool write."
+  },
+  "finalJudgment": {
+    "independentDaemonTccBoundary": "PASS — before any grant, the external launchd-owned daemon was DENIED on all three Computer services (real SCK -3801, AX trusted=false, Input preflight=false), with its own path-based TCC subject, never com.codebridge.app. No App-grant inheritance.",
+    "f2TopologySpike": "PASS_WITH_D_SCREEN_CONTAMINATION — D no longer inherits App grants (subject = external daemon), but D inherits the external daemon's own grant: the D-Screen Allowed row was taken after the user explicitly granted Screen Recording to the external entry (16:43:27, TCCAccessSetInternal), so it is contaminated for isolation purposes. AX and Input stayed denied for C and D throughout; pre-grant Screen-DENY was directly observed at C. A clean D Screen=DENIED row under App-only grants is required from the production F2 matrix. An external daemon Computer grant is itself a dangerous configuration — codified as DAEMON_COMPUTER_TCC_MUST_BE_NONE.",
+    "architectureAmendment": "RECOMMENDED — proceed with ARCHITECTURE_AMENDMENT_V2_F2 (external daemon topology, option b).",
+    "productionNote": "The spike also exposed a UX consequence: an external daemon requesting SCK triggers a real system prompt; production must ensure the daemon never requests Computer permissions, or users can grant them directly — IPC policy must fail closed on daemon-side Computer capability regardless."
+  }
+}

@@ -54,6 +54,8 @@ public enum ProbeCLI {
     probes:
       permissions     ScreenCaptureKit preflight + real call, Accessibility API, Input Monitoring
                       preflight, protected-root read probes, signing/process identity
+      screen          ScreenCaptureKit only: real shareable-content query and still capture
+      accessibility   Accessibility only: trust check and real focused-application query
       signing         code-signing identity of this process and its parent, launch context
       native-host     availability + version of shell/git/docker/ssh/kubectl in this process tree
       harness         alias for permissions + signing (used for harness-child attribution runs)

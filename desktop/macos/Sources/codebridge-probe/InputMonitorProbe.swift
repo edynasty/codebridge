@@ -160,7 +160,7 @@ enum InputMonitorProbe {
         let types: [CGEventType] = [
             .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp,
             .otherMouseDown, .otherMouseUp,
-            .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
+            .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
             .scrollWheel, .keyDown, .keyUp, .flagsChanged,
         ]
         var mask: CGEventMask = 0

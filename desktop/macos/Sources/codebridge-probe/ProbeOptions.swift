@@ -15,6 +15,7 @@ struct ProbeOptions {
     static let defaultRoots = ["Desktop", "Documents", "Downloads", "/tmp"]
     static let knownProbes: [String] = [
         "permissions", "signing", "native-host", "harness",
+        "screen", "accessibility",
         "lock-state", "input-monitor", "files-folders", "all", "list",
     ]
     static let defaultObservationSeconds: Double = 5

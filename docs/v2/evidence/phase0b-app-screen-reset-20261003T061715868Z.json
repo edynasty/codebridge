@@ -1,0 +1,96 @@
+{
+  "schema": "codebridge.phase0b.screen_reset_acceptance.v1",
+  "startedAt": "2026-10-03T06:17:15.868Z",
+  "appPath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+  "identifier": "com.codebridge.app",
+  "team": "HXAV5ALQQG",
+  "cdhash": "3ea4930142e254fae781f6f2176d167794b05fa2",
+  "stage": "Screen",
+  "status": "SCREEN_PASS",
+  "preReset": {
+    "appQuit": true,
+    "settingsQuit": true,
+    "strictDeepVerify": "PASS",
+    "note": "App PID74528 and System Settings PID74730 were still running; both were quit and re-verified absent before reset."
+  },
+  "approval": {
+    "classification": "HUMAN ACTION",
+    "scope": "tccutil reset ScreenCapture com.codebridge.app — exactly one execution; no All, no Accessibility, no ListenEvent, no daemon/probe, no TCC.db edit, no other app changes."
+  },
+  "commands": [],
+  "resets": [
+    {
+      "time": "2026-10-03T06:17:15.998Z",
+      "argv": [
+        "/usr/bin/tccutil",
+        "reset",
+        "ScreenCapture",
+        "com.codebridge.app"
+      ],
+      "exitCode": 0,
+      "stdout": "Successfully reset ScreenCapture approval status for com.codebridge.app\n",
+      "stderr": "",
+      "approvedScope": true
+    }
+  ],
+  "settings": [],
+  "observed": [
+    "Exactly one approved scoped reset executed: tccutil reset ScreenCapture com.codebridge.app, exit 0.",
+    "Post-reset screen-only request PID30496: Auth Right changed from Denied (System Set) to Unknown (None) promptType:1 — the stored denial was cleared and a real authorization opportunity appeared.",
+    "Human authorized (弹窗/设置页). After full quits, fresh App PID36351 (parent 1) ran the real screen probe.",
+    "Real SCK capture PASS: SCShareableContent ok, capture ok, real frame 1800x1169, SHA-256 77b9a798663edd4a085e144b967ee0911bf7007c42081ede32f34a94012bdbf0, pixels_persisted=false.",
+    "TCC 36351.1 kTCCServiceScreenCapture: Auth Right Allowed (System Set), authValue=2, subject com.codebridge.app. Microphone requests 36351.3/.4 were SCK-internal (SCShareableContent with audio); authValue=1 Unknown; not part of Screen PASS scope."
+  ],
+  "decisions": [],
+  "runId": "20261003T061715868Z",
+  "evidencePath": "docs/v2/evidence/phase0b-app-screen-reset-20261003T061715868Z.json",
+  "requestPath": "docs/v2/evidence/phase0b-app-screen-reset-request-20261003T061715868Z.json",
+  "logServiceName": "cb-screen-reset-1791008235869",
+  "repo": "/Users/tangxingpeng/IdeaProjects/me/codebridge",
+  "humanAuthorization": {
+    "time": "2026-10-03T06:27:02.503Z",
+    "classification": "HUMAN ACTION",
+    "report": "已在弹窗/设置页授权，可以继续验收",
+    "recordedScope": "Human enabled Screen Recording authorization for the current App only; no other software reported changed."
+  },
+  "capturePath": "docs/v2/evidence/phase0b-app-screen-positive-20261003T061715868Z.json",
+  "capture": {
+    "time": "2026-10-03T06:29:45.914Z",
+    "classification": "OBSERVED",
+    "probe": "screen",
+    "command": "/usr/bin/open -n -W ... '/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app' --args --phase0b-probe screen --output 'docs/v2/evidence/phase0b-app-screen-positive-20261003T061715868Z.json'",
+    "pid": 36351,
+    "parentPid": 1,
+    "executablePath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge",
+    "identifier": "com.codebridge.app",
+    "team": "HXAV5ALQQG",
+    "cdhash": "3ea4930142e254fae781f6f2176d167794b05fa2",
+    "result": {
+      "shareableContent": "ok",
+      "captureCall": "ok",
+      "capturedWidth": 1800,
+      "capturedHeight": 1169,
+      "capturedSha256": "77b9a798663edd4a085e144b967ee0911bf7007c42081ede32f34a94012bdbf0",
+      "displayCount": 1,
+      "pixelsPersisted": false,
+      "preflightGranted": true
+    },
+    "tccDecision": {
+      "messageId": "36351.1",
+      "service": "kTCCServiceScreenCapture",
+      "subject": "com.codebridge.app",
+      "responsible": "com.codebridge.app pid 36351",
+      "authRight": "Allowed (System Set)",
+      "authValue": 2,
+      "authReason": 4,
+      "dbAction": "None"
+    },
+    "reportPath": "docs/v2/evidence/phase0b-app-screen-positive-20261003T061715868Z.json"
+  },
+  "decision": "APP_SCREEN_BASELINE_PASS",
+  "notes": [
+    "PASS based on real capture only, not on UI ON / request return / preflight.",
+    "Round stops here: no Accessibility, no Input Monitoring, no B/C/D/E, no F2 judgment.",
+    "F2 NOT CLOSED; Phase 0 BLOCKED; Phase 1 NOT READY. AX stage is the next separate round."
+  ]
+}

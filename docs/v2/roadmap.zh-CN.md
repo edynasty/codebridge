@@ -1,6 +1,6 @@
 # CodeBridge V2 开发路线
 
-状态：**实现路线 —— PHASE_0_BLOCKED；Phase 1 NOT READY**（[收尾](evidence/phase0-closeout.zh-CN.md)）；冻结架构决策保持不变。
+状态：**实现路线 —— PHASE_0_BLOCKED；Phase 1 NOT READY**。**F2：ARCHITECTURE_AMENDMENT_REQUIRED**（2026-10-03，见下方最新状态）；冻结架构决策等待用户选择，保持不变。
 
 架构是 Bridge-first；开发路线是 Computer-first。**Computer Use 是 V2 的第一个重大功能。**
 
@@ -29,8 +29,8 @@
 技术验证（spike）：
 
 - [ ] 入口（ingress）：`tunnel-client` → Streamable HTTP MCP over Unix-domain socket → `codebridged` → 在一个真实的 ChatGPT developer-mode 会话中应答的 `ping` 工具。
-- [ ] 生命周期：带 `KeepAlive` 的 `SMAppService` LaunchAgent；退出 App 后 daemon 仍在运行；daemon 崩溃后自动重启。
-- [ ] TCC 归属：确认 daemon 及其 harness 子进程**不会**被归属到 CodeBridge.app 的屏幕录制 / 辅助功能授权。
+- [x] 生命周期：带 `KeepAlive` 的 `SMAppService` LaunchAgent；退出 App 后 daemon 仍在运行；daemon 崩溃后自动重启 —— **真实签名验收 PASS**（[生命周期](evidence/phase0b-launchagent.md)）。2026-10-03 顺带复核：App register 启动了 launchd 持有的 daemon PID 38655。
+- [x] TCC 归属 —— **已有结论，为否定**：bundle 内 daemon **会**被归属到 CodeBridge.app 的授权。真实 daemon 进程内 C probe（launchd 持有 PID 38655，`com.codebridge.daemon`）在仅 App 授权前提下取得**真实 SCK 截图成功**（`Allowed (System Set)`，subject `com.codebridge.app`），AX trusted 与 Input listen preflight 同样泄漏 → **ARCHITECTURE_AMENDMENT_REQUIRED**；persistence/受保护目录/lock 阶段全部暂停（[F2 泄漏](evidence/phase0b-f2-matrix-20261003T083256604Z.json)、[TCC](evidence/phase0b-tcc.md)）。
 - [ ] Daemon 受保护 Root TCC：使用 `~/Documents`（以及等价受保护目录）中的 Project 实测按用户 LaunchAgent 能否在重建/更新后保持稳定的 Files-and-Folders 授权，并明确 v1 二选一结果：支持且给出 `host_permission_required` 指引，或明确不支持。
 - [x] 原生宿主：真实 launchd daemon 执行 shell、git、Docker Desktop **Server**、SSH 和 kubectl（[父进程冒烟证据](evidence/phase0-parent-smoke.json)）；cwd `/`，记录真实 PATH/HOME，未经过 Manager 或容器执行。
 - [ ] 锁定状态行为：实测 screen lock、screen saver、wake、fast user switching 下的 ScreenCaptureKit / CGEvent 行为；确认排队输入不会在解锁后重放，并把结果写回 §5.5 故障矩阵。
@@ -39,14 +39,16 @@
 
 定义：
 
-- [ ] App 身份：稳定的 bundle/signing identifier 与真实 Team ID；开发优先 Apple Development，也接受 Developer ID Application（TCC 授权必须在重新构建后依然有效）。
+- [x] App 身份：稳定的 bundle/signing identifier 与真实 Team ID；开发优先 Apple Development，也接受 Developer ID Application。签名已按用户确认的 Team `HXAV5ALQQG` 验证通过；TCC 授权在重新构建后保持有效仍未证实（[签名验收](evidence/phase0b-signing.md)）。**2026-10-03 已建立 A 正向 Computer 基线**：真实 SCK 截图（1800×1169）、经 NSWorkspace frontmost 的 application-scoped AX 真实读取（TEST_GATE_REFINEMENT）、1488 个真实硬件输入事件 —— [基线证据](evidence/phase0b-tcc.md)。同身份重建后的授权保持已有部分佐证（授权在 AX 诊断重建后仍有效），但正式 persistence 矩阵被 F2 泄漏暂停。
 - [x] Host IPC v1 schema：`host`、`computer`、`approval`、`notify`；真实 Go/Swift UDS 握手及版本/安全负路径通过（[IPC](evidence/phase0-ipc.md)）；Phase 0 只实现 hello/health 最小面。
 - [x] Store schema v1：projects、sessions、runs、provider_sessions、computer_sessions、events（`stream`、`seq`、`pos`）、artifacts、policy rules、grants、approvals、`schema_version`（[事务与重启冒烟证据](evidence/phase0-store.md)）。
 - [x] Phase 1 工具的能力描述符（[Schema 冒烟证据](evidence/phase0-capabilities.md)）；仅完成定义，Phase 0 不提供 Computer 工具。
 
 Phase 0 结果：上游审计、原生宿主、IPC、Store 和能力定义通过。手动 LaunchAgent 重启及本地 MCP/widget 冒烟**不能**替代签名 SMAppService 或真实 ChatGPT 验收。F2 是架构阻塞：真实 daemon harness 已在 daemon 归属的 TCC 授权下截图；原始 App 授权因果关系未知（[TCC](evidence/phase0-tcc.md) §7）。签名受保护目录授权保持、真实 lock/saver/sleep/FUS 切换及可靠物理输入抢占仍未验证；输入保持 unavailable。Widget 媒体仅因 **Phase 2 门槛**而 DEFERRED，不阻塞 Phase 1。见[完整逐项结果与前置条件](evidence/phase0-closeout.zh-CN.md)。
 
-Phase 0B：**PHASE0_BLOCKED**，F2 **NOT CLOSED**，Phase 1 **NOT READY**。当前主机有效签名 identity 为零（**SIGNED_TCC_BLOCKED_EXTERNAL**）；真实 ChatGPT/Tunnel 验收为 **BLOCKED_EXTERNAL_CHATGPT_CREDENTIALS**。本轮没有签名实验失败。Responsibility disclaimer 备用方案没有已建立的公开 API，未实现。[Phase 0B 证据与后续验收步骤](evidence/phase0b-closeout.zh-CN.md) 保留历史 daemon 截图发现，但不把它当作真实签名下 App 授权继承的证明。
+Phase 0B（2026-10-03）：**PHASE_0_BLOCKED**，F2 **NOT CLOSED**，Phase 1 **NOT READY**。导入 Apple 官方 WWDR G3 中间证书后，原 Apple Development identity 已 valid；签名 App/daemon/probe 和真实 SMAppService 生命周期验收按用户确认的 Team `HXAV5ALQQG` 通过。真实 A/B/C/D/E 矩阵已执行，但 App ScreenCaptureKit 被拒绝，AX 返回 `kAXErrorCannotComplete`，listen-only 输入事件交付未证实。C/D 请求的 TCC subject 为 `com.codebridge.app`；不同签名 identifier 不代表独立授权主体。未观察到签名 daemon/harness 的 Computer API 成功，故尚未成立签名授权泄漏或 **ARCHITECTURE_AMENDMENT_REQUIRED**。有效的 App-only 授权及其持久性仍阻塞；真实 ChatGPT/Tunnel 验收仍为 **BLOCKED_EXTERNAL_CHATGPT_CREDENTIALS**。未重新设计架构，也未实现 responsibility disclaimer。[当前证据与后续验收步骤](evidence/phase0b-closeout.zh-CN.md) 保留历史 daemon 截图发现，但不把它当作真实签名下 App 授权继承的证明。
+
+**最新状态（2026-10-03，连续执行收尾）：** APP_TCC_BASELINE **PASS** —— Screen（真实 1800×1169 截图，`Allowed`，authValue=2）、Accessibility（**TEST_GATE_REFINEMENT**：NSWorkspace frontmost → application-scoped AXRole/AXTitle 读取 3/3；SystemWide AXFocusedApplication 在完全可信时仍间歇 −25204/−25212，属 instrumentation 生命周期与 API 路径特异问题，非授权失败）、Input Monitoring（listen-only tap，1488 个物理硬件事件，0 注入，preflight true）。F2 矩阵：**观察到 C daemon 泄漏** → **ARCHITECTURE_AMENDMENT_REQUIRED**；bundle 内 daemon（位于 CodeBridge.app 内，签名 identifier `com.codebridge.daemon`，launchd 持有，parent 1）获得 ScreenCapture `Allowed (System Set)`，授权 **subject 为 com.codebridge.app**，并完成真实截图。AX trusted 与 Input listen preflight 同样泄漏。persistence 矩阵、受保护目录、lock/input 切换与 Phase 1 **全部暂停，等待用户架构决策**（接受 bundle subject 共享并重设安全边界 / 独立 daemon bundle / 已受支持的公开 responsibility disclaimer）。外部门槛：tunnel 未配置（二进制缺失，token 文件存在但无已认证 ChatGPT surface）→ BLOCKED_EXTERNAL_CHATGPT_CREDENTIALS。未 commit、未 push；证据只追加不覆盖。
 
 完成标准：
 

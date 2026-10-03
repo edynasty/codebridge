@@ -15,7 +15,13 @@ enum AccessibilityProbe {
         var detail: String?
         switch status {
         case .success:
-            call = "ok"
+            // Success must include an actual focused application, not an empty API result.
+            if let value, CFGetTypeID(value) == AXUIElementGetTypeID() {
+                call = "ok"
+            } else {
+                call = "error"
+                detail = "AXFocusedApplication returned no valid AXUIElement"
+            }
         case .apiDisabled:
             call = "denied"
             detail = "kAXErrorAPIDisabled: accessibility is not granted to this process"

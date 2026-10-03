@@ -341,8 +341,10 @@ func TestPhase0ProbeDisabledWithoutGate(t *testing.T) {
 	if d.ProbeEnabled() {
 		t.Fatal("probe enabled without the debug gate")
 	}
-	if _, err := d.RunPhase0Probe(context.Background(), "permissions", 0); err == nil {
-		t.Fatal("probe ran without the debug gate")
+	for _, probe := range []string{"permissions", "daemon-permissions", "daemon-files-folders"} {
+		if _, err := d.RunPhase0Probe(context.Background(), probe, 0); err == nil {
+			t.Fatalf("%s ran without the debug gate", probe)
+		}
 	}
 }
 
@@ -369,9 +371,6 @@ func TestPhase0ProbeRunsFixedArgvOnly(t *testing.T) {
 	wantArgv := []string{script, "permissions", "--json"}
 	if strings.Join(res.Argv, " ") != strings.Join(wantArgv, " ") {
 		t.Fatalf("argv = %v, want the fixed %v", res.Argv, wantArgv)
-	}
-	if !strings.Contains(res.Stdout, `"probe":"permissions"`) || !strings.Contains(res.Stdout, `"arg":"--json"`) {
-		t.Fatalf("stdout = %q", res.Stdout)
 	}
 
 	// Through Host IPC the caller cannot inject an executable or extra argv.

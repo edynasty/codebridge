@@ -1,0 +1,12 @@
+{
+  "bundlePath" : "\/Users\/tangxingpeng\/IdeaProjects\/me\/codebridge\/desktop\/macos\/build\/CodeBridge.app",
+  "displayName" : "CodeBridge Phase0 Signed",
+  "listenRequestReturned" : true,
+  "note" : "Request returns are not positive API acceptance. Human authorization and App restart are required.",
+  "permission" : "input",
+  "pid" : 33788,
+  "schema" : "codebridge.phase0b.permission_request.v1",
+  "signingIdentifier" : "com.codebridge.app",
+  "stage" : "request_returned_awaiting_human_authorization_and_restart",
+  "teamIdentifier" : "HXAV5ALQQG"
+}

@@ -194,7 +194,7 @@ tunnel-client (OpenAI binary, supervised by daemon)    |
 
 ### 5.3 生命周期归属
 
-- **launchd 拥有 `codebridged`**：CodeBridge.app 把它注册为按用户的 LaunchAgent（`SMAppService`、`KeepAlive`）。它不是系统 LaunchDaemon：它必须以用户身份运行，才能触达用户的开发环境、Keychain 与 harness home 目录。
+- **launchd 拥有 `codebridged`，且安装在 CodeBridge.app 之外**（2026-10-03 修订，Phase 0C spike 已实证）：daemon 是独立安装、独立签名的按用户 LaunchAgent，路径物理上位于 App bundle 外。修订依据（实测，非理论风险）：bundle 内拓扑中，TCC 把 daemon 的 Computer 权限授权 subject 解析为 `com.codebridge.app`，daemon 因此能以 App 的授权真实截屏（[Phase 0C 证据](evidence/phase0c-independent-daemon-tcc.zh-CN.md)）；daemon 位于外部路径且由 launchd 持有时，TCC 为其分配自身路径的独立 subject，默认拒绝全部 Computer 服务（[spike](evidence/phase0c-independent-daemon-tcc.zh-CN.md)）。原 `SMAppService.agent` 生命周期验收保留为 **HISTORICAL_PASS_FOR_BUNDLED_TOPOLOGY**；外部拓扑需要重新验收生命周期。与 App 保持同一产品版本、同一发布事务；不再要求“同一物理 bundle”。App 自身的登录项注册仍可使用 `SMAppService`。
 - **`codebridged` 监管 `tunnel-client`**，因为 tunnel 必须比 UI 活得更久。
 - **CodeBridge.app 是一个登录项。** 退出它会移除 Computer 与审批 UI 能力（Fail Closed），但 Run 不受影响。
 - **开发模式**：`codebridged` 可以在前台终端中运行，使用同一个存储与 IPC。
@@ -224,7 +224,7 @@ CodeBridge.app 只保存 UI 偏好设置。
 
 ### 5.6 版本偏差
 
-- Daemon 与应用以同一个 bundle、同一个版本发布。
+- Daemon 与 App 使用同一产品版本和同一发布事务；daemon 作为独立签名组件安装在 App bundle 之外、由 launchd 独立拥有，以维持 Computer TCC responsibility boundary（2026-10-03 修订，见 §5.3）。
 - Host IPC 握手携带协议 `major.minor` 与能力标志。主版本不匹配会禁用 Computer 与 UI 服务（Fail Closed）。次版本 N 与 N-1 可互操作，以覆盖更新窗口期。
 - 存储携带 `schema_version`；迁移只向前，且迁移前先做备份；不支持降级。
 - 在 V2 内部，MCP 工具只做增量变更；破坏性变更会得到一个新的工具名。

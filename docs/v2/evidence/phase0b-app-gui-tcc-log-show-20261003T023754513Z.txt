@@ -1,0 +1,221 @@
+Timestamp               Ty Process[PID:TID]
+2026-10-03 10:42:42.783 I  tccd[436:41cff] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.syspolicyd, pid=525, auid=0, euid=0, binary_path=/usr/libexec/syspolicyd},
+2026-10-03 10:42:42.784 I  tccd[436:41cff] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.syspolicyd, pid=525, auid=0, euid=0, binary_path=/usr/libexec/syspolicyd},
+2026-10-03 10:42:42.784 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=525.246, attribution={accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.syspolicyd, pid=525, auid=0, euid=0, binary_path=/usr/libexec/syspolicyd}, },
+2026-10-03 10:42:42.795 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=525.246, subject=com.codebridge.app,
+2026-10-03 10:42:42.796 Df tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785174300 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:42:42.800 I  tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785174300) from com.codebridge.app : anchor apple; status: -67050
+2026-10-03 10:42:42.800 I  tccd[436:41cff] [com.apple.TCC:access] For com.codebridge.app: matches platform requirements: No
+2026-10-03 10:42:42.800 I  tccd[436:41cff] [com.apple.TCC:access] Handling access request to kTCCServiceDeveloperTool, from Sub:{com.codebridge.app}Resp:{TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, ReqResult(Auth Right: Unknown (None), promptType: 1,DB Action:None, UpdateVerifierData)
+2026-10-03 10:42:42.956 I  CodeBridge[11361:41d07] [com.apple.TCC:access] SEND: 0/7 synchronous to com.apple.tccd.system: request: msgID=11361.1, function=TCCAccessRequest, service=kTCCServiceScreenCapture,
+2026-10-03 10:42:42.956 Df tccd[436:41cff] [com.apple.TCC:access] REQUEST: tccd_uid=0, sender_pid=11361, sender_uid=501, sender_auid=501, function=TCCAccessRequest, msgID=11361.1
+2026-10-03 10:42:42.956 I  tccd[436:41cff] [com.apple.TCC:access] REQUEST_MSG: msgID=11361.1, msg={
+	require_purpose=<xpc_null>
+	service="kTCCServiceScreenCapture"
+	function="TCCAccessRequest"
+	preflight=true
+	target_token={NULL}
+	TCCD_MSG_ID="11361.1"
+	background_session=false
+}
+2026-10-03 10:42:42.956 I  tccd[436:41cff] [com.apple.TCC:access] AttributionChain: requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:42:42.956 I  tccd[436:41cff] [com.apple.TCC:access] AttributionChain: requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:42:42.956 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_CTX: msgID=11361.1, function=<private>, service=kTCCServiceScreenCapture, preflight=yes, query=1, client_dict=(null), daemon_dict=<private>
+2026-10-03 10:42:42.956 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=11361.1, attribution={requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, },
+2026-10-03 10:42:42.957 I  tccd[436:41cff] [com.apple.TCC:access] IDENTITY_ATTRIBUTION: /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge[11361]: from cache: = com.codebridge.app, type 0 (360/1202)
+2026-10-03 10:42:42.957 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=11361.1, subject=com.codebridge.app,
+2026-10-03 10:42:42.958 Df tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785174300 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:42:42.961 I  tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785174300) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0
+2026-10-03 10:42:42.962 I  tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785174300) from com.codebridge.app : anchor apple; status: -67050
+2026-10-03 10:42:42.962 I  tccd[436:41cff] [com.apple.TCC:access] For com.codebridge.app: matches platform requirements: No
+2026-10-03 10:42:42.962 I  tccd[436:41cff] [com.apple.TCC:access] Handling access request to kTCCServiceScreenCapture, from Sub:{com.codebridge.app}Resp:{TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, ReqResult(Auth Right: Denied (System Set), promptType: 1,DB Action:None)
+2026-10-03 10:42:42.962 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_RESULT: msgID=11361.1, authValue=0, authReason=4, authVersion=1, desired_auth=0, error=(null),
+2026-10-03 10:42:42.962 Df tccd[436:41cff] [com.apple.TCC:access] REPLY: (0) function=TCCAccessRequest, msgID=11361.1
+2026-10-03 10:42:42.973 I  tccd[436:41cff] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.replayd, pid=11093, auid=501, euid=501, binary_path=/usr/libexec/replayd},
+2026-10-03 10:42:42.974 I  tccd[436:41cff] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.replayd, pid=11093, auid=501, euid=501, binary_path=/usr/libexec/replayd},
+2026-10-03 10:42:42.974 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=11093.2, attribution={accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.replayd, pid=11093, auid=501, euid=501, binary_path=/usr/libexec/replayd}, },
+2026-10-03 10:42:42.974 Df tccd[436:41cff] [com.apple.TCC:access] requestor: TCCDProcess: identifier=com.apple.replayd, pid=11093, auid=501, euid=501, binary_path=/usr/libexec/replayd is checking access for accessor TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge
+2026-10-03 10:42:42.980 I  tccd[436:41cff] [com.apple.TCC:access] IDENTITY_ATTRIBUTION: /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge[11093]: from cache: = com.codebridge.app, type 0 (361/1203)
+2026-10-03 10:42:42.980 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=11093.2, subject=com.codebridge.app,
+2026-10-03 10:42:42.980 Df tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785174900 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:42:42.990 I  tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785174900) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0
+2026-10-03 10:42:42.990 I  tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785174900) from com.codebridge.app : anchor apple; status: -67050
+2026-10-03 10:42:42.990 I  tccd[436:41cff] [com.apple.TCC:access] For com.codebridge.app: matches platform requirements: No
+2026-10-03 10:42:42.990 I  tccd[436:41cff] [com.apple.TCC:access] Handling access request to kTCCServiceScreenCapture, from Sub:{com.codebridge.app}Resp:{TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, ReqResult(Auth Right: Denied (System Set), promptType: 1,DB Action:None)
+2026-10-03 10:42:42.991 I  replayd[11093:419e7] [com.apple.TCC:access] SEND: 0/7 synchronous to com.apple.tccd.system: request: msgID=11093.3, function=TCCAccessRequest, service=kTCCServiceScreenCapture,
+2026-10-03 10:42:42.991 Df tccd[436:411d6] [com.apple.TCC:access] REQUEST: tccd_uid=0, sender_pid=11093, sender_uid=501, sender_auid=501, function=TCCAccessRequest, msgID=11093.3
+2026-10-03 10:42:42.991 I  tccd[436:411d6] [com.apple.TCC:access] REQUEST_MSG: msgID=11093.3, msg={
+	service="kTCCServiceScreenCapture"
+	TCCD_MSG_SPI_VERSION=2 (0x2)
+	function="TCCAccessRequest"
+	TCCD_MSG_REQUEST_TYPE_KEY=0 (0x0)
+	TCC_MSG_REQUEST_AUTHORIZATION_SUBJECT_CREDENTIAL_DICTIONARY_KEY={
+		TCCD_MSG_CREDENTIAL_AUTHENTICATOR_TYPE_KEY=1 (0x1)
+		TCCD_MSG_CREDENTIAL_AUTHENTICATOR_AUDIT_TOKEN_KEY={pid:11361, auid:501, euid:501}
+	}
+	TCCD_MSG_MESSAGE_OPTION_REQUEST_USAGE_STRING_POLICY_KEY=0 (0x0)
+	TCCD_MSG_MESSAGE_OPTION_REQUEST_PROMPT_POLICY_KEY=0 (0x0)
+	TCCD_MSG_ID="11093.3"
+}
+2026-10-03 10:42:42.991 I  tccd[436:411d6] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.replayd, pid=11093, auid=501, euid=501, binary_path=/usr/libexec/replayd},
+2026-10-03 10:42:42.992 I  tccd[436:411d6] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.replayd, pid=11093, auid=501, euid=501, binary_path=/usr/libexec/replayd},
+2026-10-03 10:42:42.992 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_CTX: msgID=11093.3, function=TCCAccessRequest, service=kTCCServiceScreenCapture, preflight=no, query=1, client_dict=(null), daemon_dict=<private>
+2026-10-03 10:42:42.992 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=11093.3, attribution={accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.replayd, pid=11093, auid=501, euid=501, binary_path=/usr/libexec/replayd}, },
+2026-10-03 10:42:42.992 Df tccd[436:411d6] [com.apple.TCC:access] requestor: TCCDProcess: identifier=com.apple.replayd, pid=11093, auid=501, euid=501, binary_path=/usr/libexec/replayd is checking access for accessor TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge
+2026-10-03 10:42:42.998 I  tccd[436:411d6] [com.apple.TCC:access] IDENTITY_ATTRIBUTION: /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge[11093]: from cache: = com.codebridge.app, type 0 (362/1204)
+2026-10-03 10:42:42.998 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=11093.3, subject=com.codebridge.app,
+2026-10-03 10:42:43.000 Df tccd[436:411d6] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785174f00 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:42:43.009 I  tccd[436:411d6] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785174f00) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0
+2026-10-03 10:42:43.009 I  tccd[436:411d6] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785174f00) from com.codebridge.app : anchor apple; status: -67050
+2026-10-03 10:42:43.009 I  tccd[436:411d6] [com.apple.TCC:access] For com.codebridge.app: matches platform requirements: No
+2026-10-03 10:42:43.009 I  tccd[436:411d6] [com.apple.TCC:access] Handling access request to kTCCServiceScreenCapture, from Sub:{com.codebridge.app}Resp:{TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, ReqResult(Auth Right: Denied (System Set), promptType: 1,DB Action:None)
+2026-10-03 10:42:43.009 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_RESULT: msgID=11093.3, authValue=0, authReason=4, authVersion=1, desired_auth=0, error=(null),
+2026-10-03 10:42:43.009 Df tccd[436:411d6] [com.apple.TCC:access] REPLY: (0) function=TCCAccessRequest, msgID=11093.3
+2026-10-03 10:42:43.014 I  CodeBridge[11361:41d07] [com.apple.TCC:access] SEND: 0/7 synchronous to com.apple.tccd.system: request: msgID=11361.2, function=TCCAccessRequest, service=kTCCServiceAccessibility, target_token={pid:11361, auid:501, euid:501},
+2026-10-03 10:42:43.014 Df tccd[436:411d6] [com.apple.TCC:access] REQUEST: tccd_uid=0, sender_pid=11361, sender_uid=501, sender_auid=501, function=TCCAccessRequest, msgID=11361.2
+2026-10-03 10:42:43.014 I  tccd[436:411d6] [com.apple.TCC:access] REQUEST_MSG: msgID=11361.2, msg={
+	require_purpose=<xpc_null>
+	service="kTCCServiceAccessibility"
+	function="TCCAccessRequest"
+	preflight=true
+	target_token={pid:11361, auid:501, euid:501}
+	TCCD_MSG_ID="11361.2"
+	background_session=false
+}
+2026-10-03 10:42:43.014 I  tccd[436:411d6] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:42:43.014 E  tccd[436:411d6] [com.apple.TCC:access] TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge attempted to call TCCAccessRequest for kTCCServiceAccessibility without the recommended com.apple.private.tcc.manager.check-by-audit-token entitlement
+2026-10-03 10:42:43.014 I  tccd[436:411d6] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:42:43.014 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_CTX: msgID=11361.2, function=<private>, service=kTCCServiceAccessibility, preflight=yes, query=1, client_dict=(null), daemon_dict=<private>
+2026-10-03 10:42:43.014 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=11361.2, attribution={accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, },
+2026-10-03 10:42:43.015 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=11361.2, subject=com.codebridge.app,
+2026-10-03 10:42:43.016 Df tccd[436:411d6] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785175500 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:42:43.020 I  tccd[436:411d6] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785175500) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0
+2026-10-03 10:42:43.020 I  tccd[436:411d6] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785175500) from com.codebridge.app : anchor apple; status: -67050
+2026-10-03 10:42:43.020 I  tccd[436:411d6] [com.apple.TCC:access] For com.codebridge.app: matches platform requirements: No
+2026-10-03 10:42:43.020 I  tccd[436:411d6] [com.apple.TCC:access] Handling access request to kTCCServiceAccessibility, from Sub:{com.codebridge.app}Resp:{TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, ReqResult(Auth Right: Denied (System Set), promptType: 1,DB Action:None)
+2026-10-03 10:42:43.020 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_RESULT: msgID=11361.2, authValue=0, authReason=4, authVersion=1, desired_auth=0, error=(null),
+2026-10-03 10:42:43.020 Df tccd[436:411d6] [com.apple.TCC:access] REPLY: (0) function=TCCAccessRequest, msgID=11361.2
+2026-10-03 10:42:43.021 I  CodeBridge[11361:41d07] [com.apple.TCC:access] SEND: 0/7 synchronous to com.apple.tccd.system: request: msgID=11361.3, function=TCCAccessRequest, service=kTCCServiceAccessibility, target_token={pid:11361, auid:501, euid:501},
+2026-10-03 10:42:43.021 Df tccd[436:41cff] [com.apple.TCC:access] REQUEST: tccd_uid=0, sender_pid=11361, sender_uid=501, sender_auid=501, function=TCCAccessRequest, msgID=11361.3
+2026-10-03 10:42:43.021 I  tccd[436:41cff] [com.apple.TCC:access] REQUEST_MSG: msgID=11361.3, msg={
+	require_purpose=<xpc_null>
+	service="kTCCServiceAccessibility"
+	function="TCCAccessRequest"
+	preflight=true
+	target_token={pid:11361, auid:501, euid:501}
+	TCCD_MSG_ID="11361.3"
+	background_session=false
+}
+2026-10-03 10:42:43.022 I  tccd[436:41cff] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:42:43.022 E  tccd[436:41cff] [com.apple.TCC:access] TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge attempted to call TCCAccessRequest for kTCCServiceAccessibility without the recommended com.apple.private.tcc.manager.check-by-audit-token entitlement
+2026-10-03 10:42:43.022 I  tccd[436:41cff] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:42:43.022 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_CTX: msgID=11361.3, function=<private>, service=kTCCServiceAccessibility, preflight=yes, query=1, client_dict=(null), daemon_dict=<private>
+2026-10-03 10:42:43.022 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=11361.3, attribution={accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, },
+2026-10-03 10:42:43.023 I  tccd[436:41cff] [com.apple.TCC:access] IDENTITY_ATTRIBUTION: /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge[11361]: from cache: = com.codebridge.app, type 0 (363/1206)
+2026-10-03 10:42:43.023 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=11361.3, subject=com.codebridge.app,
+2026-10-03 10:42:43.025 Df tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785175b00 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:42:43.029 I  tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785175b00) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0
+2026-10-03 10:42:43.029 I  tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785175b00) from com.codebridge.app : anchor apple; status: -67050
+2026-10-03 10:42:43.029 I  tccd[436:41cff] [com.apple.TCC:access] For com.codebridge.app: matches platform requirements: No
+2026-10-03 10:42:43.029 I  tccd[436:41cff] [com.apple.TCC:access] Handling access request to kTCCServiceAccessibility, from Sub:{com.codebridge.app}Resp:{TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, ReqResult(Auth Right: Denied (System Set), promptType: 1,DB Action:None)
+2026-10-03 10:42:43.029 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_RESULT: msgID=11361.3, authValue=0, authReason=4, authVersion=1, desired_auth=0, error=(null),
+2026-10-03 10:42:43.029 Df tccd[436:41cff] [com.apple.TCC:access] REPLY: (0) function=TCCAccessRequest, msgID=11361.3
+2026-10-03 10:42:43.029 I  CodeBridge[11361:41d07] [com.apple.TCC:access] SEND: 0/7 synchronous to com.apple.tccd.system: request: msgID=11361.4, function=TCCAccessRequest, service=kTCCServiceListenEvent,
+2026-10-03 10:42:43.030 Df tccd[436:411d6] [com.apple.TCC:access] REQUEST: tccd_uid=0, sender_pid=11361, sender_uid=501, sender_auid=501, function=TCCAccessRequest, msgID=11361.4
+2026-10-03 10:42:43.030 I  tccd[436:411d6] [com.apple.TCC:access] REQUEST_MSG: msgID=11361.4, msg={
+	require_purpose=<xpc_null>
+	service="kTCCServiceListenEvent"
+	function="TCCAccessRequest"
+	preflight=true
+	target_token={NULL}
+	TCCD_MSG_ID="11361.4"
+	background_session=false
+}
+2026-10-03 10:42:43.030 I  tccd[436:411d6] [com.apple.TCC:access] AttributionChain: requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:42:43.030 I  tccd[436:411d6] [com.apple.TCC:access] AttributionChain: requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:42:43.030 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_CTX: msgID=11361.4, function=<private>, service=kTCCServiceListenEvent, preflight=yes, query=1, client_dict=(null), daemon_dict=<private>
+2026-10-03 10:42:43.030 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=11361.4, attribution={requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, },
+2026-10-03 10:42:43.031 I  tccd[436:411d6] [com.apple.TCC:access] IDENTITY_ATTRIBUTION: /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge[11361]: from cache: = com.codebridge.app, type 0 (364/1207)
+2026-10-03 10:42:43.031 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=11361.4, subject=com.codebridge.app,
+2026-10-03 10:42:43.032 Df tccd[436:411d6] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785174000 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:42:43.036 I  tccd[436:411d6] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785174000) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0
+2026-10-03 10:42:43.036 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_RESULT: msgID=11361.4, authValue=0, authReason=4, authVersion=1, desired_auth=0, error=(null),
+2026-10-03 10:42:43.037 Df tccd[436:411d6] [com.apple.TCC:access] REPLY: (0) function=TCCAccessRequest, msgID=11361.4
+2026-10-03 10:42:43.037 I  CodeBridge[11361:41d07] [com.apple.TCC:access] SEND: 0/7 synchronous to com.apple.tccd.system: request: msgID=11361.5, function=TCCAccessRequest, service=kTCCServicePostEvent,
+2026-10-03 10:42:43.037 Df tccd[436:41cff] [com.apple.TCC:access] REQUEST: tccd_uid=0, sender_pid=11361, sender_uid=501, sender_auid=501, function=TCCAccessRequest, msgID=11361.5
+2026-10-03 10:42:43.037 I  tccd[436:41cff] [com.apple.TCC:access] REQUEST_MSG: msgID=11361.5, msg={
+	require_purpose=<xpc_null>
+	service="kTCCServicePostEvent"
+	function="TCCAccessRequest"
+	preflight=true
+	target_token={NULL}
+	TCCD_MSG_ID="11361.5"
+	background_session=false
+}
+2026-10-03 10:42:43.037 I  tccd[436:41cff] [com.apple.TCC:access] AttributionChain: requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:42:43.037 I  tccd[436:41cff] [com.apple.TCC:access] AttributionChain: requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:42:43.037 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_CTX: msgID=11361.5, function=<private>, service=kTCCServicePostEvent, preflight=yes, query=1, client_dict=(null), daemon_dict=<private>
+2026-10-03 10:42:43.037 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=11361.5, attribution={requesting={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, },
+2026-10-03 10:42:43.038 I  tccd[436:41cff] [com.apple.TCC:access] IDENTITY_ATTRIBUTION: /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge[11361]: from cache: = com.codebridge.app, type 0 (365/1208)
+2026-10-03 10:42:43.038 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=11361.5, subject=com.codebridge.app,
+2026-10-03 10:42:43.039 Df tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785176100 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:42:43.043 I  tccd[436:41cff] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785176100) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0
+2026-10-03 10:42:43.043 Df tccd[436:41cff] [com.apple.TCC:access] AUTHREQ_RESULT: msgID=11361.5, authValue=0, authReason=4, authVersion=1, desired_auth=0, error=(null),
+2026-10-03 10:42:43.043 Df tccd[436:41cff] [com.apple.TCC:access] REPLY: (0) function=TCCAccessRequest, msgID=11361.5
+2026-10-03 10:42:43.045 I  tccd[436:411d6] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.WindowServer, pid=435, auid=88, euid=88, binary_path=/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/Resources/WindowServer},
+2026-10-03 10:42:43.045 I  tccd[436:411d6] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.WindowServer, pid=435, auid=88, euid=88, binary_path=/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/Resources/WindowServer},
+2026-10-03 10:42:43.045 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=435.356, attribution={accessing={TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.WindowServer, pid=435, auid=88, euid=88, binary_path=/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/Resources/WindowServer}, },
+2026-10-03 10:42:43.045 Df tccd[436:411d6] [com.apple.TCC:access] requestor: TCCDProcess: identifier=com.apple.WindowServer, pid=435, auid=88, euid=88, binary_path=/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/Resources/WindowServer is checking access for accessor TCCDProcess: identifier=com.codebridge.app, pid=11361, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge
+2026-10-03 10:42:43.047 I  tccd[436:411d6] [com.apple.TCC:access] IDENTITY_ATTRIBUTION: /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge[435]: from cache: = com.codebridge.app, type 0 (366/1209)
+2026-10-03 10:42:43.047 Df tccd[436:411d6] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=435.356, subject=com.codebridge.app,
+2026-10-03 10:42:43.048 Df tccd[436:411d6] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785176700 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:42:43.055 I  tccd[436:411d6] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785176700) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0
+2026-10-03 10:43:55.059 I  CodeBridge[13649:43ad2] [com.apple.TCC:access] SEND: 0/7 synchronous to com.apple.tccd.system: request: msgID=13649.1, function=TCCAccessRequest, service=kTCCServiceListenEvent,
+2026-10-03 10:43:55.060 Df tccd[436:43aec] [com.apple.TCC:access] REQUEST: tccd_uid=0, sender_pid=13649, sender_uid=501, sender_auid=501, function=TCCAccessRequest, msgID=13649.1
+2026-10-03 10:43:55.060 I  tccd[436:43aec] [com.apple.TCC:access] REQUEST_MSG: msgID=13649.1, msg={
+	require_purpose=<xpc_null>
+	service="kTCCServiceListenEvent"
+	function="TCCAccessRequest"
+	preflight=true
+	target_token={NULL}
+	TCCD_MSG_ID="13649.1"
+	background_session=false
+}
+2026-10-03 10:43:55.060 I  tccd[436:43aec] [com.apple.TCC:access] AttributionChain: requesting={TCCDProcess: identifier=com.codebridge.app, pid=13649, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:43:55.060 I  tccd[436:43aec] [com.apple.TCC:access] AttributionChain: requesting={TCCDProcess: identifier=com.codebridge.app, pid=13649, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:43:55.060 Df tccd[436:43aec] [com.apple.TCC:access] AUTHREQ_CTX: msgID=13649.1, function=<private>, service=kTCCServiceListenEvent, preflight=yes, query=1, client_dict=(null), daemon_dict=<private>
+2026-10-03 10:43:55.060 Df tccd[436:43aec] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=13649.1, attribution={requesting={TCCDProcess: identifier=com.codebridge.app, pid=13649, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, },
+2026-10-03 10:43:55.061 Df tccd[436:43aec] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=13649.1, subject=com.codebridge.app,
+2026-10-03 10:43:55.062 Df tccd[436:43aec] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785174f00 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:43:55.067 I  tccd[436:43aec] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785174f00) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0
+2026-10-03 10:43:55.067 Df tccd[436:43aec] [com.apple.TCC:access] AUTHREQ_RESULT: msgID=13649.1, authValue=0, authReason=4, authVersion=1, desired_auth=0, error=(null),
+2026-10-03 10:43:55.067 Df tccd[436:43aec] [com.apple.TCC:access] REPLY: (0) function=TCCAccessRequest, msgID=13649.1
+2026-10-03 10:43:55.067 I  CodeBridge[13649:43ad2] [com.apple.TCC:access] SEND: 0/7 synchronous to com.apple.tccd.system: request: msgID=13649.2, function=TCCAccessRequest, service=kTCCServicePostEvent,
+2026-10-03 10:43:55.068 Df tccd[436:43ae7] [com.apple.TCC:access] REQUEST: tccd_uid=0, sender_pid=13649, sender_uid=501, sender_auid=501, function=TCCAccessRequest, msgID=13649.2
+2026-10-03 10:43:55.068 I  tccd[436:43ae7] [com.apple.TCC:access] REQUEST_MSG: msgID=13649.2, msg={
+	require_purpose=<xpc_null>
+	service="kTCCServicePostEvent"
+	function="TCCAccessRequest"
+	preflight=true
+	target_token={NULL}
+	TCCD_MSG_ID="13649.2"
+	background_session=false
+}
+2026-10-03 10:43:55.068 I  tccd[436:43ae7] [com.apple.TCC:access] AttributionChain: requesting={TCCDProcess: identifier=com.codebridge.app, pid=13649, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:43:55.068 I  tccd[436:43ae7] [com.apple.TCC:access] AttributionChain: requesting={TCCDProcess: identifier=com.codebridge.app, pid=13649, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge},
+2026-10-03 10:43:55.068 Df tccd[436:43ae7] [com.apple.TCC:access] AUTHREQ_CTX: msgID=13649.2, function=<private>, service=kTCCServicePostEvent, preflight=yes, query=1, client_dict=(null), daemon_dict=<private>
+2026-10-03 10:43:55.068 Df tccd[436:43ae7] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=13649.2, attribution={requesting={TCCDProcess: identifier=com.codebridge.app, pid=13649, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, },
+2026-10-03 10:43:55.069 I  tccd[436:43ae7] [com.apple.TCC:access] IDENTITY_ATTRIBUTION: /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge[13649]: from cache: = com.codebridge.app, type 0 (375/1238)
+2026-10-03 10:43:55.069 Df tccd[436:43ae7] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=13649.2, subject=com.codebridge.app,
+2026-10-03 10:43:55.070 Df tccd[436:43ae7] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785175500 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:43:55.074 I  tccd[436:43ae7] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785175500) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0
+2026-10-03 10:43:55.074 Df tccd[436:43ae7] [com.apple.TCC:access] AUTHREQ_RESULT: msgID=13649.2, authValue=0, authReason=4, authVersion=1, desired_auth=0, error=(null),
+2026-10-03 10:43:55.074 Df tccd[436:43ae7] [com.apple.TCC:access] REPLY: (0) function=TCCAccessRequest, msgID=13649.2
+2026-10-03 10:43:55.075 I  tccd[436:43aec] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=13649, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.WindowServer, pid=435, auid=88, euid=88, binary_path=/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/Resources/WindowServer},
+2026-10-03 10:43:55.076 I  tccd[436:43aec] [com.apple.TCC:access] AttributionChain: accessing={TCCDProcess: identifier=com.codebridge.app, pid=13649, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.WindowServer, pid=435, auid=88, euid=88, binary_path=/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/Resources/WindowServer},
+2026-10-03 10:43:55.076 Df tccd[436:43aec] [com.apple.TCC:access] AUTHREQ_ATTRIBUTION: msgID=435.364, attribution={accessing={TCCDProcess: identifier=com.codebridge.app, pid=13649, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge}, requesting={TCCDProcess: identifier=com.apple.WindowServer, pid=435, auid=88, euid=88, binary_path=/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/Resources/WindowServer}, },
+2026-10-03 10:43:55.076 Df tccd[436:43aec] [com.apple.TCC:access] requestor: TCCDProcess: identifier=com.apple.WindowServer, pid=435, auid=88, euid=88, binary_path=/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/Resources/WindowServer is checking access for accessor TCCDProcess: identifier=com.codebridge.app, pid=13649, auid=501, euid=501, binary_path=/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge
+2026-10-03 10:43:55.078 I  tccd[436:43aec] [com.apple.TCC:access] IDENTITY_ATTRIBUTION: /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge[435]: from cache: = com.codebridge.app, type 0 (376/1239)
+2026-10-03 10:43:55.078 Df tccd[436:43aec] [com.apple.TCC:access] AUTHREQ_SUBJECT: msgID=435.364, subject=com.codebridge.app,
+2026-10-03 10:43:55.079 Df tccd[436:43aec] [com.apple.TCC:access] -[TCCDAccessIdentity staticCode]: static code for: identifier com.codebridge.app, type: 0: 0x7785175b00 at /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app
+2026-10-03 10:43:55.084 I  tccd[436:43aec] [com.apple.TCC:access] -[TCCDAccessIdentity matchesCodeRequirement:]: SecStaticCodeCheckValidity() static code (0x7785175b00) from com.codebridge.app : identifier "com.codebridge.app" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */; status: 0

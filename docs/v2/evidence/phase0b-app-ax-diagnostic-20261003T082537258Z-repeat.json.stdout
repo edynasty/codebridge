@@ -1,0 +1,96 @@
+{
+  "bundleIdentifier" : "com.codebridge.app",
+  "cdhash" : "205ee05ae9600bfe5b6510382bed407b0a9e0458",
+  "endedAt" : "2026-10-03T08:25:56Z",
+  "executablePath" : "\/Users\/tangxingpeng\/IdeaProjects\/me\/codebridge\/desktop\/macos\/build\/CodeBridge.app\/Contents\/MacOS\/CodeBridge",
+  "isAdHoc" : false,
+  "notes" : [
+
+  ],
+  "observationSeconds" : 2,
+  "pathA" : {
+    "api" : "AXIsProcessTrusted",
+    "result" : "ok"
+  },
+  "pathB" : {
+    "api" : "AXUIElementCreateSystemWide + AXFocusedApplication",
+    "detail" : "CFTypeID=153",
+    "elementValid" : true,
+    "errorCode" : 0,
+    "result" : "ok"
+  },
+  "pathC" : {
+    "createApplicationResult" : "created",
+    "frontmostBundleIdentifier" : "com.google.Chrome",
+    "frontmostLocalizedName" : "Google Chrome",
+    "frontmostPid" : 774,
+    "roleRead" : {
+      "api" : "AXUIElementCreateApplication(frontmost) + AXRole",
+      "detail" : "CFTypeID=7",
+      "elementValid" : true,
+      "errorCode" : 0,
+      "result" : "ok"
+    },
+    "titleRead" : {
+      "api" : "AXUIElementCreateApplication(frontmost) + AXTitle",
+      "detail" : "title length read (content not required for acceptance)",
+      "elementValid" : true,
+      "errorCode" : 0,
+      "result" : "ok"
+    }
+  },
+  "pid" : 30516,
+  "ppid" : 1,
+  "schema" : "codebridge.phase0b.ax_baseline_diagnostic.v1",
+  "startedAt" : "2026-10-03T08:25:56Z",
+  "teamIdentifier" : "HXAV5ALQQG",
+  "trusted" : true
+}
+{
+  "bundleIdentifier" : "com.codebridge.app",
+  "cdhash" : "205ee05ae9600bfe5b6510382bed407b0a9e0458",
+  "endedAt" : "2026-10-03T08:26:11Z",
+  "executablePath" : "\/Users\/tangxingpeng\/IdeaProjects\/me\/codebridge\/desktop\/macos\/build\/CodeBridge.app\/Contents\/MacOS\/CodeBridge",
+  "isAdHoc" : false,
+  "notes" : [
+
+  ],
+  "observationSeconds" : 2,
+  "pathA" : {
+    "api" : "AXIsProcessTrusted",
+    "result" : "ok"
+  },
+  "pathB" : {
+    "api" : "AXUIElementCreateSystemWide + AXFocusedApplication",
+    "detail" : "CFTypeID=153",
+    "elementValid" : true,
+    "errorCode" : 0,
+    "result" : "ok"
+  },
+  "pathC" : {
+    "createApplicationResult" : "created",
+    "frontmostBundleIdentifier" : "com.google.Chrome",
+    "frontmostLocalizedName" : "Google Chrome",
+    "frontmostPid" : 774,
+    "roleRead" : {
+      "api" : "AXUIElementCreateApplication(frontmost) + AXRole",
+      "detail" : "CFTypeID=7",
+      "elementValid" : true,
+      "errorCode" : 0,
+      "result" : "ok"
+    },
+    "titleRead" : {
+      "api" : "AXUIElementCreateApplication(frontmost) + AXTitle",
+      "detail" : "title length read (content not required for acceptance)",
+      "elementValid" : true,
+      "errorCode" : 0,
+      "result" : "ok"
+    }
+  },
+  "pid" : 30763,
+  "ppid" : 1,
+  "schema" : "codebridge.phase0b.ax_baseline_diagnostic.v1",
+  "startedAt" : "2026-10-03T08:26:11Z",
+  "teamIdentifier" : "HXAV5ALQQG",
+  "trusted" : true
+}

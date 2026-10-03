@@ -7,6 +7,11 @@
 	<!-- BundleProgram is an app-bundle relative path to the executable (launchd.plist(5)). -->
 	<key>BundleProgram</key>
 	<string>Contents/MacOS/codebridged</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>codebridged</string>
+		<string>run</string>
+	</array>
 	<!-- KeepAlive: launchd restarts the daemon if it exits non-zero; the app never spawns it. -->
 	<key>KeepAlive</key>
 	<dict>

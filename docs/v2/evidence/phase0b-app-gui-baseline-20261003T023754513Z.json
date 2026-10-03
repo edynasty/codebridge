@@ -1,0 +1,458 @@
+{
+  "schema": "codebridge.phase0b.gui_baseline_acceptance.v1",
+  "startedAt": "2026-10-03T02:37:54.513Z",
+  "appPath": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+  "identifier": "com.codebridge.app",
+  "actualTeam": "HXAV5ALQQG",
+  "scope": "GUI-first App-only cleanup and A baseline; B/C/D/E prohibited until A passes",
+  "status": "FAIL",
+  "identity": {
+    "identifier": "com.codebridge.app",
+    "teamIdentifier": "HXAV5ALQQG",
+    "adhoc": false,
+    "flags": "0x10000(runtime)",
+    "cdhash": "b7525cda835942ab7cf29360396f4508fc57497b",
+    "authority": [
+      "Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)",
+      "Apple Worldwide Developer Relations Certification Authority",
+      "Apple Root CA"
+    ],
+    "strictDeepVerification": "PASS",
+    "designatedRequirement": "identifier \"com.codebridge.app\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */"
+  },
+  "commands": [
+    {
+      "command": "codesign -dv --verbose=4 /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app && codesign --verify --deep --strict --verbose=4 /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app && codesign -d -r- /Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+      "exitCode": 0,
+      "classification": "OBSERVED"
+    },
+    {
+      "command": "pgrep -fl '^/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge([[:space:]]|$)'",
+      "exitCode": 1,
+      "stdout": "",
+      "classification": "OBSERVED_NO_MATCHING_APP_PROCESS"
+    },
+    {
+      "command": "/usr/bin/open -n -W --stdout '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json.stdout' --stderr '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json.stderr' '/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app' --args --phase0b-probe permissions --roots '' --output '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json'",
+      "classification": "OBSERVED",
+      "result": {
+        "text": "(no output)\n\nWall time: 0.45 seconds",
+        "details": {
+          "timeoutSeconds": 90,
+          "wallTimeMs": 453.50312500004657
+        }
+      }
+    },
+    {
+      "command": "/usr/bin/open -n -W --stdout '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json.stdout' --stderr '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json.stderr' '/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app' --args --phase0b-probe input-monitor --duration 30 --output '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json'",
+      "classification": "OBSERVED",
+      "completion": {
+        "exitCode": 0,
+        "wallSeconds": 32.57,
+        "source": "auto-delivered background job bg_1 completion"
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/log",
+        "show",
+        "--style",
+        "compact",
+        "--info",
+        "--debug",
+        "--start",
+        "2026-10-03 10:42:35",
+        "--end",
+        "2026-10-03 10:45:25",
+        "--predicate",
+        "subsystem == \"com.apple.TCC\" AND (eventMessage CONTAINS \"11361.\" OR eventMessage CONTAINS \"13649.\" OR eventMessage CONTAINS \"11093.3\" OR eventMessage CONTAINS \"com.codebridge.app\")"
+      ],
+      "classification": "OBSERVED_READ_ONLY",
+      "exitCode": 0,
+      "stderr": "",
+      "rawStdoutPath": "docs/v2/evidence/phase0b-app-gui-tcc-log-show-20261003T023754513Z.txt"
+    }
+  ],
+  "humanActions": [
+    {
+      "time": "2026-10-03T02:42:42.625Z",
+      "classification": "HUMAN ACTION",
+      "userResponse": "三页已清理并授权，两个程序已退出",
+      "reportedScreen": "historical App entries removed; exact current App re-added and enabled",
+      "reportedAccessibility": "historical App entries removed; exact current App re-added and enabled",
+      "reportedInputMonitoring": "historical App entries removed; exact current App re-added and enabled",
+      "reportedAppFullyQuit": true,
+      "reportedSystemSettingsFullyQuit": true,
+      "limitation": "Human action report, not observed OS authorization or API PASS."
+    }
+  ],
+  "observed": [
+    "LaunchServices launched App PIDs11361/13649, both parent1, same current non-ad-hoc signature/id/Team/CDHash.",
+    "ScreenCaptureKit -3801, no frame/capture; AX query error -25204, trusted=false; real listen-only tap created but 0 physical events in30s, preflight=false.",
+    "After human report, actual Screen AX snapshot: CodeBridge=1, CodeBridge.app=0, probe=1, daemon=1; Accessibility App/probe/daemon=0; Input Monitoring tree no CodeBridge checkbox references.",
+    "Current DR matched status0 in TCC; Screen/AX Denied(System Set); current authorization subjects com.codebridge.app.",
+    "No code/build/test/SMAppService mutation; no reset in this run; no B/C/D/E or persistence repeats."
+  ],
+  "inference": [
+    "Historical entry/path contamination is a candidate explanation only; no cause established."
+  ],
+  "decisions": [
+    "No automatic GUI permission changes. No reset has been performed in this GUI-first run.",
+    "Only current App may receive Computer grants; no private APIs or signature weakening.",
+    "Stop after failed A; no automatic reset or second A cycle. The earlier scoped resets are history, not actions in this run.",
+    "Do not infer architecture leak from App subject. Do not claim F2 closed or start Phase1.",
+    "Preserve human action and later observed UI/API results separately; no inferred user-action error or established old-entry root cause."
+  ],
+  "resets": [],
+  "runId": "20261003T023754513Z",
+  "evidencePath": "docs/v2/evidence/phase0b-app-gui-baseline-20261003T023754513Z.json",
+  "logServiceName": "cb-gui-A-tcc-1790995074513",
+  "apiPath": "docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json",
+  "inputPath": "docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json",
+  "apiCommand": "/usr/bin/open -n -W --stdout '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json.stdout' --stderr '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json.stderr' '/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app' --args --phase0b-probe permissions --roots '' --output '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json'",
+  "api": {
+    "command_line": [
+      "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge",
+      "--phase0b-probe",
+      "permissions",
+      "--roots",
+      "",
+      "--output",
+      "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json"
+    ],
+    "duration_seconds": 0.1219639778137207,
+    "ended_at": "2026-10-03T02:42:43.076Z",
+    "findings": {
+      "blocked": [],
+      "observed": [
+        "screen_capture: preflight=false shareable_content=denied error=com.apple.ScreenCaptureKit.SCStreamErrorDomain -3801: 用户拒绝了应用程序、窗口、显示器捕捉的TCC capture=skipped pixels_persisted=false",
+        "accessibility: trusted=false focused_application=error ax_error=-25204",
+        "input_monitoring_preflight: listen=false post=false secure_input=false",
+        "protected_roots(read-only, names not reported): "
+      ],
+      "untested": [
+        "real TCC grant state for a signed CodeBridge.app bundle: this run has launch_context=launchd signed=true identity=com.codebridge.app",
+        "TCC attribution comparison across launch contexts (app child / codebridged child / standalone)"
+      ]
+    },
+    "host": {
+      "architecture": "arm64",
+      "gui_session_available": true,
+      "launchd_domain": "gui/501",
+      "model_identifier": "MacBookPro18,3",
+      "os_build": "26A428",
+      "os_version": "Version 27.0 (Build 26A428)",
+      "user_uid": 501
+    },
+    "launch": {
+      "adhoc_signed": false,
+      "bundle_identifier": "com.codebridge.app",
+      "bundle_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+      "cdhash": "b7525cda835942ab7cf29360396f4508fc57497b",
+      "executable_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge",
+      "launch_context": "launchd",
+      "parent_executable_path": "/sbin/launchd",
+      "parent_pid": 1,
+      "pid": 11361,
+      "signature_valid": true,
+      "signed": true,
+      "signing_identifier": "com.codebridge.app",
+      "team_identifier": "HXAV5ALQQG"
+    },
+    "permissions": {
+      "accessibility": {
+        "api_error_code": -25204,
+        "focused_application_call": "error",
+        "focused_application_error": "kAXErrorCannotComplete",
+        "trusted": false
+      },
+      "files_folders": {
+        "note": "read-only opendir on the root plus entry counting, bounded at 5s per root; file names are neither reported nor persisted; nothing is created, modified or deleted",
+        "roots": []
+      },
+      "input_monitoring_preflight": {
+        "preflight_listen_access": false,
+        "preflight_post_access": false,
+        "secure_input_enabled": false
+      },
+      "screen_capture": {
+        "capture_call": "skipped",
+        "pixels_persisted": false,
+        "preflight_granted": false,
+        "shareable_content_call": "denied",
+        "shareable_content_error": "com.apple.ScreenCaptureKit.SCStreamErrorDomain -3801: 用户拒绝了应用程序、窗口、显示器捕捉的TCC"
+      }
+    },
+    "privacy": "no file names inside protected roots, no pixels persisted, no keystroke content, no input injected",
+    "probe": "permissions",
+    "schema": "codebridge.phase0.probe.v1",
+    "started_at": "2026-10-03T02:42:42.953Z"
+  },
+  "inputCommand": "/usr/bin/open -n -W --stdout '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json.stdout' --stderr '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json.stderr' '/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app' --args --phase0b-probe input-monitor --duration 30 --output '/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json'",
+  "physicalActionPrompt": {
+    "time": "2026-10-03T02:43:52.558Z",
+    "classification": "HUMAN ACTION REQUESTED",
+    "text": "请在30秒观察窗口移动鼠标几次，并按一次Shift等无副作用按键；仅记录物理事件计数，不记录内容。"
+  },
+  "settings": [
+    {
+      "service": "ScreenCapture",
+      "time": "2026-10-03T02:44:45.166Z",
+      "navigation": {
+        "argv": [
+          "/usr/bin/open",
+          "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      },
+      "readOnly": true,
+      "treeCommand": {
+        "argv": [
+          "/usr/bin/osascript",
+          "-e",
+          "tell application \"System Events\" to tell application process \"System Settings\" to get {name of window 1, entire contents of window 1}"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      },
+      "windowTitle": "隐私与安全",
+      "codebridgeReferences": [],
+      "scope": "Recorded visible AX tree; no entry absence inferred beyond this tree."
+    },
+    {
+      "service": "Accessibility",
+      "time": "2026-10-03T02:44:48.305Z",
+      "navigation": {
+        "argv": [
+          "/usr/bin/open",
+          "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      },
+      "readOnly": true,
+      "treeCommand": {
+        "argv": [
+          "/usr/bin/osascript",
+          "-e",
+          "tell application \"System Events\" to tell application process \"System Settings\" to get {name of window 1, entire contents of window 1}"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      },
+      "windowTitle": "设备控制和数据访问",
+      "codebridgeReferences": [
+        "checkbox codebridge-probe of UI element 1 of row 10 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 设备控制和数据访问 of application process System Settings",
+        "checkbox CodeBridge.app of UI element 1 of row 11 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 设备控制和数据访问 of application process System Settings",
+        "checkbox codebridged of UI element 1 of row 12 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 设备控制和数据访问 of application process System Settings"
+      ],
+      "scope": "Recorded visible AX tree; no entry absence inferred beyond this tree.",
+      "properties": {
+        "argv": [
+          "/usr/bin/osascript",
+          "-e",
+          "tell application \"System Events\"\nreturn {properties of checkbox \"codebridge-probe\" of UI element 1 of row 10 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"设备控制和数据访问\" of application process \"System Settings\", properties of checkbox \"CodeBridge.app\" of UI element 1 of row 11 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"设备控制和数据访问\" of application process \"System Settings\", properties of checkbox \"codebridged\" of UI element 1 of row 12 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"设备控制和数据访问\" of application process \"System Settings\"}\nend tell"
+        ],
+        "exitCode": 0,
+        "stdout": "minimum value:missing value, orientation:missing value, position:1361, 769, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:0, subrole:AXSwitch, selected:missing value, name:codebridge-probe, description:转换, minimum value:missing value, orientation:missing value, position:1361, 809, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:0, subrole:AXSwitch, selected:missing value, name:CodeBridge.app, description:转换, minimum value:missing value, orientation:missing value, position:1361, 849, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:0, subrole:AXSwitch, selected:missing value, name:codebridged, description:转换\n",
+        "stderr": ""
+      }
+    },
+    {
+      "service": "ListenEvent",
+      "time": "2026-10-03T02:44:52.148Z",
+      "navigation": {
+        "argv": [
+          "/usr/bin/open",
+          "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      },
+      "readOnly": true,
+      "treeCommand": {
+        "argv": [
+          "/usr/bin/osascript",
+          "-e",
+          "tell application \"System Events\" to tell application process \"System Settings\" to get {name of window 1, entire contents of window 1}"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      },
+      "windowTitle": "输入监控",
+      "codebridgeReferences": [],
+      "scope": "Recorded visible AX tree; no entry absence inferred beyond this tree."
+    },
+    {
+      "service": "ScreenCapture",
+      "time": "2026-10-03T02:45:21.641Z",
+      "readOnly": true,
+      "reason": "Initial navigation showed Privacy overview, not recording pane; read actual target pane instead of inferring entry absence.",
+      "navigationExitCode": 0,
+      "treeExitCode": 0,
+      "windowTitle": "录屏与系统录音",
+      "codebridgeReferences": [
+        "checkbox CodeBridge of UI element 1 of row 6 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings",
+        "checkbox codebridge-probe of UI element 1 of row 7 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings",
+        "checkbox CodeBridge.app of UI element 1 of row 8 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings",
+        "checkbox codebridged of UI element 1 of row 9 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 录屏与系统录音 of application process System Settings"
+      ],
+      "stderr": "",
+      "properties": {
+        "argv": [
+          "/usr/bin/osascript",
+          "-e",
+          "tell application \"System Events\"\nreturn {properties of checkbox \"CodeBridge\" of UI element 1 of row 6 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"录屏与系统录音\" of application process \"System Settings\", properties of checkbox \"codebridge-probe\" of UI element 1 of row 7 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"录屏与系统录音\" of application process \"System Settings\", properties of checkbox \"CodeBridge.app\" of UI element 1 of row 8 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"录屏与系统录音\" of application process \"System Settings\", properties of checkbox \"codebridged\" of UI element 1 of row 9 of outline 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window \"录屏与系统录音\" of application process \"System Settings\"}\nend tell"
+        ],
+        "exitCode": 0,
+        "stdout": "minimum value:missing value, orientation:missing value, position:1361, 597, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:1, subrole:AXSwitch, selected:missing value, name:CodeBridge, description:转换, minimum value:missing value, orientation:missing value, position:1361, 637, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:1, subrole:AXSwitch, selected:missing value, name:codebridge-probe, description:转换, minimum value:missing value, orientation:missing value, position:1361, 677, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:0, subrole:AXSwitch, selected:missing value, name:CodeBridge.app, description:转换, minimum value:missing value, orientation:missing value, position:1361, 717, class:checkbox, accessibility description:missing value, role description:转换, focused:false, title:missing value, size:36, 16, help:missing value, entire contents:, enabled:true, maximum value:missing value, role:AXCheckBox, value:1, subrole:AXSwitch, selected:missing value, name:codebridged, description:转换\n",
+        "stderr": ""
+      }
+    }
+  ],
+  "input": {
+    "command_line": [
+      "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge",
+      "--phase0b-probe",
+      "input-monitor",
+      "--duration",
+      "30",
+      "--output",
+      "/Users/tangxingpeng/IdeaProjects/me/codebridge/docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json"
+    ],
+    "duration_seconds": 30.069262981414795,
+    "ended_at": "2026-10-03T02:44:25.118Z",
+    "findings": {
+      "blocked": [
+        "input monitor is not verified usable on this host right now (input_monitor_unverified_delivery): per architecture §11.6 computer.input must be reported unavailable (fail closed) until hardware-input preemption is observed on a signed, granted build"
+      ],
+      "observed": [
+        "input_monitor: tap_created=true monitor_state=installedUnverified input_available=false disabled_events=0 hardware_events=0 delivery_proof=preflight_false origins=[:]",
+        "input_monitor decisions: [:]"
+      ],
+      "untested": [
+        "real hardware-input preemption with Input Monitoring granted to a signed bundle, and preemption against synthetic input from another Accessibility-permitted process"
+      ]
+    },
+    "host": {
+      "architecture": "arm64",
+      "gui_session_available": true,
+      "launchd_domain": "gui/501",
+      "model_identifier": "MacBookPro18,3",
+      "os_build": "26A428",
+      "os_version": "Version 27.0 (Build 26A428)",
+      "user_uid": 501
+    },
+    "input_monitor": {
+      "delivery_proof": "preflight_false",
+      "event_counts_by_origin": {},
+      "hardware_events_observed": 0,
+      "injected_events": 0,
+      "input_available": false,
+      "monitor_state": "installedUnverified",
+      "note": "listen-only tap; input is reported available only when preflight allows it, the tap is installed, it was never disabled, at least one hardware event was observed, and Secure Input was not observed active. Synthetic events from other processes and events with unknown origin are classified as preempting (conservative: unknown never resolves to safe).",
+      "observation_seconds": 30,
+      "preemption_decisions": {},
+      "preflight": {
+        "preflight_listen_access": false,
+        "preflight_post_access": false,
+        "secure_input_enabled": false
+      },
+      "tap_created": true,
+      "tap_disabled_count": 0,
+      "unavailability_reason": "input_monitor_unverified_delivery"
+    },
+    "launch": {
+      "adhoc_signed": false,
+      "bundle_identifier": "com.codebridge.app",
+      "bundle_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app",
+      "cdhash": "b7525cda835942ab7cf29360396f4508fc57497b",
+      "executable_path": "/Users/tangxingpeng/IdeaProjects/me/codebridge/desktop/macos/build/CodeBridge.app/Contents/MacOS/CodeBridge",
+      "launch_context": "launchd",
+      "parent_executable_path": "/sbin/launchd",
+      "parent_pid": 1,
+      "pid": 13649,
+      "signature_valid": true,
+      "signed": true,
+      "signing_identifier": "com.codebridge.app",
+      "team_identifier": "HXAV5ALQQG"
+    },
+    "privacy": "no file names inside protected roots, no pixels persisted, no keystroke content, no input injected",
+    "probe": "input-monitor",
+    "schema": "codebridge.phase0.probe.v1",
+    "started_at": "2026-10-03T02:43:55.049Z"
+  },
+  "logShowCommand": "/usr/bin/log show --style compact --info --debug --start '2026-10-03 10:42:35' --end '2026-10-03 10:45:25' --predicate 'subsystem == \"com.apple.TCC\" AND (eventMessage CONTAINS \"11361.\" OR eventMessage CONTAINS \"13649.\" OR eventMessage CONTAINS \"11093.3\" OR eventMessage CONTAINS \"com.codebridge.app\")'",
+  "liveLogPath": "docs/v2/evidence/phase0b-app-gui-tcc-live-20261003T023754513Z.txt",
+  "logShowPath": "docs/v2/evidence/phase0b-app-gui-tcc-log-show-20261003T023754513Z.txt",
+  "decision": "APP_TCC_BASELINE_NOT_ESTABLISHED",
+  "phase0": "BLOCKED",
+  "phase1": "NOT_READY",
+  "f2": "NOT_CLOSED",
+  "apiResults": {
+    "screen": {
+      "classification": "DENIED",
+      "pid": 11361,
+      "result": {
+        "capture_call": "skipped",
+        "pixels_persisted": false,
+        "preflight_granted": false,
+        "shareable_content_call": "denied",
+        "shareable_content_error": "com.apple.ScreenCaptureKit.SCStreamErrorDomain -3801: 用户拒绝了应用程序、窗口、显示器捕捉的TCC"
+      }
+    },
+    "accessibility": {
+      "classification": "ERROR",
+      "pid": 11361,
+      "result": {
+        "api_error_code": -25204,
+        "focused_application_call": "error",
+        "focused_application_error": "kAXErrorCannotComplete",
+        "trusted": false
+      }
+    },
+    "input": {
+      "classification": "UNPROVEN",
+      "pid": 13649,
+      "result": {
+        "delivery_proof": "preflight_false",
+        "event_counts_by_origin": {},
+        "hardware_events_observed": 0,
+        "injected_events": 0,
+        "input_available": false,
+        "monitor_state": "installedUnverified",
+        "note": "listen-only tap; input is reported available only when preflight allows it, the tap is installed, it was never disabled, at least one hardware event was observed, and Secure Input was not observed active. Synthetic events from other processes and events with unknown origin are classified as preempting (conservative: unknown never resolves to safe).",
+        "observation_seconds": 30,
+        "preemption_decisions": {},
+        "preflight": {
+          "preflight_listen_access": false,
+          "preflight_post_access": false,
+          "secure_input_enabled": false
+        },
+        "tap_created": true,
+        "tap_disabled_count": 0,
+        "unavailability_reason": "input_monitor_unverified_delivery"
+      }
+    }
+  },
+  "rawEvidence": {
+    "api": "docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json",
+    "apiStdout": "docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json.stdout",
+    "apiStderr": "docs/v2/evidence/phase0b-app-gui-api-20261003T023754513Z.json.stderr",
+    "input": "docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json",
+    "inputStdout": "docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json.stdout",
+    "inputStderr": "docs/v2/evidence/phase0b-app-gui-input-20261003T023754513Z.json.stderr",
+    "tccLive": "docs/v2/evidence/phase0b-app-gui-tcc-live-20261003T023754513Z.txt",
+    "tccPersisted": "docs/v2/evidence/phase0b-app-gui-tcc-log-show-20261003T023754513Z.txt"
+  },
+  "recorder": {
+    "name": "cb-gui-A-tcc-1790995074513",
+    "state": "exited",
+    "stopExitCode": 1,
+    "owned": true,
+    "liveDroppedMessages": true,
+    "limitation": "Live log PTY wraps lines and dropped messages; raw non-PTY log-show output is the exact request/result source."
+  },
+  "minimumNextAction": "Human reconcile the exact App path/entries with the observed App-OFF states; ensure no extra Computer grants are enabled for daemon/probe. Stop experiments until current App-only GUI state is effective; next experiment A only. No root cause inferred; no automatic reset."
+}

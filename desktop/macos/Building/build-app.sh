@@ -22,6 +22,7 @@ DAEMON_BINARY=""
 EMBED_PHASE0_ENV=0
 OUTPUT_DIR="${PACKAGE_DIR}/build"
 APP_NAME="CodeBridge"
+DISPLAY_NAME=""
 
 usage() {
   cat <<'EOF'
@@ -34,6 +35,8 @@ usage: build-app.sh [options]
   --daemon <path>          codebridged binary to embed at Contents/MacOS/codebridged
   --embed-phase0-env       bake CODEBRIDGE_PHASE0_DEBUG/CODEBRIDGE_PHASE0_PROBE/HOSTIPC socket into
                            the LaunchAgent plist (development/attribution builds only)
+  --display-name <name>    override App UI name only for signed --embed-phase0-env acceptance;
+                           product default, bundle path, executable and identities stay unchanged
   --unsigned-dev           assemble without a signing identity; the bundle is marked and is NOT
                            valid for TCC / SMAppService / LaunchAgent evidence
   --bundle-id <id>         default com.codebridge.app
@@ -53,6 +56,7 @@ while [[ $# -gt 0 ]]; do
     --team-id) TEAM_ID="${2:-}"; shift 2 ;;
     --daemon) DAEMON_BINARY="${2:-}"; shift 2 ;;
     --embed-phase0-env) EMBED_PHASE0_ENV=1; shift ;;
+    --display-name) DISPLAY_NAME="${2:?--display-name requires a name}"; shift 2 ;;
     --unsigned-dev) UNSIGNED_DEV=1; shift ;;
     --bundle-id) BUNDLE_ID="${2:-}"; shift 2 ;;
     --version) VERSION="${2:-}"; shift 2 ;;
@@ -63,6 +67,11 @@ while [[ $# -gt 0 ]]; do
     *) echo "unknown argument: $1" >&2; usage >&2; exit 2 ;;
   esac
 done
+
+if [[ -n "${DISPLAY_NAME}" && ( "${EMBED_PHASE0_ENV}" -ne 1 || "${UNSIGNED_DEV}" -ne 0 ) ]]; then
+  echo "error: --display-name requires a signed --embed-phase0-env acceptance build" >&2
+  exit 2
+fi
 
 if [[ -n "${DAEMON_BINARY}" && ! -x "${DAEMON_BINARY}" ]]; then
   echo "error: --daemon ${DAEMON_BINARY} is not an executable" >&2
@@ -104,7 +113,7 @@ if [[ "${UNSIGNED_DEV}" -eq 0 ]]; then
   cp /usr/bin/true "${IDENTITY_WORK}/identity-check"
   codesign --force --sign "${SIGN_IDENTITY}" --identifier com.codebridge.identity-check \
     "${IDENTITY_WORK}/identity-check"
-  codesign --verify --strict --test-requirement 'anchor apple generic' "${IDENTITY_WORK}/identity-check"
+  codesign --verify --strict --test-requirement '=anchor apple generic' "${IDENTITY_WORK}/identity-check"
   IDENTITY_METADATA="$(codesign -dv --verbose=4 "${IDENTITY_WORK}/identity-check" 2>&1)"
   if [[ "${IDENTITY_METADATA}" != *"Authority=Apple Development:"* && \
         "${IDENTITY_METADATA}" != *"Authority=Developer ID Application:"* ]]; then
@@ -170,6 +179,11 @@ sed \
   -e "s|__TEAM_ID__|${TEAM_ID}|g" \
   -e "s|__UNSIGNED_MARKER_VALUE__|${UNSIGNED_MARKER}|g" \
   "${SCRIPT_DIR}/Info.plist.in" > "${APP_BUNDLE}/Contents/Info.plist"
+
+if [[ -n "${DISPLAY_NAME}" ]]; then
+  plutil -replace CFBundleName -string "${DISPLAY_NAME}" "${APP_BUNDLE}/Contents/Info.plist"
+  plutil -insert CFBundleDisplayName -string "${DISPLAY_NAME}" "${APP_BUNDLE}/Contents/Info.plist"
+fi
 
 ENV_FILE="$(mktemp)"
 cat > "${ENV_FILE}" <<EOF
@@ -237,7 +251,7 @@ for binary in "${APP_BUNDLE}/Contents/MacOS/codebridge-probe" \
         *) expected_id="com.codebridge.app" ;;
       esac
       codesign --verify --deep --strict --verbose=4 --test-requirement \
-        "anchor apple generic and identifier \"${expected_id}\" and certificate leaf[subject.OU] = \"${TEAM_ID}\"" "${binary}"
+        "=anchor apple generic and identifier \"${expected_id}\" and certificate leaf[subject.OU] = \"${TEAM_ID}\"" "${binary}"
     fi
     [[ -d "${binary}" ]] || shasum -a 256 "${binary}"
   fi
