@@ -25,3 +25,22 @@ Run from the genuine SMAppService-owned daemon identity, and separately its sign
 For supported roots, document observed denial/error behavior and `permission_denied: host_permission_required` guidance: the user grants Files & Folders access to the actually attributed component in System Settings and retries the original registration; do not request Full Disk Access or grant daemon Screen Recording/AX/Input Monitoring to bypass it. A timeout is an unresolved host-permission probe, not a proven denial. If signed evidence establishes an unsupported protected-root case, choose UNSUPPORTED_IN_V1 with that evidence and an ordinary-root alternative. No production registration API was added here.
 
 以真实 SMAppService daemon 身份和独立 harness 分别验收，记录授权对象、错误/deadline、重启及相同身份更新结果。不能用 shell 权限代替，也不授予 daemon Computer 权限。支持时提供 host_permission_required 指引与重试原注册操作；不通过 Full Disk Access 绕过。只有真实签名证据支持时才选择 UNSUPPORTED_IN_V1。
+
+## Final verdict — 2026-10-03: PROTECTED_ROOTS: SUPPORTED / 最终结论
+
+**PROTECTED_ROOTS: SUPPORTED** — via the production external independent daemon (`~/Library/Application Support/CodeBridge/bin/codebridged`, launchd-owned, PPID 1, `com.codebridge.daemon` / `HXAV5ALQQG`). [Full record](phase0c-protected-roots-20261003T125243Z.json). No bundled daemon, no shell substitution, no Full Disk Access, no Computer grants to the daemon were used.
+
+| Root | Result | TCC |
+| --- | --- | --- |
+| ~/Documents | **readable** (errno 0, 7 entries) | `Allowed (User Consent)` |
+| ~/Desktop | **readable** (errno 0, 3 entries) | `Allowed (User Consent)` |
+| ~/Downloads | **readable** (errno 0, 224 entries) | `Allowed (User Consent)` |
+
+- **Grant recipient**: the external production daemon itself (`com.codebridge.daemon` at its own path) — the per-root Files & Folders services (`kTCCServiceSystemPolicy{Desktop,Documents,Downloads}Folder`) record the daemon as the authorized subject. No inheritance from `com.codebridge.app`.
+- **After SIGKILL → launchd restart** (60758→83516): PASS — all three roots readable.
+- **After same-identity daemon update** (→83846, and again →75517 after the guard fix): PASS — all roots readable, identity preserved.
+- **Guard**: `DAEMON_COMPUTER_TCC_MUST_BE_NONE` PASS at pre-test and final state (`safe=true`, all three preflights false). During the gate the guard **detected a real user-granted Screen permission on the daemon** (`safe=false`) — the user removed it, and the incident exposed a stale-cache bug (health used a `sync.Once`-cached guard); fixed to `ComputerTCCBoundaryCheck()` (fresh passive check per health call), deployed and verified. The fail-closed design proved itself in production.
+
+**Production behavior** (defined): missing root permission yields `permission_denied` with `reason=host_permission_required`; the user grants Files & Folders to the actually-attributed external daemon in System Settings → Privacy & Security → Files and Folders, then retries; never Full Disk Access, never Computer permissions. Per-root grants only.
+
+生产结论：外部生产独立 daemon 可以获得并跨重启/更新稳定保持 Files & Folders 授权（授权对象为 daemon 自身），V1 支持 protected roots；缺权限时按 host_permission_required 指引授权后重试。

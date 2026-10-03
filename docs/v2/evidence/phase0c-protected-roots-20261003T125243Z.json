@@ -1,0 +1,72 @@
+{
+  "schema": "codebridge.phase0c.protected_roots.v1",
+  "date": "2026-10-03T12:54:02.615Z",
+  "daemon": {
+    "path": "/Users/tangxingpeng/Library/Application Support/CodeBridge/bin/codebridged",
+    "launchdOwned": true,
+    "ppid1": true,
+    "identifier": "com.codebridge.daemon",
+    "team": "HXAV5ALQQG"
+  },
+  "preTestGuard": {
+    "safe": true,
+    "screen": false,
+    "ax": false,
+    "input": false,
+    "checkedAt": "2026-10-03T10:42:19Z"
+  },
+  "roots": {
+    "Documents": {
+      "readable": true,
+      "errno": 0,
+      "entries": 7,
+      "classification": "ALLOWED"
+    },
+    "Desktop": {
+      "readable": true,
+      "errno": 0,
+      "entries": 3,
+      "classification": "ALLOWED"
+    },
+    "Downloads": {
+      "readable": true,
+      "errno": 0,
+      "entries": 224,
+      "classification": "ALLOWED"
+    }
+  },
+  "tccAttribution": {
+    "recipient": "/Users/tangxingpeng/Library/Application Support/CodeBridge/bin/codebridged (com.codebridge.daemon)",
+    "authRight": "Allowed (User Consent)",
+    "services": [
+      "kTCCServiceSystemPolicyDesktopFolder",
+      "kTCCServiceSystemPolicyDocumentsFolder",
+      "kTCCServiceSystemPolicyDownloadsFolder"
+    ],
+    "inheritance": "none — the grant belongs to the external daemon itself, not com.codebridge.app"
+  },
+  "persistence": {
+    "sigkillRestart": {
+      "pidBefore": 60758,
+      "pidAfter": 83516,
+      "result": "PASS — all three roots readable"
+    },
+    "sameIdentityUpdate": {
+      "pidAfter": 83846,
+      "result": "PASS — all three roots readable; identity preserved"
+    },
+    "finalGuardFixUpdate": {
+      "pidAfter": 75517,
+      "result": "PASS — all three roots readable"
+    }
+  },
+  "guardIncident": {
+    "finding": "During the update-persistence step the health guard reported screen=true (safe=false). The user removed the daemon Screen Recording grant; after daemon restart the guard returned safe=true. Root cause of stale display: health used a sync.Once-cached guard; fixed to use ComputerTCCBoundaryCheck() (fresh passive check per health call). Fix deployed and verified (PID 75517, safe=true).",
+    "lesson": "The DAEMON_COMPUTER_TCC_MUST_BE_NONE guard itself detected a real dangerous configuration (user-granted Screen) during the gate — proving the fail-closed design works."
+  },
+  "verdict": "PROTECTED_ROOTS_SUPPORTED",
+  "productionBehavior": {
+    "onMissingPermission": "permission_denied with reason=host_permission_required; surface guidance to grant Files & Folders to the real attributed external daemon, then retry",
+    "scope": "per-root Files & Folders grants to the external daemon only; never Full Disk Access; never Computer permissions"
+  }
+}

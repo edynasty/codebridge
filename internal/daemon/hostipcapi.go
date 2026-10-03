@@ -166,7 +166,7 @@ func (d *Daemon) handleHostHealth(_ context.Context, c *hostipc.Conn, _ json.Raw
 			BundleID:          d.cfg.AppBundleID,
 		},
 		ProbeEnabled: d.ProbeEnabled(),
-		ComputerTCC:  d.computerTCCGuard(),
+		ComputerTCC:  d.ComputerTCCBoundaryCheck(),
 	}, nil
 }
 
