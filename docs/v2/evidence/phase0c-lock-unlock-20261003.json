@@ -1,0 +1,50 @@
+{
+  "schema": "codebridge.phase0c.lock_state_acceptance.v1",
+  "startedAt": "2026-10-03T13:26:00Z",
+  "preCheck": {
+    "appScreen": "PASS (re-granted after TCC record loss; 1800x1169 ok)",
+    "appAx": "PASS (trusted)",
+    "appInput": "PASS (preflight)",
+    "daemonGuard": "PASS (safe=true, 75517)",
+    "note": "App Screen grant had been lost (user cleaned daemon entries); user re-granted before scenarios."
+  },
+  "lockUnlock": {
+    "verdict": "PASS",
+    "F0": {
+      "digest": "f70dd9ea93c222b970260c5c749b162a5a7581d9aa4648bf2b299996d67b753f",
+      "capturedAt": "2026-10-03T13:28:34.870Z",
+      "dims": "1800x1169"
+    },
+    "window": {
+      "duration": 240,
+      "initialSnapshot": "screen_locked=true, on_console=true",
+      "events": [
+        {
+          "kind": "screenIsUnlocked",
+          "at": "2026-10-03T13:42:26.035Z",
+          "source": "DistributedNotificationCenter"
+        }
+      ],
+      "finalSnapshot": "screen_locked=nil, on_console=true"
+    },
+    "model": {
+      "transitions": 1,
+      "controller": "none",
+      "replayBlocked": true,
+      "requiresHumanResume": true
+    },
+    "F1": {
+      "digest": "1bc9df8bda84853c...",
+      "capturedAt": "2026-10-03T13:45:43.722Z",
+      "dims": "1800x1169",
+      "freshAfterUnlock": true,
+      "digestDiffersFromF0": true,
+      "captureOk": true
+    },
+    "notes": [
+      "First two windows (120s/240s) captured nothing: user had not locked yet — recorded as timing, not instrumentation failure. Third window started while already locked (initial snapshot locked=true), proving the lock; the unlock notification arrived in-window.",
+      "Retry cost note: two unused observation windows are retained in /tmp raw evidence."
+    ]
+  },
+  "status": "LOCK_UNLOCK_PASS"
+}

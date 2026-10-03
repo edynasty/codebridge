@@ -1,0 +1,19 @@
+{
+  "schema": "codebridge.phase0c.fast_user_switch.v1",
+  "date": "2026-10-03T14:31:14.679Z",
+  "verdict": "BLOCKED_NO_SECOND_USER",
+  "observed": {
+    "localUsersWithUID500Plus": [
+      {
+        "name": "tangxingpeng",
+        "uid": 501
+      }
+    ],
+    "note": "only one real local user exists; per protocol no test user was created and no environment waiver was granted"
+  },
+  "failClosedDesign": {
+    "onConsoleFalse": "suspension model treats on_console=false as fastUserSwitch → controller=none, discard pending",
+    "sessionNotifications": "sessionDidResignActive/sessionDidBecomeActive are observed by the probe and map to fastUserSwitch suspension"
+  },
+  "note": "The CGSession on_console=false fail-closed path is exercised by the state-machine model in every lock-state window (replay_blocked=true), but a real FUS transition was not executed on this host."
+}

@@ -1,0 +1,54 @@
+{
+  "schema": "codebridge.phase0c.system_sleep_acceptance.v1",
+  "date": "2026-10-03T14:29:40Z",
+  "verdict": "PASS",
+  "observer": {
+    "type": "independent LaunchServices App probe, no power assertions held",
+    "firstWindow": "no transition (user had not slept yet — timing, not instrumentation failure)",
+    "secondWindow": "full event sequence captured"
+  },
+  "events": [
+    {
+      "kind": "willSleep",
+      "at": "2026-10-03T14:24:24.914Z",
+      "source": "NSWorkspace"
+    },
+    {
+      "kind": "screenIsLocked",
+      "at": "2026-10-03T14:24:25.444Z",
+      "source": "DistributedNotificationCenter"
+    },
+    {
+      "kind": "screenIsUnlocked",
+      "at": "2026-10-03T14:24:49.574Z",
+      "source": "DistributedNotificationCenter"
+    },
+    {
+      "kind": "didWake",
+      "at": "2026-10-03T14:24:54.925Z",
+      "source": "NSWorkspace"
+    }
+  ],
+  "crossEvidence": {
+    "pmset": "Display off 22:24:24 / on 22:24:46; SRPrevSleep assertion state; \"Delays to Sleep notifications\" kernel acks at 22:24:54 confirm the real sleep/wake cycle"
+  },
+  "model": {
+    "replayBlocked": true,
+    "controller": "none during sleep",
+    "requiresHumanResume": true
+  },
+  "daemonSurvival": {
+    "pid": 75517,
+    "uptimeMs": 5791797,
+    "note": "daemon ran continuously across sleep; no restart",
+    "guard": "safe=true maintained (screen/ax/input all false)"
+  },
+  "freshFrame": {
+    "captureOk": true,
+    "digest": "d05b4d2fcb1adc17...",
+    "dims": "1800x1169",
+    "at": "2026-10-03T14:29:40.101Z",
+    "freshAfterDidWake": true
+  },
+  "displayOffAwakeDistinction": "The prior lid-close was DISPLAY_OFF_AWAKE (no Entering Sleep; separate state, separate evidence file). This SYSTEM_SLEEP run used explicit Apple-menu sleep which bypasses both the user AC-power idle-sleep policy and the agent PreventUserIdleSystemSleep assertions."
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "codebridge.phase0c.display_off_awake.v1",
+  "date": "2026-10-03T13:55:13Z",
+  "classification": "DISPLAY_OFF_AWAKE",
+  "observed": {
+    "trigger": "user lid close while on AC power with \"prevent automatic sleep when display off\" enabled",
+    "displayOff": "21:54:47 +0800 (pmset Display is turned off)",
+    "displayOn": "21:55:10 +0800 (pmset Display is turned on)",
+    "screenLocked": "2026-10-03T13:54:42.080Z (screenIsLocked notification — lid-close lock coupling)",
+    "screenUnlocked": "2026-10-03T13:55:13.337Z",
+    "systemSleep": "NONE — no \"Entering Sleep state\" in pmset log; system remained awake (bun/powerd/sharingd PreventUserIdleSystemSleep assertions held continuously)",
+    "onConsole": "true throughout (initial and final snapshots)",
+    "daemonSurvival": {
+      "pid": 75517,
+      "uptimeContinuityMs": 4865414,
+      "note": "daemon ran across the entire window without restart"
+    },
+    "modelBehavior": {
+      "replayBlocked": true,
+      "transitions": 1,
+      "controller": "none during locked display-off; fresh-frame required after unlock"
+    }
+  },
+  "blockerAnalysis": {
+    "userSetting": "AC Power sleep=0 — user-enabled \"prevent automatic sleep when display is off on power adapter\"; affects idle sleep only, does not block explicit user-initiated sleep",
+    "agentAssertions": "bun PIDs 44218/52908/52558 hold PreventUserIdleSystemSleep \"omp agent session\"; also idle-sleep-only, do not block Apple-menu explicit sleep",
+    "conclusion": "The observed display-off was NOT caused by agent assertions; it matches the user lid-close + awake policy. Explicit Apple-menu Sleep remains available for SYSTEM_SLEEP testing."
+  },
+  "productionModel": {
+    "displayOffAwake": "runs/agents/daemon continue; Computer control fail-closed separately based on display/fresh-observation availability (screen locked during this window also suspends Computer control via the lock gate)",
+    "noFalseInterruption": "background tasks are NOT marked interrupted by display-off-while-awake"
+  }
+}

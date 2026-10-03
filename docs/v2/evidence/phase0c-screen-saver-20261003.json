@@ -1,0 +1,40 @@
+{
+  "schema": "codebridge.phase0c.screen_saver_acceptance.v1",
+  "date": "2026-10-03T13:51:32Z",
+  "verdict": "PASS_AS_LOCK_COUPLED",
+  "window": {
+    "duration": 240,
+    "events": [
+      {
+        "kind": "screenIsLocked",
+        "at": "2026-10-03T13:48:57.558Z"
+      },
+      {
+        "kind": "screenIsUnlocked",
+        "at": "2026-10-03T13:48:59.749Z"
+      },
+      {
+        "kind": "screenIsLocked",
+        "at": "2026-10-03T13:49:05.500Z"
+      },
+      {
+        "kind": "screenIsUnlocked",
+        "at": "2026-10-03T13:49:21.001Z"
+      }
+    ],
+    "saverSpecificEvents": 0,
+    "classification": "SAVER_LOCK_COUPLED — this host couples the screen saver with the screen lock; no independent screenSaver.didstart/didstop notifications were observed. Fail-closed applies (same suspension path as lock)."
+  },
+  "model": {
+    "replayBlocked": true,
+    "transitions": 2
+  },
+  "postExit": {
+    "freshFrame": {
+      "captureOk": true,
+      "digest": "46c6f69517787b1e...",
+      "at": "2026-10-03T13:51:32.542Z",
+      "freshAfterLastUnlock": true
+    }
+  }
+}
