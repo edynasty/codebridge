@@ -154,6 +154,12 @@ if [[ -n "${DAEMON_BINARY}" ]]; then
   DAEMON_EMBEDDED="true"
 fi
 
+# Daemon payload (2026-10-03 architecture amendment): the app carries the signed daemon purely
+# as an install source artifact. launchd must only execute the externally installed copy at
+# ~/Library/Application Support/CodeBridge/bin/codebridged (installed by DaemonInstaller).
+# The copy is made from the ALREADY-SIGNED nested binary after the signing step below, so the
+# payload carries the genuine com.codebridge.daemon signature (never the unsigned Go output).
+
 UNSIGNED_MARKER="false"
 if [[ "${UNSIGNED_DEV}" -eq 1 ]]; then
   UNSIGNED_MARKER="true"
@@ -230,6 +236,10 @@ if [[ "${UNSIGNED_DEV}" -eq 0 ]]; then
   if [[ "${DAEMON_EMBEDDED}" == "true" ]]; then
     codesign --force --options runtime --timestamp --sign "${SIGN_IDENTITY}" \
       --identifier "com.codebridge.daemon" "${APP_BUNDLE}/Contents/MacOS/codebridged"
+    # Payload copy made from the signed nested daemon (see comment above the assembly section).
+    mkdir -p "${APP_BUNDLE}/Contents/Resources/DaemonPayload"
+    cp "${APP_BUNDLE}/Contents/MacOS/codebridged" "${APP_BUNDLE}/Contents/Resources/DaemonPayload/codebridged"
+    chmod +x "${APP_BUNDLE}/Contents/Resources/DaemonPayload/codebridged"
   fi
   codesign --force --options runtime --timestamp --sign "${SIGN_IDENTITY}" \
     --identifier "${BUNDLE_ID}" "${APP_BUNDLE}"

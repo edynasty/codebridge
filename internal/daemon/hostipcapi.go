@@ -36,17 +36,29 @@ type hostListeners struct {
 
 // hostHealthResult is the host.health result.
 type hostHealthResult struct {
-	Status        string           `json:"status"`
-	DaemonVersion string           `json:"daemon_version"`
-	Protocol      hostipc.Protocol `json:"protocol"`
-	UptimeMS      int64            `json:"uptime_ms"`
-	PID           int              `json:"pid"`
-	Caller        hostCaller       `json:"caller"`
-	Store         map[string]any   `json:"store"`
-	Tunnel        TunnelHealth     `json:"tunnel"`
-	Listeners     hostListeners    `json:"listeners"`
-	Signing       hostSigning      `json:"signing"`
-	ProbeEnabled  bool             `json:"probe_enabled"`
+	Status        string                 `json:"status"`
+	DaemonVersion string                 `json:"daemon_version"`
+	Protocol      hostipc.Protocol       `json:"protocol"`
+	UptimeMS      int64                  `json:"uptime_ms"`
+	PID           int                    `json:"pid"`
+	Caller        hostCaller             `json:"caller"`
+	Store         map[string]any         `json:"store"`
+	Tunnel        TunnelHealth           `json:"tunnel"`
+	Listeners     hostListeners          `json:"listeners"`
+	Signing       hostSigning            `json:"signing"`
+	ProbeEnabled  bool                   `json:"probe_enabled"`
+	ComputerTCC   *ComputerTCCGuardState `json:"computer_tcc,omitempty"`
+}
+
+// ComputerTCCGuardState reports the fail-closed Computer-TCC posture guard
+// (invariant DAEMON_COMPUTER_TCC_MUST_BE_NONE).
+type ComputerTCCGuardState struct {
+	Safe      bool   `json:"safe"`
+	Reason    string `json:"reason,omitempty"`
+	Screen    bool   `json:"screen_preflight_granted"`
+	AXTrusted bool   `json:"ax_trusted"`
+	Listen    bool   `json:"listen_preflight_granted"`
+	CheckedAt string `json:"checked_at"`
 }
 
 type nativeHostSmokeParams struct {
@@ -123,6 +135,9 @@ func (d *Daemon) handleHostHealth(_ context.Context, c *hostipc.Conn, _ json.Raw
 		mode = fi.Mode().Perm().String()
 	}
 	status := "ok"
+	if guard := d.computerTCCGuard(); guard != nil && !guard.Safe {
+		status = "degraded"
+	}
 	if th := d.tunnel.Health(); th.Configured && th.State == TunnelFailed {
 		status = "degraded"
 	}
@@ -151,6 +166,7 @@ func (d *Daemon) handleHostHealth(_ context.Context, c *hostipc.Conn, _ json.Raw
 			BundleID:          d.cfg.AppBundleID,
 		},
 		ProbeEnabled: d.ProbeEnabled(),
+		ComputerTCC:  d.computerTCCGuard(),
 	}, nil
 }
 

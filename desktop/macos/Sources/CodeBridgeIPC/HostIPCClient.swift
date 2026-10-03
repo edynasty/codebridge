@@ -262,6 +262,17 @@ public final class HostIPCClient {
                 close()
                 throw HostIPCError.unverifiedPeer(verification.summary)
             }
+            // 2026-10-03 amendment: the daemon must be the EXTERNALLY INSTALLED copy
+            // (F2 topology). A verified daemon whose executable still lives inside this
+            // app bundle is the legacy bundled topology and must be refused.
+            if expected.signingIdentifier == "com.codebridge.daemon",
+               let path = verification.verifiedIdentity?.executablePath,
+               path.hasPrefix(Bundle.main.bundlePath + "/") {
+                close()
+                throw HostIPCError.unverifiedPeer(
+                    "daemon peer is the bundled legacy copy; production topology requires the external install"
+                )
+            }
         }
 
         let params = HostHelloParams(

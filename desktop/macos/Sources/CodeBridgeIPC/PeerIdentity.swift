@@ -78,6 +78,12 @@ public enum SignatureVerification: Equatable, Sendable {
         return false
     }
 
+    /// The identity of a verified peer, nil otherwise.
+    public var verifiedIdentity: SigningIdentity? {
+        if case .verified(let identity) = self { return identity }
+        return nil
+    }
+
     public var summary: String {
         switch self {
         case .verified(let identity):

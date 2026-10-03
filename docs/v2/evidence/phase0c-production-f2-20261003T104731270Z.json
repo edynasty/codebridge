@@ -1,0 +1,73 @@
+{
+  "schema": "codebridge.phase0c.production_f2_matrix.v1",
+  "startedAt": "2026-10-03T10:47:31.270Z",
+  "topology": "external daemon at ~/Library/Application Support/CodeBridge/bin/codebridged, launchd-owned, label com.codebridge.daemon",
+  "daemonIdentity": {
+    "identifier": "com.codebridge.daemon",
+    "team": "HXAV5ALQQG",
+    "cdhash": "7fe900be6ae61bf96c49c9cf0d5a326bcb350dcc",
+    "designatedRequirement": "identifier \"com.codebridge.daemon\" and anchor apple generic and certificate leaf[subject.CN] = \"Apple Development: tangxingpeng@hotmail.com (QC2AU8UDY6)\" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */",
+    "strictVerify": "PASS"
+  },
+  "lifecycle": {
+    "install": "PASS (payload from signed bundle, SecStaticCode-verified, atomic staging→install)",
+    "launchdStart": "PASS (bootstrap gui/501)",
+    "ppid1": "PASS (PIDs 54848/57832/58599/60758 all ppid=1)",
+    "externalRealpath": "PASS",
+    "sigkillRestart": "PASS (54848→57832 after kill -KILL, KeepAlive)",
+    "health": "PASS (status ok, store schema 1 wired)",
+    "storeReopen": "PASS (same runtime.db after restarts)",
+    "update": "PASS (atomic binary replace + kickstart → PID 58599, identity preserved)",
+    "guard": "DAEMON_COMPUTER_TCC_MUST_BE_NONE PASS — health computer_tcc.safe=true, all three preflights false"
+  },
+  "C": {
+    "pid": 60758,
+    "execution": "daemon_in_process",
+    "screen": {
+      "shareable": "denied -3801",
+      "capture": "skipped",
+      "preflight": false
+    },
+    "ax": {
+      "trusted": false,
+      "apiError": -25204
+    },
+    "input": {
+      "preflightListen": false,
+      "tapCreated": true
+    },
+    "tccSubject": "/Users/tangxingpeng/Library/Application Support/CodeBridge/bin/codebridged (own path)"
+  },
+  "D": {
+    "pid": 64234,
+    "parent": 60758,
+    "context": "codebridged_child",
+    "executable": "/Users/tangxingpeng/Library/Application Support/CodeBridge/bin/codebridge-probe",
+    "screen": {
+      "shareable": "denied",
+      "preflight": false,
+      "capture": "skipped"
+    },
+    "ax": {
+      "trusted": false
+    },
+    "input": {
+      "listenPreflight": false
+    }
+  },
+  "debugGate": "host.phase0_probe refused without CODEBRIDGE_PHASE0_DEBUG (production gate verified); matrix run with gate enabled via plist env",
+  "status": "INITIAL_MATRIX_PASS",
+  "runId": "20261003T104731270Z",
+  "persistence": {
+    "appRestart": "PASS — daemon PIDs 54848→60758 spanned periods with no App running; A re-verified ALLOWED after App rebuild (Screen capture ok 1800x1169 pid65521, AX trusted=true, Input preflight=true)",
+    "daemonRestart": "PASS — SIGKILL 54848→57832 (KeepAlive); update kickstart→58599; matrix ran on post-restart PID 60758 with C/D still DENIED",
+    "sameIdentityRebuild": "PASS — App rebuilt+re-signed (new CDHash) and daemon binary atomically replaced from new payload; A ALLOWED, C/D DENIED after both",
+    "verdict": "F2_PERSISTENCE_PASS"
+  },
+  "finalVerdict": {
+    "f2Initial": "PASS — A ALLOW/ALLOW/ALLOW; C DENY/DENY/DENY (subject=external daemon own path); D DENY/DENY/DENY (responsible=external daemon, subject=external path, never com.codebridge.app)",
+    "f2Persistence": "PASS",
+    "f2": "CLOSED",
+    "cleanDScreen": "The Phase0C-contaminated D-Screen row is now replaced: production D-Screen=denied under App-only grants"
+  }
+}

@@ -187,3 +187,19 @@ char *cb_daemon_permissions(int folders_only, const char *signing) {
         return strndup((const char *)data.bytes, data.length);
     }
 }
+
+// Passive Computer-TCC posture: preflight/status APIs only. Never requests, never prompts
+// (invariant DAEMON_COMPUTER_TCC_MUST_BE_NONE — the daemon must not hold Computer grants).
+char *cb_daemon_passive_tcc(void) {
+    @autoreleasepool {
+        NSDictionary *report = @{
+            @"screen_preflight_granted": @((bool)CGPreflightScreenCaptureAccess()),
+            @"ax_trusted": @((bool)AXIsProcessTrusted()),
+            @"listen_preflight_granted": @((bool)CGPreflightListenEventAccess()),
+            @"secure_input_enabled": @((bool)IsSecureEventInputEnabled()),
+        };
+        NSData *data = [NSJSONSerialization dataWithJSONObject:report options:0 error:NULL];
+        if (!data) return NULL;
+        return strndup((const char *)data.bytes, data.length);
+    }
+}

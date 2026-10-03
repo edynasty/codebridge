@@ -38,3 +38,32 @@ func runDaemonPermissionProbe(probe string) (ProbeResult, error) {
 	defer C.free(unsafe.Pointer(data))
 	return ProbeResult{Probe: probe, Argv: []string{}, Stdout: C.GoString(data)}, nil
 }
+
+// ComputerTCCStatus is the passive Computer-TCC posture of the daemon process.
+// It is gathered with preflight/status APIs ONLY — the daemon must never call
+// CGRequestScreenCaptureAccess, AXIsProcessTrustedWithOptions(prompt:) or
+// CGRequestListenEventAccess (invariant DAEMON_COMPUTER_TCC_MUST_BE_NONE).
+type ComputerTCCStatus struct {
+	ScreenPreflightGranted bool   `json:"screen_preflight_granted"`
+	AXTrusted              bool   `json:"ax_trusted"`
+	ListenPreflightGranted bool   `json:"listen_preflight_granted"`
+	AnyComputerPrivilege   bool   `json:"any_computer_privilege"`
+	Detail                 string `json:"detail,omitempty"`
+}
+
+// passiveComputerTCCStatus reads the daemon's own Computer-TCC posture using
+// passive checks only (no prompts, no requests).
+func passiveComputerTCCStatus() ComputerTCCStatus {
+	data := C.cb_daemon_passive_tcc()
+	if data == nil {
+		return ComputerTCCStatus{Detail: "native passive check unavailable"}
+	}
+	defer C.free(unsafe.Pointer(data))
+	jsonStr := C.GoString(data)
+	var status ComputerTCCStatus
+	if err := jsonUnmarshalStrict([]byte(jsonStr), &status); err != nil {
+		return ComputerTCCStatus{Detail: fmt.Sprintf("parse passive report: %v", err)}
+	}
+	status.AnyComputerPrivilege = status.ScreenPreflightGranted || status.AXTrusted || status.ListenPreflightGranted
+	return status
+}

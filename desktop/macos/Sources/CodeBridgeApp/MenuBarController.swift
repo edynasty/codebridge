@@ -9,6 +9,7 @@ import CodeBridgeIPC
 final class MenuBarController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let launchAgent = LaunchAgentController()
+    private let installer = DaemonInstaller.shared
     private let worker = DispatchQueue(label: "com.codebridge.app.worker", qos: .userInitiated)
 
     override init() {
@@ -36,9 +37,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(withTitle: "Host IPC: handshake as app", action: #selector(handshakeAsApp), keyEquivalent: "")
         menu.addItem(withTitle: "Host IPC: handshake as diagnostics", action: #selector(handshakeAsDiagnostics), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(withTitle: "LaunchAgent: register daemon", action: #selector(registerAgent), keyEquivalent: "")
-        menu.addItem(withTitle: "LaunchAgent: unregister daemon", action: #selector(unregisterAgent), keyEquivalent: "")
-        menu.addItem(withTitle: "Daemon: launchd status", action: #selector(showDaemonStatus), keyEquivalent: "")
+        menu.addItem(withTitle: "Daemon: install external (production)", action: #selector(installExternalDaemon), keyEquivalent: "")
+        menu.addItem(withTitle: "Daemon: uninstall external", action: #selector(uninstallExternalDaemon), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Probe: permissions (CodeBridge.app child)", action: #selector(probeAsAppChild), keyEquivalent: "")
         menu.addItem(withTitle: "Probe: permissions (codebridged child)", action: #selector(probeViaDaemon), keyEquivalent: "")
@@ -133,6 +133,35 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             info.detail,
         ].joined(separator: "\n")
         present(title: "Daemon (launchd view)", body: body)
+    }
+
+    @objc private func installExternalDaemon() {
+        runAsync(title: "Install external daemon") {
+            do {
+                let installed = try self.installer.install()
+                let snapshot = try DaemonLaunchctl.inspect(label: HostIPCPaths.daemonLaunchAgentLabel)
+                return DaemonClient.Outcome(ok: true, body: [
+                    "installed at: \(installed.url.path)",
+                    "team: \(installed.teamIdentifier ?? "unknown")",
+                    "cdhash: \(installed.cdhash ?? "unknown")",
+                    "launchctl job: pid \(snapshot.pid.map { String($0) } ?? "none"), state \(snapshot.state ?? "unknown")",
+                    "program: \(snapshot.program ?? "unknown")",
+                ].joined(separator: "\n"))
+            } catch {
+                return DaemonClient.Outcome(ok: false, body: "install failed: \(error)")
+            }
+        }
+    }
+
+    @objc private func uninstallExternalDaemon() {
+        runAsync(title: "Uninstall external daemon") {
+            do {
+                try self.installer.uninstall()
+                return DaemonClient.Outcome(ok: true, body: "uninstalled (runtime data preserved)")
+            } catch {
+                return DaemonClient.Outcome(ok: false, body: "uninstall failed: \(error)")
+            }
+        }
     }
 
     @objc private func probeAsAppChild() {

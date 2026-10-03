@@ -18,11 +18,13 @@ import (
 
 // Daemon is the Phase 0 codebridged authority.
 type Daemon struct {
-	cfg     Config
-	log     *slog.Logger
-	started time.Time
-	token   string
-	tunnel  *TunnelSupervisor
+	cfg              Config
+	log              *slog.Logger
+	started          time.Time
+	computerTCCOnce  sync.Once
+	computerTCCState *ComputerTCCGuardState
+	token            string
+	tunnel           *TunnelSupervisor
 
 	servers map[CallerClass]*mcp.Server
 	hostSrv *hostipc.Server
@@ -55,6 +57,16 @@ func New(cfg Config, log *slog.Logger) (*Daemon, error) {
 		errCh:   make(chan error, 4),
 	}
 	d.tunnel = NewTunnelSupervisor(cfg, token, log)
+	// DAEMON_COMPUTER_TCC_MUST_BE_NONE: passive startup check. If the daemon
+	// holds any Computer privilege (user-granted), it must fail closed and
+	// report degraded security; this is recorded, never auto-reset.
+	if state := d.computerTCCGuard(); state != nil && !state.Safe {
+		log.Error("UNSAFE_DAEMON_COMPUTER_PERMISSION",
+			"reason", state.Reason,
+			"screen_preflight", state.Screen, "ax_trusted", state.AXTrusted,
+			"listen_preflight", state.Listen,
+			"action", "computer broker and agent/harness spawning disabled until the user removes the daemon Computer grants")
+	}
 	// Fail fast at startup: a registrar that panics or a tool whose schema is
 	// invalid must stop the daemon, not turn every ingress request into a
 	// recovered panic (which surfaces to the client as a bare EOF).
